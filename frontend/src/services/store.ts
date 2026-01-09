@@ -30,6 +30,8 @@ interface AppState {
     fetchMedications: () => Promise<void>;
     fetchTodayLogs: () => Promise<void>;
     takeMedication: (logId: number) => Promise<void>;
+    updateMedication: (id: number, data: any) => Promise<void>;
+    deleteMedication: (id: number) => Promise<void>;
 
     fetchAlerts: () => Promise<void>;
 
@@ -141,6 +143,41 @@ export const useMedicationStore = create<AppState>((set, get) => ({
                     : log
             );
             set({ todayLogs: logs });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    updateMedication: async (id, data) => {
+        try {
+            set({ isLoading: true, error: null });
+            const response = await api.medications.update(id, data);
+
+            // 로컬 상태 업데이트
+            const updatedMedication = response.data;
+            const meds = get().medications.map((med) =>
+                med.id === id ? updatedMedication : med
+            );
+            set({ medications: meds });
+        } catch (error) {
+            set({ error: '약 정보를 수정할 수 없습니다.' });
+            throw error;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    deleteMedication: async (id) => {
+        try {
+            set({ isLoading: true, error: null });
+            await api.medications.delete(id);
+
+            // 로컬 상태 업데이트
+            const meds = get().medications.filter((med) => med.id !== id);
+            set({ medications: meds });
+        } catch (error) {
+            set({ error: '약을 삭제할 수 없습니다.' });
+            throw error;
         } finally {
             set({ isLoading: false });
         }

@@ -24,10 +24,12 @@
     "zustand": "^4.4.0",
     "react-hook-form": "^7.48.0",
     "date-fns": "^2.30.0",
-    "lucide-react": "^0.294.0"
+    "lucide-react": "^0.294.0",
+    "framer-motion": "^10.16.0"
   }
 }
 ```
+
 
 ---
 
@@ -37,12 +39,14 @@
 |------|------|------|
 | `/` | `page.tsx` | 홈 - 오늘의 복약 목록 |
 | `/login` | `login/page.tsx` | 로그인/회원가입 |
-| `/medications` | `medications/page.tsx` | 내 약 목록 |
+| `/medications` | `medications/page.tsx` | 내 약 목록 (편집 모드, 일괄 삭제) |
+| `/medications/[id]` | `medications/[id]/page.tsx` | 약 상세/수정 |
 | `/medications/add` | `medications/add/page.tsx` | 약 추가 (시간대 선택) |
-| `/medications/scan` | `medications/scan/page.tsx` | 처방전 OCR 스캔 |
+| `/medications/scan` | `medications/scan/page.tsx` | 처방전 OCR 스캔 (중복 감지) |
 | `/profile` | `profile/page.tsx` | 내 정보 + 비상 연락처 |
 | `/guardian` | `guardian/page.tsx` | 보호자 대시보드 |
 | `/alerts` | `alerts/page.tsx` | 알림 내역 |
+
 
 ---
 
@@ -54,14 +58,20 @@
 
 ```tsx
 interface MedicationCardProps {
-  log: MedicationLog;
+  medication: Medication;
+  isSelectionMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: (id: number) => void;
 }
 
 // 주요 기능:
 // - 복용 완료 버튼 (큰 터치 영역)
-// - 상태별 색상 구분 (완료: 녹색, 대기: 주황색)
-// - 복용 시간 표시
+// - 상태별 색상 구분 (복용 중: 녹색, 중단: 분홍색)
+// - 스캔에서 등록된 설명 1줄 표시 (truncate)
+// - 편집 모드: 체크박스 표시
+// - 클릭 시 상세 페이지 이동
 ```
+
 
 ### Button
 
@@ -134,10 +144,12 @@ interface AppState {
   
   // 액션
   fetchUser, logout,
-  fetchMedications, fetchTodayLogs, takeMedication,
+  fetchMedications, deleteMedication, updateMedication,
+  fetchTodayLogs, takeMedication,
   fetchAlerts,
 }
 ```
+
 
 ### 타입 정의 (`types.ts`)
 
@@ -209,8 +221,17 @@ interface AppState {
 
 - 카메라/갤러리 이미지 선택
 - 이미지 미리보기
-- AI 분석 결과 표시
-- 분석 결과 확인 후 등록
+- AI 분석 결과 표시 (gpt-4o Vision)
+- **중복 약품 감지** (이미 등록된 약은 표시)
+- 분석 결과 확인 후 등록 (중복은 자동 제외)
+
+### 약 상세 페이지 (`/medications/[id]`) ✨ NEW
+
+- 약 상세 정보 표시 (이름, 용량, 설명)
+- 수정 모드 전환 (react-hook-form)
+- 복용 상태 토글 (복용 중/중단)
+- 삭제 기능
+
 
 ### 프로필 페이지 (`/profile`)
 
@@ -251,7 +272,17 @@ npm start
 
 - [ ] 음성 인식 UI 추가 (Whisper 연동)
 - [ ] PWA 오프라인 지원
-- [ ] 푸시 알림 수신 처리 (FCM)
+- [ ] 푸시 알림 수신 처리 (FCM) - Safety Line
 - [ ] 다크 모드 지원
 - [ ] E2E 테스트 (Playwright)
 - [ ] 접근성 검사 (axe-core)
+
+---
+
+## ✅ 최근 구현 완료 (2026-01-10)
+
+- [x] 약 상세/수정 페이지 (`/medications/[id]`)
+- [x] 편집 모드 일괄 삭제 (전체 선택/선택 삭제)
+- [x] 처방전 스캔 중복 약품 감지
+- [x] 약품 설명 목록에서 1줄 truncate
+- [x] framer-motion 애니메이션 적용

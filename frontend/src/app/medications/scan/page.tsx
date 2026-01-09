@@ -1,18 +1,25 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Camera, Lightbulb, Search, Check, RefreshCw, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
+import { useMedicationStore } from '@/services/store';
 
 export default function ScanPrescriptionPage() {
     const router = useRouter();
+    const { medications: existingMedications, fetchMedications } = useMedicationStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [preview, setPreview] = useState<string | null>(null);
     const [scanResult, setScanResult] = useState<any>(null);
+
+    // 페이지 로드시 기존 약 목록 가져오기 (중복 체크용)
+    useEffect(() => {
+        fetchMedications();
+    }, [fetchMedications]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -46,19 +53,33 @@ export default function ScanPrescriptionPage() {
         }
     };
 
+    const isDuplicate = (name: string) => {
+        return existingMedications.some(med => med.name === name);
+    };
+
     const handleConfirm = async () => {
         if (!scanResult?.medications) return;
 
         setIsLoading(true);
         try {
-            // 스캔된 약품들 등록
-            for (const med of scanResult.medications) {
+            // 중복되지 않은 약품만 필터링하여 등록
+            const newMedications = scanResult.medications.filter((med: any) => !isDuplicate(med.name));
+
+            if (newMedications.length === 0) {
+                alert('모든 약이 이미 등록되어 있습니다.');
+                router.push('/medications');
+                return;
+            }
+
+            for (const med of newMedications) {
                 await api.medications.create({
                     name: med.name,
                     dosage: med.dosage,
-                    description: `${med.frequency}`,
+                    description: med.description || med.frequency, // 설명 우선, 없으면 횟수
                 });
             }
+            // 등록 후 최신 데이터 가져오기
+            await fetchMedications();
             router.push('/medications');
         } catch (err: any) {
             setError('약 등록에 실패했습니다.');
@@ -218,31 +239,61 @@ export default function ScanPrescriptionPage() {
                                     분석 결과
                                 </h2>
 
-                                {scanResult.medications?.map((med: any, index: number) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            padding: '1rem',
-                                            marginBottom: '0.5rem',
-                                            background: 'var(--color-cream)',
-                                            borderRadius: 'var(--border-radius)',
-                                        }}
-                                    >
-                                        <p style={{
-                                            fontSize: 'var(--font-size-lg)',
-                                            fontWeight: 600,
-                                            marginBottom: '0.25rem',
-                                        }}>
-                                            {med.name}
-                                        </p>
-                                        <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-light)' }}>
-                                            {med.dosage} · {med.frequency}
-                                        </p>
-                                        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-mint-dark)' }}>
-                                            복용 시간: {med.times?.join(', ')}
-                                        </p>
-                                    </div>
-                                ))}
+                                {scanResult.medications?.map((med: any, index: number) => {
+                                    const duplicate = isDuplicate(med.name);
+                                    return (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                padding: '1rem',
+                                                marginBottom: '0.5rem',
+                                                background: duplicate ? 'var(--color-cream-dark)' : 'var(--color-cream)',
+                                                borderRadius: 'var(--border-radius)',
+                                                opacity: duplicate ? 0.7 : 1,
+                                                position: 'relative',
+                                            }}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <p style={{
+                                                    fontSize: 'var(--font-size-lg)',
+                                                    fontWeight: 600,
+                                                    marginBottom: '0.25rem',
+                                                }}>
+                                                    {med.name}
+                                                </p>
+                                                {duplicate && (
+                                                    <span style={{
+                                                        fontSize: 'var(--font-size-sm)',
+                                                        color: 'white',
+                                                        background: 'var(--color-danger)',
+                                                        padding: '0.25rem 0.75rem',
+                                                        borderRadius: '999px',
+                                                        fontWeight: 600,
+                                                        whiteSpace: 'nowrap',
+                                                        flexShrink: 0,
+                                                        marginLeft: '0.5rem',
+                                                        alignSelf: 'flex-start',
+                                                        height: 'fit-content',
+                                                        lineHeight: '1.2',
+                                                    }}>
+                                                        이미 등록됨
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-light)' }}>
+                                                {med.dosage} · {med.frequency}
+                                            </p>
+                                            {med.description && (
+                                                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text)', marginTop: '0.25rem' }}>
+                                                    {med.description}
+                                                </p>
+                                            )}
+                                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-mint-dark)', marginTop: '0.25rem' }}>
+                                                복용 시간: {med.times?.join(', ')}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             <div className="flex flex-col gap-4">

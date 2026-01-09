@@ -2,7 +2,9 @@
 Medications Services - OCR 및 STT 처리
 """
 
+import json
 import base64
+from openai import OpenAI
 from django.conf import settings
 
 
@@ -13,7 +15,7 @@ class OCRService:
     """
     
     def __init__(self):
-        self.api_key = settings.OPENAI_API_KEY
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
     
     def parse_prescription(self, image_file):
         """
@@ -25,27 +27,64 @@ class OCRService:
         Returns:
             dict: 추출된 약품 정보 리스트
         """
-        # TODO: OpenAI Vision API 연동 구현
-        # 현재는 예시 응답 반환
-        
-        # 이미지를 base64로 인코딩
-        image_data = base64.b64encode(image_file.read()).decode('utf-8')
-        
-        # OpenAI API 호출 (구현 예정)
-        # response = openai.ChatCompletion.create(...)
-        
-        return {
-            'success': True,
-            'medications': [
-                {
-                    'name': '추출된 약품명',
-                    'dosage': '1정',
-                    'frequency': '하루 3회',
-                    'times': ['08:00', '12:00', '18:00']
-                }
-            ],
-            'message': 'OCR 처리가 완료되었습니다. 결과를 확인해주세요.'
-        }
+        try:
+            # 이미지를 base64로 인코딩
+            image_content = image_file.read()
+            image_base64 = base64.b64encode(image_content).decode('utf-8')
+            
+            prompt = """
+            이 처방전 이미지에서 약품 정보를 추출해서 JSON 형식으로 반환해줘.
+            이미지는 일반적으로 '약품명', '약품 사진', '설명/효능', '복용법' 등의 컬럼으로 구성된 표 형태일 거야.
+            각 행(Row)을 분석해서 다음 필드를 포함하는 리스트를 만들어줘:
+
+            - medications: 약품 목록 (리스트)
+                - name: 약품명 (예: "데팍신서방정 25mg")
+                - dosage: 1회 투약량
+                - frequency: 1일 투여 횟수 (예: "하루 3회", "1일 1회")
+                - times: 투약 시간 리스트 (예: ["08:00", "12:00", "18:00"]) - '아침', '취침 전' 등의 텍스트를 보고 시간을 추정해줘
+                - description: 약에 대한 상세 설명. **가장 중요함**. 약의 모양(예: "흰색 정제")과 효능/효과(예: "- 중추에 작용하여...", "- 심박동수를 감소시켜...") 등 해당 칸에 있는 **모든 텍스트**를 그대로 가져와줘. 줄바꿈 문자가 있다면 공백으로 대체해서 한 줄로 만들어줘.
+
+            응답은 오직 JSON 데이터만 보내줘. 마크다운 포맷팅 없이 raw JSON으로.
+            """
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_base64}",
+                                },
+                            },
+                        ],
+                    }
+                ],
+                max_tokens=1000,
+            )
+            
+            content = response.choices[0].message.content
+            # JSON 파싱 (혹시 모를 마크다운 코드블록 제거)
+            content = content.replace('```json', '').replace('```', '').strip()
+            result = json.loads(content)
+            
+            return {
+                'success': True,
+                'medications': result.get('medications', []),
+                'message': 'OCR 처리가 완료되었습니다.'
+            }
+            
+        except Exception as e:
+            print(f"OCR Error: {str(e)}")
+            # 에러 발생 시 예시 데이터 반환 (데모 안정성을 위해)
+            # 실제 운영 시에는 에러를 반환해야 함
+            return {
+                'success': False,
+                'message': f'OCR 처리 중 오류가 발생했습니다: {str(e)}'
+            }
 
 
 class STTService:
@@ -55,41 +94,51 @@ class STTService:
     """
     
     def __init__(self):
-        self.api_key = settings.OPENAI_API_KEY
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
     
     def transcribe(self, audio_file):
         """
         음성을 텍스트로 변환
-        
-        Args:
-            audio_file: 업로드된 오디오 파일
-            
-        Returns:
-            str: 변환된 텍스트
         """
-        # TODO: OpenAI Whisper API 연동 구현
-        return "아침 8시에 혈압약 추가해줘"
+        try:
+            # Whisper API는 파일 객체를 직접 받음
+            # 파일 포인터를 처음으로 되돌림 (혹시 모를 상황 대비)
+            if hasattr(audio_file, 'seek'):
+                audio_file.seek(0)
+                
+            response = self.client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+            return response.text
+        except Exception as e:
+            print(f"STT Error: {str(e)}")
+            return ""
     
     def process_command(self, audio_file, user):
         """
         음성 명령 처리
-        
-        Args:
-            audio_file: 오디오 파일
-            user: 현재 사용자
-            
-        Returns:
-            dict: 처리 결과
         """
         # 음성을 텍스트로 변환
         text = self.transcribe(audio_file)
         
-        # 명령어 파싱 및 처리
-        # TODO: NLP를 통한 의도 분류 및 엔티티 추출 구현
+        if not text:
+            return {
+                'success': False,
+                'message': '음성을 인식하지 못했습니다.'
+            }
+        
+        # 간단한 키워드 기반 의도 분류 (임시 구현)
+        # 실제로는 여기서도 GPT를 사용하여 의도를 파악하고 구조화된 데이터를 뽑아내면 좋습니다.
+        action = 'unknown'
+        if '먹었어' in text or '복용' in text:
+            action = 'take_medication'
+        elif '추가' in text or '등록' in text:
+            action = 'add_schedule'
         
         return {
             'success': True,
             'transcribed_text': text,
-            'action': 'add_schedule',
-            'message': '음성 명령이 처리되었습니다.'
+            'action': action,
+            'message': f'음성 인식 결과: "{text}"'
         }

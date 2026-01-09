@@ -84,14 +84,21 @@ class MedicationLog(models.Model):
 
 ```python
 class OCRService:
-    """처방전 OCR 스캔 (OpenAI Vision API)"""
-    def parse_prescription(self, image_file) -> dict
+    """처방전 OCR 스캔 (OpenAI Vision API - gpt-4o)"""
+    def parse_prescription(self, image_file) -> dict:
+        # 이미지를 base64로 인코딩
+        # gpt-4o 모델로 테이블 형태의 처방전 분석
+        # 약품명, 용량, 복용법, 효능 설명 추출
+        # JSON 형식으로 반환
 
 class STTService:
-    """음성 명령 처리 (OpenAI Whisper)"""
+    """음성 명령 처리 (OpenAI Whisper - whisper-1)"""
     def transcribe(self, audio_file) -> str
     def process_command(self, audio_file, user) -> dict
 ```
+
+> ✅ **구현 완료**: OCR 및 STT 서비스가 OpenAI API와 연동되어 실제 동작합니다.
+
 
 ---
 
@@ -200,8 +207,8 @@ celery -A core beat --loglevel=info
 
 ## 다음 단계 (TODO)
 
-- [ ] OpenAI Vision API 연동 (OCR 실제 구현)
-- [ ] OpenAI Whisper API 연동 (STT 실제 구현)
-- [ ] Firebase Admin SDK 연동 (푸시 알림)
+- [x] ~~OpenAI Vision API 연동 (OCR 실제 구현)~~ ✅ 완료
+- [x] ~~OpenAI Whisper API 연동 (STT 실제 구현)~~ ✅ 완료
+- [ ] Firebase Admin SDK 연동 (푸시 알림 - Safety Line)
 - [ ] 유닛 테스트 작성
 - [ ] API 문서화 (Swagger/drf-spectacular)

@@ -79,7 +79,7 @@ export const api = {
         create: (data: any) =>
             apiClient.post('medications/', data),
         update: (id: number, data: any) =>
-            apiClient.patch(`medications/${id}`, data),
+            apiClient.put(`medications/${id}/`, data),
         delete: (id: number) =>
             apiClient.delete(`medications/${id}`),
         scanPrescription: (image: File) => {
