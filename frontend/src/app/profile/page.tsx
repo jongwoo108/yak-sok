@@ -3,304 +3,306 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, User, Users, Phone, Building2, AlertCircle, Plus, Trash2, LogOut, Loader2 } from 'lucide-react';
 import { useMedicationStore } from '@/services/store';
 import { api } from '@/services/api';
 import type { EmergencyContact } from '@/services/types';
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { user, fetchUser, logout, isLoading } = useMedicationStore();
-    const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
-    const [showAddContact, setShowAddContact] = useState(false);
+    const { user, fetchUser, isLoading, setUser } = useMedicationStore();
+    const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+    const [loadingContacts, setLoadingContacts] = useState(true);
+    const [showAddForm, setShowAddForm] = useState(false);
     const [newContact, setNewContact] = useState({
         name: '',
         phone_number: '',
+        relationship: '',
         contact_type: 'guardian' as 'guardian' | 'hospital' | 'emergency' | 'other',
     });
 
     useEffect(() => {
         fetchUser();
-        fetchEmergencyContacts();
+        fetchContacts();
     }, [fetchUser]);
 
-    const fetchEmergencyContacts = async () => {
+    const fetchContacts = async () => {
         try {
             const response = await api.emergencyContacts.list();
-            setEmergencyContacts(response.data.results || response.data);
+            // Ensure we always set an array
+            setContacts(Array.isArray(response.data) ? response.data : response.data?.results || []);
         } catch (err) {
-            // 오류 무시
+            console.error(err);
+            setContacts([]);
+        } finally {
+            setLoadingContacts(false);
         }
     };
+
 
     const handleAddContact = async () => {
         try {
             await api.emergencyContacts.create(newContact);
-            setNewContact({ name: '', phone_number: '', contact_type: 'guardian' });
-            setShowAddContact(false);
-            fetchEmergencyContacts();
+            setNewContact({
+                name: '',
+                phone_number: '',
+                relationship: '',
+                contact_type: 'guardian',
+            });
+            setShowAddForm(false);
+            fetchContacts();
         } catch (err) {
-            alert('연락처 추가에 실패했습니다.');
+            console.error(err);
         }
     };
 
     const handleDeleteContact = async (id: number) => {
-        if (!confirm('정말 삭제하시겠습니까?')) return;
         try {
             await api.emergencyContacts.delete(id);
-            fetchEmergencyContacts();
+            fetchContacts();
         } catch (err) {
-            alert('삭제에 실패했습니다.');
+            console.error(err);
         }
     };
 
     const handleLogout = () => {
-        logout();
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        setUser(null);
         router.push('/login');
     };
 
+    const contactTypeIcons = {
+        guardian: <Users size={18} />,
+        hospital: <Building2 size={18} />,
+        emergency: <AlertCircle size={18} />,
+        other: <Phone size={18} />,
+    };
+
     const contactTypeLabels = {
-        guardian: '👨‍👩‍👧 보호자',
-        hospital: '🏥 병원',
-        emergency: '🚨 119',
-        other: '📞 기타',
+        guardian: '보호자',
+        hospital: '병원',
+        emergency: '119',
+        other: '기타',
     };
 
     return (
-        <div className="container min-h-screen p-6">
-            {/* 헤더 */}
-            <header className="flex items-center mb-6" style={{ justifyContent: 'space-between' }}>
-                <Link
-                    href="/"
-                    style={{
-                        fontSize: 'var(--font-size-xl)',
-                        textDecoration: 'none',
-                        color: 'var(--color-text)',
-                    }}
-                >
-                    ←
-                </Link>
-                <h1 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700 }}>
-                    👤 내 정보
-                </h1>
-                <div style={{ width: '40px' }} />
-            </header>
+        <>
+            <div className="organic-bg" />
+            <div className="page-wrapper">
+                <div className="page-content">
+                    {/* 헤더 */}
+                    <header className="flex items-center" style={{ justifyContent: 'space-between' }}>
+                        <Link
+                            href="/"
+                            className="status-icon"
+                            style={{
+                                width: '44px',
+                                height: '44px',
+                                background: 'var(--color-cream)',
+                            }}
+                        >
+                            <ArrowLeft size={22} color="var(--color-text)" />
+                        </Link>
+                        <h1 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <User size={24} color="var(--color-mint-dark)" />
+                            내 정보
+                        </h1>
+                        <div style={{ width: '44px' }} />
+                    </header>
 
-            {isLoading ? (
-                <div className="card text-center">
-                    <p style={{ fontSize: 'var(--font-size-lg)' }}>로딩 중...</p>
-                </div>
-            ) : user ? (
-                <>
-                    {/* 사용자 정보 */}
-                    <div className="card mb-6">
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            marginBottom: '1rem',
-                        }}>
-                            <div style={{
-                                width: '80px',
-                                height: '80px',
-                                borderRadius: '50%',
-                                background: 'var(--color-primary)',
-                                color: 'white',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 'var(--font-size-2xl)',
-                                marginRight: '1rem',
-                            }}>
-                                {user.role === 'senior' ? '👴' : '👨‍👩‍👧'}
+                    {isLoading ? (
+                        <div className="card text-center">
+                            <div className="status-icon status-icon-pending" style={{ margin: '0 auto 1rem' }}>
+                                <Loader2 size={28} style={{ color: 'var(--color-text-light)' }} />
                             </div>
-                            <div>
-                                <h2 style={{
-                                    fontSize: 'var(--font-size-xl)',
-                                    fontWeight: 700,
+                            <p style={{ fontSize: 'var(--font-size-lg)' }}>로딩 중...</p>
+                        </div>
+                    ) : user ? (
+                        <>
+                            {/* 사용자 정보 */}
+                            <div className="card">
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    marginBottom: '1rem',
                                 }}>
-                                    {user.first_name || user.username}
-                                </h2>
-                                <p style={{
-                                    fontSize: 'var(--font-size-base)',
-                                    color: 'var(--color-text-light)',
-                                }}>
-                                    {user.role === 'senior' ? '시니어' : '보호자'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div style={{
-                            padding: '1rem',
-                            background: '#F9FAFB',
-                            borderRadius: 'var(--border-radius)',
-                        }}>
-                            <div style={{ marginBottom: '0.5rem' }}>
-                                <span style={{ color: 'var(--color-text-light)' }}>전화번호: </span>
-                                <span style={{ fontWeight: 600 }}>{user.phone_number || '미등록'}</span>
-                            </div>
-                            <div>
-                                <span style={{ color: 'var(--color-text-light)' }}>이메일: </span>
-                                <span style={{ fontWeight: 600 }}>{user.email || '미등록'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 비상 연락처 */}
-                    <div className="card mb-6">
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '1rem',
-                        }}>
-                            <h3 style={{
-                                fontSize: 'var(--font-size-lg)',
-                                fontWeight: 700,
-                            }}>
-                                🚨 비상 연락처
-                            </h3>
-                            <button
-                                onClick={() => setShowAddContact(!showAddContact)}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    background: 'var(--color-primary)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: 'var(--font-size-base)',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                + 추가
-                            </button>
-                        </div>
-
-                        {showAddContact && (
-                            <div style={{
-                                padding: '1rem',
-                                marginBottom: '1rem',
-                                background: '#EEF2FF',
-                                borderRadius: 'var(--border-radius)',
-                            }}>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder="이름"
-                                    value={newContact.name}
-                                    onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-                                    style={{ marginBottom: '0.5rem' }}
-                                />
-                                <input
-                                    type="tel"
-                                    className="input"
-                                    placeholder="전화번호"
-                                    value={newContact.phone_number}
-                                    onChange={(e) => setNewContact({ ...newContact, phone_number: e.target.value })}
-                                    style={{ marginBottom: '0.5rem' }}
-                                />
-                                <select
-                                    className="input"
-                                    value={newContact.contact_type}
-                                    onChange={(e) => setNewContact({ ...newContact, contact_type: e.target.value as any })}
-                                    style={{ marginBottom: '0.5rem' }}
-                                >
-                                    <option value="guardian">보호자</option>
-                                    <option value="hospital">병원</option>
-                                    <option value="emergency">119</option>
-                                    <option value="other">기타</option>
-                                </select>
-                                <button
-                                    onClick={handleAddContact}
-                                    className="btn btn-primary w-full"
-                                >
-                                    저장
-                                </button>
-                            </div>
-                        )}
-
-                        {emergencyContacts.length === 0 ? (
-                            <p style={{
-                                fontSize: 'var(--font-size-base)',
-                                color: 'var(--color-text-light)',
-                                textAlign: 'center',
-                                padding: '1rem',
-                            }}>
-                                등록된 비상 연락처가 없습니다.
-                            </p>
-                        ) : (
-                            emergencyContacts.map((contact) => (
-                                <div
-                                    key={contact.id}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        padding: '1rem',
-                                        marginBottom: '0.5rem',
-                                        background: '#F9FAFB',
-                                        borderRadius: 'var(--border-radius)',
-                                    }}
-                                >
+                                    <div className="status-icon status-icon-success" style={{
+                                        width: '60px',
+                                        height: '60px',
+                                        marginRight: '1rem',
+                                    }}>
+                                        <User size={28} color="white" />
+                                    </div>
                                     <div>
-                                        <p style={{
-                                            fontSize: 'var(--font-size-lg)',
+                                        <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700 }}>
+                                            {user.first_name || user.username}
+                                        </h2>
+                                        <span style={{
+                                            padding: '0.25rem 0.75rem',
+                                            borderRadius: 'var(--border-radius-pill)',
+                                            background: user.role === 'senior'
+                                                ? 'var(--color-mint-light)'
+                                                : 'var(--color-blue-light)',
+                                            color: user.role === 'senior'
+                                                ? 'var(--color-mint-dark)'
+                                                : 'var(--color-blue-dark)',
+                                            fontSize: 'var(--font-size-sm)',
                                             fontWeight: 600,
                                         }}>
-                                            {contact.name}
-                                        </p>
-                                        <p style={{
-                                            fontSize: 'var(--font-size-base)',
-                                            color: 'var(--color-text-light)',
-                                        }}>
-                                            {contact.phone_number}
-                                        </p>
-                                        <span style={{
-                                            fontSize: 'var(--font-size-sm)',
-                                            color: 'var(--color-primary)',
-                                        }}>
-                                            {contactTypeLabels[contact.contact_type]}
+                                            {user.role === 'senior' ? '시니어' : '보호자'}
                                         </span>
                                     </div>
+                                </div>
+                                {user.phone_number && (
+                                    <p style={{
+                                        fontSize: 'var(--font-size-base)',
+                                        color: 'var(--color-text-light)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                    }}>
+                                        <Phone size={16} />
+                                        {user.phone_number}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* 비상 연락처 */}
+                            <div className="card">
+                                <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
+                                    <h3 style={{
+                                        fontSize: 'var(--font-size-lg)',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                    }}>
+                                        <AlertCircle size={20} color="var(--color-danger)" />
+                                        비상 연락처
+                                    </h3>
                                     <button
-                                        onClick={() => handleDeleteContact(contact.id)}
+                                        onClick={() => setShowAddForm(!showAddForm)}
+                                        className="status-icon"
                                         style={{
-                                            padding: '0.5rem',
-                                            background: '#FEE2E2',
-                                            color: 'var(--color-danger)',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            cursor: 'pointer',
+                                            width: '40px',
+                                            height: '40px',
+                                            background: 'var(--color-mint-light)',
                                         }}
                                     >
-                                        삭제
+                                        <Plus size={20} color="var(--color-mint-dark)" />
                                     </button>
                                 </div>
-                            ))
-                        )}
-                    </div>
 
-                    {/* 로그아웃 */}
-                    <button
-                        onClick={handleLogout}
-                        className="btn w-full"
-                        style={{
-                            background: '#FEE2E2',
-                            color: 'var(--color-danger)',
-                            border: 'none',
-                        }}
-                    >
-                        로그아웃
-                    </button>
-                </>
-            ) : (
-                <div className="card text-center">
-                    <p style={{ fontSize: 'var(--font-size-lg)', marginBottom: '1rem' }}>
-                        로그인이 필요합니다.
-                    </p>
-                    <Link href="/login" className="btn btn-primary w-full">
-                        로그인하기
-                    </Link>
+                                {showAddForm && (
+                                    <div style={{
+                                        padding: '1rem',
+                                        background: 'var(--color-cream-light)',
+                                        borderRadius: 'var(--border-radius)',
+                                        marginBottom: '1rem',
+                                    }}>
+                                        <input
+                                            type="text"
+                                            placeholder="이름"
+                                            value={newContact.name}
+                                            onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                                            className="input"
+                                            style={{ marginBottom: '0.5rem' }}
+                                        />
+                                        <input
+                                            type="tel"
+                                            placeholder="전화번호"
+                                            value={newContact.phone_number}
+                                            onChange={(e) => setNewContact({ ...newContact, phone_number: e.target.value })}
+                                            className="input"
+                                            style={{ marginBottom: '0.5rem' }}
+                                        />
+                                        <button
+                                            onClick={handleAddContact}
+                                            className="btn btn-primary w-full"
+                                        >
+                                            추가하기
+                                        </button>
+                                    </div>
+                                )}
+
+                                {loadingContacts ? (
+                                    <p style={{ textAlign: 'center', color: 'var(--color-text-light)' }}>
+                                        로딩 중...
+                                    </p>
+                                ) : contacts.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: 'var(--color-text-light)' }}>
+                                        등록된 비상 연락처가 없습니다.
+                                    </p>
+                                ) : (
+                                    contacts.map((contact) => (
+                                        <div
+                                            key={contact.id}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '0.75rem',
+                                                marginBottom: '0.5rem',
+                                                background: 'var(--color-cream-light)',
+                                                borderRadius: 'var(--border-radius)',
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <span style={{ color: 'var(--color-text-light)' }}>
+                                                    {contactTypeIcons[contact.contact_type as keyof typeof contactTypeIcons]}
+                                                </span>
+                                                <div>
+                                                    <p style={{ fontSize: 'var(--font-size-base)', fontWeight: 600 }}>
+                                                        {contact.name}
+                                                    </p>
+                                                    <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-light)' }}>
+                                                        {contact.phone_number}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteContact(contact.id)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: 'var(--color-danger)',
+                                                }}
+                                            >
+                                                <Trash2 size={20} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* 로그아웃 */}
+                            <button
+                                onClick={handleLogout}
+                                className="btn w-full"
+                                style={{
+                                    background: 'var(--color-pink-light)',
+                                    color: 'var(--color-danger)',
+                                    border: 'none',
+                                }}
+                            >
+                                <LogOut size={20} />
+                                로그아웃
+                            </button>
+                        </>
+                    ) : (
+                        <div className="card text-center">
+                            <p style={{ fontSize: 'var(--font-size-lg)', marginBottom: '1rem' }}>
+                                로그인이 필요합니다.
+                            </p>
+                            <Link href="/login" className="btn btn-primary w-full">
+                                로그인하기
+                            </Link>
+                        </div>
+                    )}
                 </div>
-            )}
-        </div>
+            </div>
+        </>
     );
 }

@@ -4,7 +4,8 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+// 백엔드 직접 호출 (Next.js 프록시 우회)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/';
 
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -34,7 +35,7 @@ apiClient.interceptors.response.use(
             try {
                 const refreshToken = localStorage.getItem('refresh_token');
                 if (refreshToken) {
-                    const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+                    const response = await axios.post(`${API_BASE_URL}token/refresh/`, {
                         refresh: refreshToken,
                     });
 
@@ -56,41 +57,42 @@ apiClient.interceptors.response.use(
     }
 );
 
-// API 함수들
+// API 함수들 
+// 주의: path에 leading slash 없어야 함 (baseURL에 trailing slash 있음)
 export const api = {
     // 인증
     auth: {
         login: (username: string, password: string) =>
-            apiClient.post('/token/', { username, password }),
+            apiClient.post('token/', { username, password }),
         register: (data: any) =>
-            apiClient.post('/users/', data),
+            apiClient.post('users/', data),
         me: () =>
-            apiClient.get('/users/me/'),
+            apiClient.get('users/me'),
     },
 
     // 복약
     medications: {
         list: () =>
-            apiClient.get('/medications/'),
+            apiClient.get('medications/'),
         get: (id: number) =>
-            apiClient.get(`/medications/${id}/`),
+            apiClient.get(`medications/${id}`),
         create: (data: any) =>
-            apiClient.post('/medications/', data),
+            apiClient.post('medications/', data),
         update: (id: number, data: any) =>
-            apiClient.patch(`/medications/${id}/`, data),
+            apiClient.patch(`medications/${id}`, data),
         delete: (id: number) =>
-            apiClient.delete(`/medications/${id}/`),
+            apiClient.delete(`medications/${id}`),
         scanPrescription: (image: File) => {
             const formData = new FormData();
             formData.append('image', image);
-            return apiClient.post('/medications/scan_prescription/', formData, {
+            return apiClient.post('medications/scan_prescription', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
         },
         voiceCommand: (audio: File) => {
             const formData = new FormData();
             formData.append('audio', audio);
-            return apiClient.post('/medications/voice_command/', formData, {
+            return apiClient.post('medications/voice_command', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
         },
@@ -99,28 +101,28 @@ export const api = {
     // 복약 기록
     logs: {
         today: () =>
-            apiClient.get('/medications/logs/today/'),
+            apiClient.get('medications/logs/today'),
         take: (id: number) =>
-            apiClient.post(`/medications/logs/${id}/take/`),
+            apiClient.post(`medications/logs/${id}/take`),
     },
 
     // 알림
     alerts: {
         list: () =>
-            apiClient.get('/alerts/'),
+            apiClient.get('alerts/'),
         pending: () =>
-            apiClient.get('/alerts/pending/'),
+            apiClient.get('alerts/pending'),
     },
 
     // 비상 연락처
     emergencyContacts: {
         list: () =>
-            apiClient.get('/alerts/emergency-contacts/'),
+            apiClient.get('alerts/emergency-contacts'),
         create: (data: any) =>
-            apiClient.post('/alerts/emergency-contacts/', data),
+            apiClient.post('alerts/emergency-contacts', data),
         update: (id: number, data: any) =>
-            apiClient.patch(`/alerts/emergency-contacts/${id}/`, data),
+            apiClient.patch(`alerts/emergency-contacts/${id}`, data),
         delete: (id: number) =>
-            apiClient.delete(`/alerts/emergency-contacts/${id}/`),
+            apiClient.delete(`alerts/emergency-contacts/${id}`),
     },
 };

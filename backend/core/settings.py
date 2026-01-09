@@ -6,6 +6,9 @@ Django settings for Yak-Sok project.
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -52,6 +55,10 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'core.urls'
+
+# API 서버에서는 trailing slash 자동 리다이렉트 비활성화
+# Next.js 프록시가 슬래시를 제거하는 문제 해결
+APPEND_SLASH = False
 
 TEMPLATES = [
     {
