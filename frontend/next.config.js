@@ -3,6 +3,10 @@ const nextConfig = {
     // PWA를 위한 설정
     reactStrictMode: true,
 
+    // trailing slash 보존 (Django API 호환)
+    trailingSlash: false,
+    skipTrailingSlashRedirect: true,
+
     // API 프록시 설정
     async rewrites() {
         return [
@@ -20,3 +24,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+

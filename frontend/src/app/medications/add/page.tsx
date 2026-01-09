@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Pill, Sun, Sunrise, Sunset, Moon, Check, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
 
 type TimeOfDay = 'morning' | 'noon' | 'evening' | 'night';
@@ -12,11 +13,11 @@ interface Schedule {
     scheduled_time: string;
 }
 
-const TIME_OPTIONS: { value: TimeOfDay; label: string; defaultTime: string }[] = [
-    { value: 'morning', label: '🌅 아침', defaultTime: '08:00' },
-    { value: 'noon', label: '☀️ 점심', defaultTime: '12:00' },
-    { value: 'evening', label: '🌆 저녁', defaultTime: '18:00' },
-    { value: 'night', label: '🌙 취침 전', defaultTime: '22:00' },
+const TIME_OPTIONS: { value: TimeOfDay; label: string; defaultTime: string; icon: React.ReactNode }[] = [
+    { value: 'morning', label: '아침', defaultTime: '08:00', icon: <Sunrise size={24} /> },
+    { value: 'noon', label: '점심', defaultTime: '12:00', icon: <Sun size={24} /> },
+    { value: 'evening', label: '저녁', defaultTime: '18:00', icon: <Sunset size={24} /> },
+    { value: 'night', label: '취침 전', defaultTime: '22:00', icon: <Moon size={24} /> },
 ];
 
 export default function AddMedicationPage() {
@@ -73,11 +74,6 @@ export default function AddMedicationPage() {
                 }
             });
 
-            // TODO: 스케줄 API 호출
-            // schedules.forEach(schedule => {
-            //   await api.medications.createSchedule(medicationId, schedule);
-            // });
-
             router.push('/medications');
         } catch (err: any) {
             setError(err.response?.data?.detail || '약 등록에 실패했습니다.');
@@ -87,148 +83,170 @@ export default function AddMedicationPage() {
     };
 
     return (
-        <div className="container min-h-screen p-6">
-            {/* 헤더 */}
-            <header className="flex items-center mb-6" style={{ justifyContent: 'space-between' }}>
-                <Link
-                    href="/medications"
-                    style={{
-                        fontSize: 'var(--font-size-xl)',
-                        textDecoration: 'none',
-                        color: 'var(--color-text)',
-                    }}
-                >
-                    ←
-                </Link>
-                <h1 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700 }}>
-                    💊 약 추가하기
-                </h1>
-                <div style={{ width: '40px' }} />
-            </header>
-
-            {/* 폼 */}
-            <form onSubmit={handleSubmit}>
-                {error && (
-                    <div style={{
-                        padding: '1rem',
-                        marginBottom: '1rem',
-                        background: '#FEE2E2',
-                        color: 'var(--color-danger)',
-                        borderRadius: 'var(--border-radius)',
-                        fontSize: 'var(--font-size-base)',
-                    }}>
-                        {error}
-                    </div>
-                )}
-
-                <div className="card mb-6">
-                    <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                        <label style={{
-                            display: 'block',
-                            marginBottom: '0.5rem',
-                            fontSize: 'var(--font-size-lg)',
-                            fontWeight: 600,
-                        }}>
-                            약 이름 *
-                        </label>
-                        <input
-                            type="text"
-                            className="input"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="예: 혈압약, 당뇨약"
-                            required
-                            style={{ fontSize: 'var(--font-size-lg)' }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                        <label style={{
-                            display: 'block',
-                            marginBottom: '0.5rem',
-                            fontSize: 'var(--font-size-lg)',
-                            fontWeight: 600,
-                        }}>
-                            복용량
-                        </label>
-                        <input
-                            type="text"
-                            className="input"
-                            value={formData.dosage}
-                            onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
-                            placeholder="예: 1정, 2알"
-                            style={{ fontSize: 'var(--font-size-lg)' }}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={{
-                            display: 'block',
-                            marginBottom: '0.5rem',
-                            fontSize: 'var(--font-size-lg)',
-                            fontWeight: 600,
-                        }}>
-                            복용 설명 (선택)
-                        </label>
-                        <textarea
-                            className="input"
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="복용 시 주의사항 등"
-                            rows={3}
+        <>
+            <div className="organic-bg" />
+            <div className="page-wrapper">
+                <div className="page-content">
+                    {/* 헤더 */}
+                    <header className="flex items-center" style={{ justifyContent: 'space-between' }}>
+                        <Link
+                            href="/medications"
+                            className="status-icon"
                             style={{
-                                fontSize: 'var(--font-size-base)',
-                                resize: 'none',
+                                width: '44px',
+                                height: '44px',
+                                background: 'var(--color-cream)',
                             }}
-                        />
-                    </div>
-                </div>
+                        >
+                            <ArrowLeft size={22} color="var(--color-text)" />
+                        </Link>
+                        <h1 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Pill size={24} color="var(--color-mint-dark)" />
+                            약 추가하기
+                        </h1>
+                        <div style={{ width: '44px' }} />
+                    </header>
 
-                {/* 복용 시간 선택 */}
-                <div className="card mb-6">
-                    <label style={{
-                        display: 'block',
-                        marginBottom: '1rem',
-                        fontSize: 'var(--font-size-lg)',
-                        fontWeight: 600,
-                    }}>
-                        복용 시간 *
-                    </label>
-                    <div className="flex flex-col gap-4">
-                        {TIME_OPTIONS.map(option => (
-                            <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => handleTimeToggle(option.value)}
-                                className="btn w-full"
-                                style={{
-                                    justifyContent: 'space-between',
-                                    background: selectedTimes[option.value] ? 'var(--color-primary)' : 'var(--color-surface)',
-                                    color: selectedTimes[option.value] ? 'white' : 'var(--color-text)',
-                                    border: '2px solid var(--color-primary)',
-                                }}
-                            >
-                                <span style={{ fontSize: 'var(--font-size-lg)' }}>
-                                    {option.label}
-                                </span>
-                                <span style={{ fontSize: 'var(--font-size-base)' }}>
-                                    {option.defaultTime}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                    {/* 폼 */}
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        {error && (
+                            <div style={{
+                                padding: '1rem',
+                                marginBottom: '1rem',
+                                background: 'var(--color-pink-light)',
+                                color: 'var(--color-danger)',
+                                borderRadius: 'var(--border-radius)',
+                                fontSize: 'var(--font-size-base)',
+                            }}>
+                                {error}
+                            </div>
+                        )}
 
-                {/* 제출 버튼 */}
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="btn btn-primary w-full"
-                    style={{ fontSize: 'var(--font-size-xl)', minHeight: '64px' }}
-                >
-                    {isLoading ? '등록 중...' : '✓ 약 등록하기'}
-                </button>
-            </form>
-        </div>
+                        <div className="card mb-6">
+                            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    fontSize: 'var(--font-size-lg)',
+                                    fontWeight: 600,
+                                }}>
+                                    약 이름 *
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="예: 혈압약, 당뇨약"
+                                    required
+                                    style={{ fontSize: 'var(--font-size-lg)' }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    fontSize: 'var(--font-size-lg)',
+                                    fontWeight: 600,
+                                }}>
+                                    복용량
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.dosage}
+                                    onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                                    placeholder="예: 1정, 2알"
+                                    style={{ fontSize: 'var(--font-size-lg)' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    fontSize: 'var(--font-size-lg)',
+                                    fontWeight: 600,
+                                }}>
+                                    복용 설명 (선택)
+                                </label>
+                                <textarea
+                                    className="input"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="복용 시 주의사항 등"
+                                    rows={3}
+                                    style={{
+                                        fontSize: 'var(--font-size-base)',
+                                        resize: 'none',
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 복용 시간 선택 */}
+                        <div className="card mb-6">
+                            <label style={{
+                                display: 'block',
+                                marginBottom: '1rem',
+                                fontSize: 'var(--font-size-lg)',
+                                fontWeight: 600,
+                            }}>
+                                복용 시간 *
+                            </label>
+                            <div className="flex flex-col gap-4">
+                                {TIME_OPTIONS.map(option => (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => handleTimeToggle(option.value)}
+                                        className="btn w-full"
+                                        style={{
+                                            justifyContent: 'space-between',
+                                            background: selectedTimes[option.value]
+                                                ? 'linear-gradient(135deg, var(--color-mint-light) 0%, var(--color-mint) 100%)'
+                                                : 'var(--color-cream)',
+                                            color: selectedTimes[option.value] ? 'white' : 'var(--color-text)',
+                                            border: 'none',
+                                            boxShadow: selectedTimes[option.value]
+                                                ? '0 4px 12px rgba(123, 196, 154, 0.4)'
+                                                : 'var(--shadow-neumorphic)',
+                                        }}
+                                    >
+                                        <span style={{ fontSize: 'var(--font-size-lg)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            {option.icon}
+                                            {option.label}
+                                        </span>
+                                        <span style={{ fontSize: 'var(--font-size-base)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            {option.defaultTime}
+                                            {selectedTimes[option.value] && <Check size={20} />}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 제출 버튼 */}
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="btn btn-primary w-full"
+                            style={{ fontSize: 'var(--font-size-xl)', minHeight: '64px' }}
+                        >
+                            {isLoading ? (
+                                <Loader2 size={24} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Check size={24} />
+                                    약 등록하기
+                                </>
+                            )}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </>
     );
 }
+
