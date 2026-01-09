@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pill, User, Users, Loader2 } from 'lucide-react';
-import { api } from '@/services/api';
+import { api, API_BASE_URL } from '@/services/api';
 import { useMedicationStore } from '@/services/store';
 
 export default function LoginPage() {
@@ -21,6 +21,12 @@ export default function LoginPage() {
         phone_number: '',
         role: 'senior' as 'senior' | 'guardian',
     });
+
+    useEffect(() => {
+        // 로그인 페이지 진입 시 기존 토큰 삭제 (401 오류 방지)
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,6 +49,7 @@ export default function LoginPage() {
                 // 회원가입
                 if (formData.password !== formData.password_confirm) {
                     setError('비밀번호가 일치하지 않습니다.');
+                    setIsLoading(false);
                     return;
                 }
 
@@ -56,7 +63,20 @@ export default function LoginPage() {
                 router.push('/');
             }
         } catch (err: any) {
-            setError(err.response?.data?.detail || '오류가 발생했습니다. 다시 시도해주세요.');
+            console.error(err);
+            if (err.response?.data) {
+                // DRF 유효성 검사 에러 처리
+                const data = err.response.data;
+                if (typeof data === 'object') {
+                    // 첫 번째 에러 메시지 표시
+                    const firstError = Object.values(data).flat()[0];
+                    setError(String(firstError));
+                } else {
+                    setError(data.detail || '오류가 발생했습니다.');
+                }
+            } else {
+                setError('서버 연결에 실패했습니다.');
+            }
         } finally {
             setIsLoading(false);
         }

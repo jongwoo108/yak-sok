@@ -137,10 +137,17 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings
+# CORS Settings
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS', 
     'http://localhost:3000,http://127.0.0.1:3000'
 ).split(',')
+
+# Allow ngrok
+if DEBUG:
+    ALLOWED_HOSTS = ['*']  # 개발 모드에서는 모든 호스트 허용
+    CORS_ALLOW_ALL_ORIGINS = True  # 모든 Origin 허용
+    CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app', 'https://*.ngrok.io']
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
