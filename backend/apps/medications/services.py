@@ -4,8 +4,10 @@ Medications Services - OCR 및 STT 처리
 
 import json
 import base64
+import io
 from openai import OpenAI
 from django.conf import settings
+from PIL import Image, ExifTags
 
 
 class OCRService:
@@ -16,6 +18,33 @@ class OCRService:
     
     def __init__(self):
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    
+    def _auto_rotate_image(self, image_content: bytes) -> bytes:
+        """
+        EXIF 데이터를 기반으로 이미지 자동 회전
+        모바일에서 세로로 촬영한 사진을 올바른 방향으로 회전
+        """
+        from PIL import ImageOps
+        
+        try:
+            image = Image.open(io.BytesIO(image_content))
+            
+            # EXIF 기반 자동 회전 (가장 신뢰할 수 있는 방법)
+            image = ImageOps.exif_transpose(image)
+            
+            # RGB 모드로 변환 (PNG 등 대응)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # 회전된 이미지를 bytes로 변환
+            output = io.BytesIO()
+            image.save(output, format='JPEG', quality=90)
+            print(f"[이미지 회전] 원본 → 회전 완료 (크기: {image.size})")
+            return output.getvalue()
+            
+        except Exception as e:
+            print(f"이미지 회전 처리 건너뜀: {e}")
+            return image_content
     
     def parse_prescription(self, image_file):
         """
@@ -28,12 +57,16 @@ class OCRService:
             dict: 추출된 약품 정보 리스트
         """
         try:
-            # 이미지를 base64로 인코딩
+            # 이미지 읽기 및 자동 회전
             image_content = image_file.read()
+            image_content = self._auto_rotate_image(image_content)
             image_base64 = base64.b64encode(image_content).decode('utf-8')
             
             prompt = """
             이 처방전 이미지에서 약품 정보를 추출해서 JSON 형식으로 반환해줘.
+            
+            **중요: 이미지가 90도, 180도, 270도 회전되어 있을 수 있어. 텍스트가 읽히는 올바른 방향을 자동으로 감지해서 인식해줘.**
+            
             이미지는 일반적으로 '약품명', '약품 사진', '설명/효능', '복용법' 등의 컬럼으로 구성된 표 형태일 거야.
             각 행(Row)을 분석해서 다음 필드를 포함하는 리스트를 만들어줘:
 
@@ -72,10 +105,31 @@ class OCRService:
             content = content.replace('```json', '').replace('```', '').strip()
             result = json.loads(content)
             
+            # RAG를 통한 약품명 보정
+            medications = result.get('medications', [])
+            try:
+                from .rag_service import get_rag_service
+                rag_service = get_rag_service()
+                
+                for med in medications:
+                    if med.get('name'):
+                        correction = rag_service.correct_medication_name(med['name'])
+                        if correction.get('matched'):
+                            med['name'] = correction['corrected']
+                            med['rag_confidence'] = correction['confidence']
+                            # 성분/제조사 정보도 추가
+                            if correction.get('ingredient'):
+                                med['ingredient'] = correction['ingredient']
+                            if correction.get('manufacturer'):
+                                med['manufacturer'] = correction['manufacturer']
+            except Exception as rag_error:
+                print(f"RAG 보정 건너뜀: {rag_error}")
+                # RAG 오류 시에도 OCR 결과는 반환
+            
             return {
                 'success': True,
                 'symptom': result.get('symptom', ''),
-                'medications': result.get('medications', []),
+                'medications': medications,
                 'message': 'OCR 처리가 완료되었습니다.'
             }
             
@@ -87,6 +141,7 @@ class OCRService:
                 'success': False,
                 'message': f'OCR 처리 중 오류가 발생했습니다: {str(e)}'
             }
+
 
 
 class STTService:

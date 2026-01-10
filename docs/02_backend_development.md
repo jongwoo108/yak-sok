@@ -210,10 +210,15 @@ celery -A core beat --loglevel=info
 - [x] ~~OpenAI Vision API 연동 (OCR 실제 구현)~~ ✅ 완료
 - [x] ~~OpenAI Whisper API 연동 (STT 실제 구현)~~ ✅ 완료
 - [x] ~~약품 그룹 기능 (MedicationGroup 모델)~~ ✅ 완료
-- [ ] **OCR 정확도 향상 - RAG 구현** (아래 참조)
+- [x] ~~OCR 정확도 향상 - RAG 구현~~ ✅ 완료 (Pinecone + 100개 샘플)
 - [ ] Firebase Admin SDK 연동 (푸시 알림 - Safety Line)
 - [ ] 유닛 테스트 작성
 - [ ] API 문서화 (Swagger/drf-spectacular)
+
+### 후순위 개선 항목
+- [ ] **세로 사진 자동 회전** - EXIF 처리로 해결 안 됨, 추가 연구 필요
+- [ ] **증상 자동 추정 개선** - RAG 데이터에 `indications` 필드 추가하여 약품별 적응증 기반 증상 추정
+- [ ] **약품 데이터 확장** - 약학정보원 크롤링으로 전체 약품 DB 구축
 
 ---
 
@@ -287,3 +292,37 @@ class OCRService:
 | **Supabase pgvector** | 500MB | ⭐⭐ |
 | **ChromaDB (로컬)** | 무제한 | ⭐ (운영 복잡) |
 
+---
+
+## RAG 구현 완료 (2026-01-10)
+
+### 구현된 파일
+
+| 파일 | 설명 |
+|------|------|
+| `apps/medications/rag_service.py` | RAG 서비스 클래스 |
+| `data/medications.json` | 100개 샘플 약품 데이터 |
+| `apps/medications/management/commands/upload_medications.py` | Pinecone 업로드 명령어 |
+
+### 환경 변수 (.env)
+```
+PINECONE_API_KEY=your_api_key
+PINECONE_INDEX_NAME=medications
+```
+
+### 사용법
+```bash
+# 약품 데이터 Pinecone 업로드
+python manage.py upload_medications
+```
+
+### 동작 방식
+1. OCR이 약품명 추출 (GPT-4o)
+2. RAG가 유사도 검색으로 약품명 보정 (임계값 0.75)
+3. 75% 이상 일치 시 보정, 미만 시 원본 유지
+
+### 디버그 로그
+```
+[RAG] '파록소씨알정' → '파록스씨알정 12.5mg' (유사도: 0.741) ✅
+[RAG] '산도스에스시탈로프람정' → 매칭 실패 (유사도: 0.650) ❌
+```

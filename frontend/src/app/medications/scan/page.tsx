@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Camera, Lightbulb, Search, Check, RefreshCw, Loader2, Clock, Plus, Package, X } from 'lucide-react';
+import { ArrowLeft, Camera, Lightbulb, Search, Check, RefreshCw, Loader2, Clock, Plus, Package, X, RotateCw } from 'lucide-react';
 import { api } from '@/services/api';
 import { useMedicationStore } from '@/services/store';
 
@@ -63,6 +63,36 @@ export default function ScanPrescriptionPage() {
 
     const removeImage = (index: number) => {
         setImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const rotateImage = async (index: number) => {
+        const img = images[index];
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const image = new Image();
+
+        image.onload = () => {
+            // 90도 회전
+            canvas.width = image.height;
+            canvas.height = image.width;
+            ctx?.translate(canvas.width / 2, canvas.height / 2);
+            ctx?.rotate(90 * Math.PI / 180);
+            ctx?.drawImage(image, -image.width / 2, -image.height / 2);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const rotatedFile = new File([blob], img.file.name, { type: 'image/jpeg' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setImages(prev => prev.map((item, i) =>
+                            i === index ? { file: rotatedFile, preview: reader.result as string } : item
+                        ));
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }, 'image/jpeg', 0.9);
+        };
+        image.src = img.preview;
     };
 
     const handleAnalyzeAll = async () => {
@@ -272,6 +302,64 @@ export default function ScanPrescriptionPage() {
                         </div>
                     )}
 
+                    {/* STEP: 분석 중 */}
+                    {step === 'analyze' && (
+                        <div className="card" style={{
+                            minHeight: '400px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textAlign: 'center',
+                        }}>
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, var(--color-mint-light) 0%, var(--color-mint) 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: '1.5rem',
+                                animation: 'pulse 1.5s ease-in-out infinite',
+                            }}>
+                                <Loader2 size={36} color="white" style={{ animation: 'spin 1s linear infinite' }} />
+                            </div>
+                            <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, marginBottom: '0.5rem' }}>
+                                AI가 처방전을 분석 중입니다
+                            </h2>
+                            <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-light)', marginBottom: '1.5rem' }}>
+                                {images.length}장의 이미지를 분석하고 있어요...
+                            </p>
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem',
+                                fontSize: 'var(--font-size-sm)',
+                                color: 'var(--color-text-light)',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                                    <span>약품명 추출 중...</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                                    <span>RAG로 약품명 보정 중...</span>
+                                </div>
+                            </div>
+                            <style jsx>{`
+                                @keyframes pulse {
+                                    0%, 100% { transform: scale(1); opacity: 1; }
+                                    50% { transform: scale(1.05); opacity: 0.8; }
+                                }
+                                @keyframes spin {
+                                    from { transform: rotate(0deg); }
+                                    to { transform: rotate(360deg); }
+                                }
+                            `}</style>
+                        </div>
+                    )}
+
                     {/* STEP 1: 이미지 촬영/수집 */}
                     {step === 'capture' && (
                         <>
@@ -294,6 +382,28 @@ export default function ScanPrescriptionPage() {
                                                         borderRadius: '8px',
                                                     }}
                                                 />
+                                                {/* 회전 버튼 */}
+                                                <button
+                                                    onClick={() => rotateImage(idx)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '-8px',
+                                                        left: '-8px',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '50%',
+                                                        background: 'var(--color-mint)',
+                                                        border: 'none',
+                                                        color: 'white',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    <RotateCw size={12} />
+                                                </button>
+                                                {/* 삭제 버튼 */}
                                                 <button
                                                     onClick={() => removeImage(idx)}
                                                     style={{
@@ -407,26 +517,7 @@ export default function ScanPrescriptionPage() {
                         </>
                     )}
 
-                    {/* STEP 2: AI 분석 중 */}
-                    {step === 'analyze' && (
-                        <div className="card text-center" style={{ padding: '3rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                                <div className="status-icon" style={{
-                                    width: '80px',
-                                    height: '80px',
-                                    background: 'linear-gradient(135deg, var(--color-mint-light) 0%, var(--color-mint) 100%)',
-                                }}>
-                                    <Loader2 size={36} color="white" className="animate-spin" />
-                                </div>
-                            </div>
-                            <p style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, marginBottom: '0.5rem' }}>
-                                AI 분석 중...
-                            </p>
-                            <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-light)' }}>
-                                {images.length}장의 이미지를 분석하고 있습니다
-                            </p>
-                        </div>
-                    )}
+
 
                     {/* STEP 3: 결과 편집 */}
                     {step === 'edit' && (
@@ -483,8 +574,8 @@ export default function ScanPrescriptionPage() {
                                             opacity: med.isDuplicate ? 0.7 : 1,
                                         }}
                                     >
-                                        <div className="flex justify-between items-start" style={{ marginBottom: '0.75rem' }}>
-                                            <div>
+                                        <div className="flex justify-between items-start" style={{ marginBottom: '0.75rem', gap: '1rem' }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
                                                 <p style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>
                                                     {med.name}
                                                 </p>
@@ -497,10 +588,13 @@ export default function ScanPrescriptionPage() {
                                                     fontSize: 'var(--font-size-sm)',
                                                     color: 'white',
                                                     background: 'var(--color-danger)',
-                                                    padding: '0.25rem 0.75rem',
+                                                    padding: '0.375rem 0.75rem',
                                                     borderRadius: '999px',
                                                     fontWeight: 600,
                                                     whiteSpace: 'nowrap',
+                                                    flexShrink: 0,
+                                                    alignSelf: 'flex-start',
+                                                    lineHeight: 1.2,
                                                 }}>
                                                     이미 등록됨
                                                 </span>
