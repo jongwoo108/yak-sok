@@ -6,6 +6,39 @@ from django.db import models
 from django.conf import settings
 
 
+class MedicationGroup(models.Model):
+    """
+    약품 그룹 (함께 복용하는 약 묶음)
+    그룹 이름 = 증상/질환명 (예: 고혈압, 당뇨, 우울증)
+    """
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='medication_groups',
+        verbose_name='사용자'
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name='증상/질환명'
+    )
+    color = models.CharField(
+        max_length=20,
+        default='mint',
+        verbose_name='구분 색상'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = '약품 그룹'
+        verbose_name_plural = '약품 그룹 목록'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
+
+
 class Medication(models.Model):
     """
     복용 약품 정보
@@ -17,6 +50,14 @@ class Medication(models.Model):
         on_delete=models.CASCADE,
         related_name='medications',
         verbose_name='사용자'
+    )
+    group = models.ForeignKey(
+        MedicationGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='medications',
+        verbose_name='약품 그룹'
     )
     name = models.CharField(
         max_length=100,
@@ -48,7 +89,7 @@ class Medication(models.Model):
     class Meta:
         verbose_name = '복용 약품'
         verbose_name_plural = '복용 약품 목록'
-        ordering = ['-created_at']
+        ordering = ['group', '-created_at']
     
     def __str__(self):
         return f"{self.name} ({self.user.username})"

@@ -3,7 +3,15 @@ Medications Admin
 """
 
 from django.contrib import admin
-from .models import Medication, MedicationSchedule, MedicationLog
+from .models import Medication, MedicationSchedule, MedicationLog, MedicationGroup
+
+
+@admin.register(MedicationGroup)
+class MedicationGroupAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'color', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['name', 'user__username']
+
 
 
 @admin.register(Medication)

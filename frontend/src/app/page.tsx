@@ -1,27 +1,103 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Pill, List, Settings, PartyPopper, Loader2 } from 'lucide-react';
-import { MedicationCard } from '@/components/MedicationCard';
+import { Pill, List, Settings, PartyPopper, Loader2, Package, Check } from 'lucide-react';
 import { useMedicationStore } from '@/services/store';
+import { api } from '@/services/api';
+
+interface MedicationLog {
+    id: number;
+    medication_name: string;
+    medication_dosage: string;
+    group_id: number | null;
+    group_name: string | null;
+    time_of_day: string;
+    time_of_day_display: string;
+    scheduled_datetime: string;
+    status: string;
+}
+
+interface GroupedLogs {
+    key: string;
+    group_id: number | null;
+    group_name: string | null;
+    time_of_day: string;
+    time_of_day_display: string;
+    logs: MedicationLog[];
+    allTaken: boolean;
+}
 
 export default function HomePage() {
     const { todayLogs, fetchTodayLogs, isLoading } = useMedicationStore();
+    const [takingGroup, setTakingGroup] = useState<string | null>(null);
 
     useEffect(() => {
         fetchTodayLogs();
     }, [fetchTodayLogs]);
 
-    const completedCount = todayLogs.filter(log => log.status === 'taken').length;
+    // 그룹 + 시간대별로 로그 묶기
+    const groupedLogs: GroupedLogs[] = [];
+    const groupMap = new Map<string, GroupedLogs>();
+
+    todayLogs.forEach((log: MedicationLog) => {
+        // 그룹이 있으면 group_id + time_of_day로 키 생성, 없으면 log.id로 개별 처리
+        const key = log.group_id
+            ? `group_${log.group_id}_${log.time_of_day}`
+            : `single_${log.id}`;
+
+        if (!groupMap.has(key)) {
+            groupMap.set(key, {
+                key,
+                group_id: log.group_id,
+                group_name: log.group_name,
+                time_of_day: log.time_of_day,
+                time_of_day_display: log.time_of_day_display,
+                logs: [],
+                allTaken: true,
+            });
+        }
+
+        const group = groupMap.get(key)!;
+        group.logs.push(log);
+        if (log.status !== 'taken') {
+            group.allTaken = false;
+        }
+    });
+
+    groupMap.forEach(group => groupedLogs.push(group));
+    // 시간 순 정렬
+    groupedLogs.sort((a, b) => {
+        const timeOrder = { morning: 1, noon: 2, evening: 3, night: 4 };
+        return (timeOrder[a.time_of_day as keyof typeof timeOrder] || 5) -
+            (timeOrder[b.time_of_day as keyof typeof timeOrder] || 5);
+    });
+
+    const completedCount = todayLogs.filter((log: MedicationLog) => log.status === 'taken').length;
     const totalCount = todayLogs.length;
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+    const handleTakeGroup = async (group: GroupedLogs) => {
+        if (group.allTaken) return;
+
+        setTakingGroup(group.key);
+        try {
+            const pendingLogIds = group.logs
+                .filter(log => log.status !== 'taken')
+                .map(log => log.id);
+
+            await api.logs.batchTake(pendingLogIds);
+            await fetchTodayLogs();
+        } catch (err) {
+            console.error('Failed to take medications', err);
+        } finally {
+            setTakingGroup(null);
+        }
+    };
+
     return (
         <>
-            {/* 유기적 배경 그라데이션 */}
             <div className="organic-bg" />
-
             <div className="page-wrapper">
                 <div className="page-content">
                     {/* 헤더 */}
@@ -76,7 +152,7 @@ export default function HomePage() {
                         </div>
                     )}
 
-                    {/* 복약 카드 목록 */}
+                    {/* 복약 카드 목록 - 그룹별 표시 */}
                     <section className="flex flex-col gap-4">
                         {isLoading ? (
                             <div className="card text-center">
@@ -85,7 +161,7 @@ export default function HomePage() {
                                 </div>
                                 <p style={{ fontSize: 'var(--font-size-lg)' }}>로딩 중...</p>
                             </div>
-                        ) : todayLogs.length === 0 ? (
+                        ) : groupedLogs.length === 0 ? (
                             <div className="card text-center">
                                 <div style={{
                                     display: 'flex',
@@ -105,14 +181,124 @@ export default function HomePage() {
                                 }}>
                                     오늘 복용할 약이 없습니다
                                 </p>
-                                <Link href="/medications/add" className="btn btn-primary">
+                                <Link href="/medications/scan" className="btn btn-primary">
                                     <Pill size={20} />
-                                    약 추가하기
+                                    처방전 스캔하기
                                 </Link>
                             </div>
                         ) : (
-                            todayLogs.map((log) => (
-                                <MedicationCard key={log.id} log={log} />
+                            groupedLogs.map((group) => (
+                                <div
+                                    key={group.key}
+                                    className="card"
+                                    style={{
+                                        opacity: group.allTaken ? 0.6 : 1,
+                                        transition: 'all 0.3s ease',
+                                    }}
+                                >
+                                    {/* 그룹 헤더 */}
+                                    <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
+                                        <div className="flex items-center gap-2">
+                                            {group.group_name ? (
+                                                <>
+                                                    <Package size={20} color="var(--color-mint-dark)" />
+                                                    <span style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)' }}>
+                                                        {group.group_name}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)' }}>
+                                                    {group.logs[0]?.medication_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span style={{
+                                            padding: '0.25rem 0.75rem',
+                                            borderRadius: '999px',
+                                            background: 'var(--color-cream)',
+                                            fontSize: 'var(--font-size-sm)',
+                                            fontWeight: 600,
+                                            color: 'var(--color-text-light)',
+                                        }}>
+                                            {group.time_of_day_display}
+                                        </span>
+                                    </div>
+
+                                    {/* 약품 목록 */}
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        {group.logs.map((log, idx) => (
+                                            <div
+                                                key={log.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.75rem',
+                                                    padding: '0.5rem 0',
+                                                    borderBottom: idx < group.logs.length - 1 ? '1px solid var(--color-cream)' : 'none',
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    borderRadius: '50%',
+                                                    background: log.status === 'taken'
+                                                        ? 'var(--color-mint)'
+                                                        : 'var(--color-cream)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}>
+                                                    {log.status === 'taken' && (
+                                                        <Check size={14} color="white" />
+                                                    )}
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <p style={{
+                                                        fontWeight: 600,
+                                                        textDecoration: log.status === 'taken' ? 'line-through' : 'none',
+                                                        color: log.status === 'taken' ? 'var(--color-text-light)' : 'var(--color-text)',
+                                                    }}>
+                                                        {group.group_name ? log.medication_name : (log.medication_dosage || '')}
+                                                    </p>
+                                                    {group.group_name && log.medication_dosage && (
+                                                        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-light)' }}>
+                                                            {log.medication_dosage}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* 복용 완료 버튼 */}
+                                    <button
+                                        onClick={() => handleTakeGroup(group)}
+                                        disabled={group.allTaken || takingGroup === group.key}
+                                        className={`btn w-full ${group.allTaken ? '' : 'btn-primary'}`}
+                                        style={{
+                                            minHeight: '56px',
+                                            fontSize: 'var(--font-size-lg)',
+                                            background: group.allTaken ? 'var(--color-cream)' : undefined,
+                                            color: group.allTaken ? 'var(--color-text-light)' : undefined,
+                                        }}
+                                    >
+                                        {takingGroup === group.key ? (
+                                            <Loader2 size={24} className="animate-spin" />
+                                        ) : group.allTaken ? (
+                                            <>
+                                                <Check size={24} />
+                                                복용 완료
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Pill size={24} />
+                                                {group.logs.length > 1
+                                                    ? `${group.logs.length}개 약 한번에 복용하기`
+                                                    : '복용 완료'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             ))
                         )}
                     </section>
@@ -133,4 +319,3 @@ export default function HomePage() {
         </>
     );
 }
-
