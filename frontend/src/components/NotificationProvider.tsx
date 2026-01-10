@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { onMessageListener } from '@/services/firebase';
 import { useMedicationStore } from '@/services/store';
-import { X, Check } from 'lucide-react';
+import { X, Check, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface NotificationPayload {
@@ -83,22 +83,51 @@ export default function NotificationProvider({ children }: { children: React.Rea
         setToast(null);
     };
 
+    const getToastStyles = (severity?: string) => {
+        switch (severity) {
+            case 'emergency':
+                return {
+                    container: 'toast-emergency',
+                    title: 'toast-title-emergency',
+                    body: 'toast-body-emergency',
+                    icon: <div className="toast-icon toast-icon-emergency"><AlertCircle size={24} /></div>
+                };
+            case 'warning':
+                return {
+                    container: 'toast-warning',
+                    title: 'toast-title-warning',
+                    body: 'toast-body-warning',
+                    icon: <div className="toast-icon toast-icon-warning"><AlertTriangle size={24} /></div>
+                };
+            default: // reminder or info
+                return {
+                    container: 'toast-info',
+                    title: 'toast-title-info',
+                    body: 'toast-body-info',
+                    icon: <div className="toast-icon toast-icon-info"><Info size={24} /></div>
+                };
+        }
+    };
+
+    const styles = toast ? getToastStyles(toast.data?.severity) : null;
+
     return (
         <>
             {children}
 
             {/* Custom Toast UI */}
-            {toast && (
+            {toast && styles && (
                 <div
-                    className="toast"
+                    className={`toast ${styles.container}`}
                     onClick={handleAction}
                     role="alert"
                 >
+                    {styles.icon}
                     <div className="toast-content">
-                        <h4 className="toast-title">
+                        <h4 className={`toast-title ${styles.title}`}>
                             {toast.title}
                         </h4>
-                        <p className="toast-body">
+                        <p className={`toast-body ${styles.body}`}>
                             {toast.body}
                         </p>
                     </div>
@@ -106,10 +135,12 @@ export default function NotificationProvider({ children }: { children: React.Rea
                         onClick={(e) => { e.stopPropagation(); handleClose(); }}
                         className="toast-close"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
             )}
         </>
     );
 }
+
+

@@ -82,7 +82,8 @@ def trigger_safety_alert(self, alert_id):
         send_push_notification(
             user_id=user.id,
             title=alert.title,
-            message=alert.message
+            message=alert.message,
+            severity=alert.alert_type  # 심각도 전달
         )
         
         # 2단계: 보호자 알림
@@ -92,7 +93,8 @@ def trigger_safety_alert(self, alert_id):
             send_push_notification(
                 user_id=guardian.id,
                 title=f'[긴급] {user.first_name}님 미복약 알림',
-                message=alert.message
+                message=alert.message,
+                severity=Alert.AlertType.EMERGENCY  # 보호자 알림은 긴급으로 처리
             )
         
         # 알림 상태 업데이트
@@ -107,7 +109,7 @@ def trigger_safety_alert(self, alert_id):
 
 
 @shared_task
-def send_push_notification(user_id, title, message):
+def send_push_notification(user_id, title, message, severity='reminder'):
     """
     FCM 푸시 알림 발송
     """
@@ -129,7 +131,10 @@ def send_push_notification(user_id, title, message):
             token=fcm_token,
             title=title,
             body=message,
-            data={'user_id': str(user_id)}
+            data={
+                'user_id': str(user_id),
+                'severity': severity  # 심각도 추가
+            }
         )
         
         if success:
