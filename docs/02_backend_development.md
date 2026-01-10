@@ -211,7 +211,8 @@ celery -A core beat --loglevel=info
 - [x] ~~OpenAI Whisper API 연동 (STT 실제 구현)~~ ✅ 완료
 - [x] ~~약품 그룹 기능 (MedicationGroup 모델)~~ ✅ 완료
 - [x] ~~OCR 정확도 향상 - RAG 구현~~ ✅ 완료 (Pinecone + 100개 샘플)
-- [ ] Firebase Admin SDK 연동 (푸시 알림 - Safety Line)
+- [x] ~~Firebase Admin SDK 연동 (푸시 알림 - Safety Line)~~ ✅ 완료
+
 - [ ] 유닛 테스트 작성
 - [ ] API 문서화 (Swagger/drf-spectacular)
 
