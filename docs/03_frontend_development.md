@@ -272,7 +272,8 @@ npm start
 
 - [ ] 음성 인식 UI 추가 (Whisper 연동)
 - [ ] PWA 오프라인 지원
-- [ ] 푸시 알림 수신 처리 (FCM) - Safety Line
+- [x] ~~푸시 알림 수신 처리 (FCM) - Safety Line~~ ✅ 완료
+
 - [ ] 다크 모드 지원
 - [ ] E2E 테스트 (Playwright)
 - [ ] 접근성 검사 (axe-core)

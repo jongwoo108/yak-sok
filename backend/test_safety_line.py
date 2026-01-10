@@ -21,15 +21,34 @@ User = get_user_model()
 def run_test():
     print("\n[Safety Line Integration Test Start]")
     
+    import time
+    
     # 1. Setup Data
     print("\n1. Setting up test data...")
     user_email = f"testuser_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}@example.com"
     user = User.objects.create_user(username=user_email, email=user_email, password="password123")
-    user.fcm_token = "dpVlMrWQD7WOm0Nad3q8dJ:APA91bFkyvH-s0rfWRDk27PLxA7OsWhIBgmJYG_bgc_w_IddSf3tM7DLbbxXHNaWqLm6hleFvh_-Q88dchd_ZwYhiP_sB_zUvTh1JjgsrU_P2gCxKcgx4H4"
-    user.save()
-    print(f"Created user: {user.username}")
+    # user.fcm_token = "..." # 이전에 로그에서 복사한 토큰이 있다면 사용, 없으면 아래 로직대로
+    
+    # 주의: 실제 테스트를 위해서는 프론트엔드에서 발급받은 '내 기기의 실제 토큰'이 DB에 있어야 합니다.
+    # 이 스크립트는 '새로운 유저'를 만들기 때문에, 내 브라우저의 토큰과 연결되지 않습니다.
+    # 해결책: 내 기기의 토큰을 하드코딩하거나, 가장 최근에 업데이트된 유저의 토큰을 가져와야 합니다.
+    
+    print("Most recent user's token will be used if available.")
+    last_user = User.objects.exclude(fcm_token__isnull=True).exclude(fcm_token='').order_by('-date_joined').first()
+    
+    if last_user and last_user.fcm_token:
+        target_token = last_user.fcm_token
+        print(f"Using token from user {last_user.username}: {target_token[:20]}...")
+        user.fcm_token = target_token
+        user.save()
+    else:
+        # Fallback to the hardcoded one if no user has a token (for initial test)
+        user.fcm_token = "dpVlMrWQD7WOm0Nad3q8dJ:APA91bFkyvH-s0rfWRDk27PLxA7OsWhIBgmJYG_bgc_w_IddSf3tM7DLbbxXHNaWqLm6hleFvh_-Q88dchd_ZwYhiP_sB_zUvTh1JjgsrU_P2gCxKcgx4H4"
+        print("Using hardcoded fallback token.")
+        user.save()
 
     medication = Medication.objects.create(
+
         user=user,
         name="Test Pill (Safety Line)",
         dosage="10mg"
@@ -56,8 +75,16 @@ def run_test():
 
     # 2. Test Scheduling Alert
     print("\n2. Testing schedule_medication_alert()...")
+    
+    print("\n>>> 5초 뒤에 알림을 보냅니다! 브라우저 창을 활성화(클릭)하고 기다려주세요! <<<")
+    for i in range(5, 0, -1):
+        print(f"{i}...", end=" ", flush=True)
+        time.sleep(1)
+    print("발송!")
+
     # Call the task synchronously
     result = schedule_medication_alert(log.id)
+
     print(f"Task result: {result}")
     
     # Verify Alert creation

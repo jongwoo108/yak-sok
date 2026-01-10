@@ -40,9 +40,35 @@ self.addEventListener('notificationclick', (event) => {
     console.log('[SW] 알림 클릭:', event.action);
     event.notification.close();
 
-    if (event.action === 'open' || !event.action) {
-        event.waitUntil(
-            clients.openWindow('/')
-        );
+    const data = event.notification.data;
+    let url = '/';
+
+    // 데이터 타입에 따른 이동 경로 설정
+    if (data) {
+        if (data.type === 'medication_reminder') {
+            url = '/'; // 복약 알림은 홈으로
+        } else if (data.type === 'guardian_alert') {
+            url = '/alerts'; // 보호자 알림은 알림 목록으로
+        } else if (data.url) {
+            url = data.url;
+        }
     }
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            // 이미 열린 창이 있으면 포커스하고 URL 변경
+            for (let client of windowClients) {
+                if (client.url.includes(self.registration.scope) && 'focus' in client) {
+                    return client.focus().then((focusedClient) => {
+                        return focusedClient.navigate(url);
+                    });
+                }
+            }
+            // 열린 창이 없으면 새 창 열기
+            if (clients.openWindow) {
+                return clients.openWindow(url);
+            }
+        })
+    );
 });
+

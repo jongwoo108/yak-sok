@@ -162,6 +162,8 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 
 
+
+
 # OpenAI API Key (for OCR and STT)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
