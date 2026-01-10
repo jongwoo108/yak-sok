@@ -42,6 +42,11 @@ export interface MedicationLog {
     id: number;
     schedule: number;
     medication_name: string;
+    medication_dosage: string;
+    group_id: number | null;
+    group_name: string | null;
+    time_of_day: string;
+    time_of_day_display: string;
     scheduled_datetime: string;
     taken_datetime: string | null;
     status: 'pending' | 'taken' | 'missed' | 'skipped';

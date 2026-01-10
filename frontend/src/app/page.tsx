@@ -7,18 +7,7 @@ import { useMedicationStore } from '@/services/store';
 import { api } from '@/services/api';
 import { requestNotificationPermission } from '@/services/firebase';
 import { apiClient } from '@/services/api';
-
-interface MedicationLog {
-    id: number;
-    medication_name: string;
-    medication_dosage: string;
-    group_id: number | null;
-    group_name: string | null;
-    time_of_day: string;
-    time_of_day_display: string;
-    scheduled_datetime: string;
-    status: string;
-}
+import type { MedicationLog } from '@/services/types';
 
 interface GroupedLogs {
     key: string;
