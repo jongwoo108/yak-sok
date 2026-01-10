@@ -1,6 +1,9 @@
 {
   "dependencies": {
+    "expo-image-picker": "^17.0.10",
     "firebase": "^12.7.0",
-    "framer-motion": "^12.25.0"
+    "framer-motion": "^12.25.0",
+    "react-dom": "^19.1.0",
+    "react-native-web": "^0.21.2"
   }
 }

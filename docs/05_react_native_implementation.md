@@ -56,38 +56,67 @@ yak-sok/
 
 ## 개발 단계
 
-### Phase 1: 프로젝트 셋업 & 인증
+> **현재 진행률**: Phase 1 완료, Phase 2 진행 중 (약 70%)
+> 
+> 📅 **마지막 업데이트**: 2026-01-10
 
-- [ ] Expo 프로젝트 생성 (`npx create-expo-app@latest mobile`)
-- [ ] 필수 패키지 설치 (Zustand, Axios, NativeWind, expo-router)
-- [ ] 기존 `services/api.ts`, `store.ts` 로직 복사 및 수정
-- [ ] Firebase Auth 연동 (Google Login)
-- [ ] 로그인/회원가입 화면 구현
-- [ ] JWT 토큰 저장 (expo-secure-store)
+| 상태 | 의미 |
+|:---:|------|
+| ✅ | 완료 |
+| 🔄 | 진행 중 |
+| ⬜ | 미완료 |
 
-### Phase 2: 핵심 기능
+---
 
-- [ ] 탭 네비게이션 구성 (홈, 약 목록, 설정)
-- [ ] 홈 화면 구현 (오늘의 복약 목록, 복용 완료 버튼)
-- [ ] 약 목록 화면 (내 약 관리, 삭제 기능)
-- [ ] 약 추가 화면 (수동 입력, 시간대 선택)
-- [ ] 처방전 스캔 화면 (expo-camera + OCR API)
+### Phase 1: 프로젝트 셋업 & 인증 ✅
 
-### Phase 3: 푸시 알림
+- [x] ✅ Expo 프로젝트 생성 (`npx create-expo-app@latest mobile`)
+- [x] ✅ 필수 패키지 설치 (Zustand, Axios, expo-router, expo-secure-store)
+- [x] ✅ 기존 `services/api.ts`, `store.ts`, `types.ts` 로직 복사 및 수정
+- [x] ✅ 로그인/회원가입 화면 구현 (`app/(auth)/login.tsx`, `register.tsx`)
+- [ ] 🔄 Firebase Auth 연동 (Google Login) - *미완료*
+- [ ] ⬜ JWT 토큰 저장 연동 완료 (expo-secure-store) - *인프라 완료, 로직 연동 필요*
 
-- [ ] expo-notifications 설정
-- [ ] FCM 토큰 등록 로직 (백엔드 연동)
-- [ ] 포그라운드/백그라운드 알림 처리
-- [ ] 알림 클릭 시 딥링크 처리
+### Phase 2: 핵심 기능 ✅
 
-### Phase 4: 배포
+- [x] ✅ 탭 네비게이션 구성 (홈, 약 목록, 설정) - `app/(tabs)/_layout.tsx`
+- [x] ✅ 홈 화면 구현 (오늘의 복약 목록, 복용 완료 버튼) - `app/(tabs)/index.tsx`
+- [x] ✅ 약 목록 화면 (내 약 관리, 삭제 기능) - `app/(tabs)/medications.tsx`
+- [x] ✅ 약 추가 화면 (수동 입력, 시간대 선택) - `app/medications/add.tsx`
+- [x] ✅ 설정 화면 (프로필) - `app/(tabs)/profile.tsx`
+- [x] ✅ 처방전 스캔 화면 (expo-image-picker + OCR API) - `app/medications/scan.tsx`
 
-- [ ] EAS Build 설정 (`eas.json`)
-- [ ] 앱 아이콘, 스플래시 스크린 디자인
-- [ ] App Store Connect 계정 준비 (iOS)
-- [ ] Google Play Console 계정 준비 (Android)
-- [ ] TestFlight / 내부 테스트 배포
-- [ ] Production 출시
+### Phase 2.5: UI 테마 적용 (3D Pastel Claymorphism) 🔄
+
+> 💡 웹과 동일한 **파스텔 뉴모피즘** 디자인을 React Native에 적용
+
+- [x] ✅ 색상 팔레트 통일 (`components/theme.ts`)
+  - `colors.mint`, `colors.cream`, `colors.pink` 등 웹과 동일한 색상
+- [x] ✅ 공통 컴포넌트 생성
+  - `components/ClayCard.tsx` - 뉴모피즘 카드
+  - `components/ClayButton.tsx` - 3D 버튼
+  - `components/ClayInput.tsx` - Inset 입력 필드
+  - `components/OrganicBackground.tsx` - 유기적 배경
+- [x] ✅ 홈 화면 스타일 리팩토링 (`app/(tabs)/index.tsx`)
+- [x] ✅ 약 목록 화면 스타일 리팩토링 (`app/(tabs)/medications.tsx`)
+- [ ] 🔄 약 추가 화면 스타일 리팩토링 
+- [ ] 🔄 설정 화면 스타일 리팩토링
+
+### Phase 3: 푸시 알림 ⬜
+
+- [ ] ⬜ expo-notifications 설정
+- [ ] ⬜ FCM 토큰 등록 로직 (백엔드 연동)
+- [ ] ⬜ 포그라운드/백그라운드 알림 처리
+- [ ] ⬜ 알림 클릭 시 딥링크 처리
+
+### Phase 4: 배포 ⬜
+
+- [ ] ⬜ EAS Build 설정 (`eas.json`)
+- [ ] ⬜ 앱 아이콘, 스플래시 스크린 디자인
+- [ ] ⬜ App Store Connect 계정 준비 (iOS)
+- [ ] ⬜ Google Play Console 계정 준비 (Android)
+- [ ] ⬜ TestFlight / 내부 테스트 배포
+- [ ] ⬜ Production 출시
 
 ---
 
