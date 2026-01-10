@@ -41,7 +41,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def update_fcm_token(self, request):
         """FCM 토큰 업데이트"""
         token = request.data.get('fcm_token')
-        if token:
+        if token is not None:
             request.user.fcm_token = token
             request.user.save(update_fields=['fcm_token'])
             return Response({'status': 'FCM 토큰이 업데이트되었습니다.'})

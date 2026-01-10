@@ -112,6 +112,8 @@ def send_push_notification(user_id, title, message):
     FCM 푸시 알림 발송
     """
     from django.contrib.auth import get_user_model
+    from apps.alerts.fcm_service import FCMService
+    
     User = get_user_model()
     
     try:
@@ -119,12 +121,23 @@ def send_push_notification(user_id, title, message):
         fcm_token = user.fcm_token
         
         if not fcm_token:
+            print(f"[Push] 사용자 {user.username}의 FCM 토큰이 없습니다.")
             return {'status': 'skipped', 'reason': 'FCM 토큰 없음'}
         
-        # TODO: Firebase Admin SDK를 통한 푸시 알림 발송
-        # firebase_admin.messaging.send(...)
+        # FCM 푸시 알림 발송
+        success = FCMService.send_notification(
+            token=fcm_token,
+            title=title,
+            body=message,
+            data={'user_id': str(user_id)}
+        )
         
-        return {'status': 'sent', 'user_id': user_id}
+        if success:
+            print(f"[Push] 사용자 {user.username}에게 알림 발송 성공")
+            return {'status': 'sent', 'user_id': user_id}
+        else:
+            print(f"[Push] 사용자 {user.username}에게 알림 발송 실패")
+            return {'status': 'failed', 'user_id': user_id}
         
     except User.DoesNotExist:
         return {'status': 'error', 'message': '사용자를 찾을 수 없습니다.'}

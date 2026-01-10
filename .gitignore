@@ -70,3 +70,9 @@ celerybeat.pid
 
 # dotenv
 .env
+
+# Firebase
+firebase-credentials.json
+
+# 테스트
+test_fcm.py

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Pill, List, Settings, PartyPopper, Loader2, Package, Check } from 'lucide-react';
+import { Pill, List, Settings, PartyPopper, Loader2, Package, Check, Bell, BellOff } from 'lucide-react';
 import { useMedicationStore } from '@/services/store';
 import { api } from '@/services/api';
+import { requestNotificationPermission } from '@/services/firebase';
+import { apiClient } from '@/services/api';
 
 interface MedicationLog {
     id: number;
@@ -31,10 +33,68 @@ interface GroupedLogs {
 export default function HomePage() {
     const { todayLogs, fetchTodayLogs, isLoading } = useMedicationStore();
     const [takingGroup, setTakingGroup] = useState<string | null>(null);
+    const [notificationEnabled, setNotificationEnabled] = useState<boolean>(false);
+    const [notificationSupported, setNotificationSupported] = useState<boolean>(true);
+    const [togglingNotification, setTogglingNotification] = useState(false);
 
     useEffect(() => {
         fetchTodayLogs();
+        // 알림 권한 상태 확인
+        if (typeof window !== 'undefined') {
+            if ('Notification' in window) {
+                setNotificationEnabled(Notification.permission === 'granted');
+                setNotificationSupported(true);
+            } else {
+                // iOS Safari 등 Notification 미지원
+                setNotificationSupported(false);
+            }
+        }
     }, [fetchTodayLogs]);
+
+    // 알림 토글 핸들러
+    const handleToggleNotification = async () => {
+        if (togglingNotification) return;
+
+        if (!notificationSupported) {
+            alert('이 브라우저는 웹 알림을 지원하지 않습니다. 앱 설치 후 이용해주세요.');
+            return;
+        }
+
+        setTogglingNotification(true);
+
+        try {
+            // 로그인 체크
+            const accessToken = localStorage.getItem('access_token');
+            if (!accessToken) {
+                alert('알림 설정을 위해 로그인이 필요합니다.');
+                setTogglingNotification(false);
+                return;
+            }
+
+            if (!notificationEnabled) {
+                console.log('[알림] 토큰 요청 시작...');
+                const token = await requestNotificationPermission();
+                console.log('[알림] 토큰:', token);
+                if (token) {
+                    await apiClient.patch('/users/update_fcm_token', { fcm_token: token });
+                    setNotificationEnabled(true);
+                    console.log('[알림] 활성화 완료');
+                } else {
+                    console.warn('[알림] 토큰 획득 실패');
+                }
+            } else {
+                // 알림 끄기 (토큰 제거)
+                await apiClient.patch('/users/update_fcm_token', { fcm_token: '' });
+                setNotificationEnabled(false);
+                console.log('[알림] 비활성화 완료');
+            }
+        } catch (error) {
+            console.error('알림 설정 변경 실패:', error);
+            alert('알림 설정 변경에 실패했습니다.');
+        } finally {
+            setTogglingNotification(false);
+        }
+    };
 
     // 그룹 + 시간대별로 로그 묶기
     const groupedLogs: GroupedLogs[] = [];
@@ -127,6 +187,57 @@ export default function HomePage() {
                             })}
                         </p>
                     </header>
+
+                    {/* 알림 설정 토글 */}
+                    <div
+                        className="card"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '1rem 1.25rem',
+                            opacity: notificationSupported ? 1 : 0.5,
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            {notificationEnabled ? (
+                                <Bell size={22} color="var(--color-mint-dark)" />
+                            ) : (
+                                <BellOff size={22} color="var(--color-text-light)" />
+                            )}
+                            <span style={{ fontSize: 'var(--font-size-base)', fontWeight: 500 }}>
+                                복약 알림
+                            </span>
+                        </div>
+                        <button
+                            onClick={handleToggleNotification}
+                            disabled={togglingNotification}
+                            style={{
+                                width: '52px',
+                                height: '28px',
+                                borderRadius: '14px',
+                                border: 'none',
+                                background: notificationEnabled
+                                    ? 'var(--color-mint)'
+                                    : '#ddd',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                            }}
+                        >
+                            <div style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '50%',
+                                background: 'white',
+                                position: 'absolute',
+                                top: '3px',
+                                left: notificationEnabled ? '27px' : '3px',
+                                transition: 'left 0.2s',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                            }} />
+                        </button>
+                    </div>
 
                     {/* 진행 상태 카드 */}
                     {totalCount > 0 && (
