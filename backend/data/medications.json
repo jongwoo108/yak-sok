@@ -1,0 +1,482 @@
+[
+    {
+        "name": "파록스씨알정 12.5mg",
+        "ingredient": "파록세틴염산염수화물",
+        "manufacturer": "한미약품"
+    },
+    {
+        "name": "파록스씨알정 25mg",
+        "ingredient": "파록세틴염산염수화물",
+        "manufacturer": "한미약품"
+    },
+    {
+        "name": "리보트릴정 0.5mg",
+        "ingredient": "클로나제팜",
+        "manufacturer": "한국로슈"
+    },
+    {
+        "name": "리보트릴정 2mg",
+        "ingredient": "클로나제팜",
+        "manufacturer": "한국로슈"
+    },
+    {
+        "name": "아빌리파이정 2mg",
+        "ingredient": "아리피프라졸",
+        "manufacturer": "한국오츠카제약"
+    },
+    {
+        "name": "아빌리파이정 5mg",
+        "ingredient": "아리피프라졸",
+        "manufacturer": "한국오츠카제약"
+    },
+    {
+        "name": "아빌리파이정 10mg",
+        "ingredient": "아리피프라졸",
+        "manufacturer": "한국오츠카제약"
+    },
+    {
+        "name": "인데놀정 40mg",
+        "ingredient": "프로프라놀롤염산염",
+        "manufacturer": "아주약품"
+    },
+    {
+        "name": "데팍신서방정 25mg",
+        "ingredient": "벤라팍신염산염",
+        "manufacturer": "한국팜비오"
+    },
+    {
+        "name": "데팍신서방정 37.5mg",
+        "ingredient": "벤라팍신염산염",
+        "manufacturer": "한국팜비오"
+    },
+    {
+        "name": "졸피뎀정 5mg",
+        "ingredient": "졸피뎀타르타르산염",
+        "manufacturer": "한미약품"
+    },
+    {
+        "name": "졸피뎀정 10mg",
+        "ingredient": "졸피뎀타르타르산염",
+        "manufacturer": "한미약품"
+    },
+    {
+        "name": "알프람정 0.25mg",
+        "ingredient": "알프라졸람",
+        "manufacturer": "환인제약"
+    },
+    {
+        "name": "알프람정 0.5mg",
+        "ingredient": "알프라졸람",
+        "manufacturer": "환인제약"
+    },
+    {
+        "name": "렉사프로정 10mg",
+        "ingredient": "에스시탈로프람옥살산염",
+        "manufacturer": "한국룬드벡"
+    },
+    {
+        "name": "렉사프로정 20mg",
+        "ingredient": "에스시탈로프람옥살산염",
+        "manufacturer": "한국룬드벡"
+    },
+    {
+        "name": "세로켈정 25mg",
+        "ingredient": "쿠에티아핀푸마르산염",
+        "manufacturer": "아스트라제네카"
+    },
+    {
+        "name": "세로켈정 100mg",
+        "ingredient": "쿠에티아핀푸마르산염",
+        "manufacturer": "아스트라제네카"
+    },
+    {
+        "name": "아모잘탄정 5/50mg",
+        "ingredient": "암로디핀/로사르탄",
+        "manufacturer": "한미약품"
+    },
+    {
+        "name": "노바스크정 5mg",
+        "ingredient": "암로디핀베실산염",
+        "manufacturer": "화이자"
+    },
+    {
+        "name": "노바스크정 10mg",
+        "ingredient": "암로디핀베실산염",
+        "manufacturer": "화이자"
+    },
+    {
+        "name": "리피토정 10mg",
+        "ingredient": "아토르바스타틴칼슘수화물",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "리피토정 20mg",
+        "ingredient": "아토르바스타틴칼슘수화물",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "메포민정 500mg",
+        "ingredient": "메트포르민염산염",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "메포민정 1000mg",
+        "ingredient": "메트포르민염산염",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "자누비아정 50mg",
+        "ingredient": "시타글립틴인산염수화물",
+        "manufacturer": "한국MSD"
+    },
+    {
+        "name": "자누비아정 100mg",
+        "ingredient": "시타글립틴인산염수화물",
+        "manufacturer": "한국MSD"
+    },
+    {
+        "name": "아스피린프로텍트정 100mg",
+        "ingredient": "아스피린",
+        "manufacturer": "바이엘코리아"
+    },
+    {
+        "name": "플라빅스정 75mg",
+        "ingredient": "클로피도그렐황산수소염",
+        "manufacturer": "사노피"
+    },
+    {
+        "name": "넥시움정 20mg",
+        "ingredient": "에스오메프라졸마그네슘이수화물",
+        "manufacturer": "한국아스트라제네카"
+    },
+    {
+        "name": "넥시움정 40mg",
+        "ingredient": "에스오메프라졸마그네슘이수화물",
+        "manufacturer": "한국아스트라제네카"
+    },
+    {
+        "name": "가스모틴정 5mg",
+        "ingredient": "모사프리드시트르산염수화물",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "타이레놀정 500mg",
+        "ingredient": "아세트아미노펜",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "타이레놀이알서방정 650mg",
+        "ingredient": "아세트아미노펜",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "판피린티정",
+        "ingredient": "아세트아미노펜/카페인",
+        "manufacturer": "동아제약"
+    },
+    {
+        "name": "게보린정",
+        "ingredient": "이부프로펜/아세트아미노펜/카페인",
+        "manufacturer": "삼진제약"
+    },
+    {
+        "name": "이지엔6이브정",
+        "ingredient": "이부프로펜",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "애드빌리퀴겔캡슐 200mg",
+        "ingredient": "이부프로펜",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "세티리진정 10mg",
+        "ingredient": "세티리진염산염",
+        "manufacturer": "유한양행"
+    },
+    {
+        "name": "지르텍정 10mg",
+        "ingredient": "세티리진염산염",
+        "manufacturer": "한국유씨비"
+    },
+    {
+        "name": "클래리틴정 10mg",
+        "ingredient": "로라타딘",
+        "manufacturer": "바이엘코리아"
+    },
+    {
+        "name": "알레그라정 60mg",
+        "ingredient": "펙소페나딘염산염",
+        "manufacturer": "사노피"
+    },
+    {
+        "name": "알레그라정 180mg",
+        "ingredient": "펙소페나딘염산염",
+        "manufacturer": "사노피"
+    },
+    {
+        "name": "가스터정 20mg",
+        "ingredient": "파모티딘",
+        "manufacturer": "LG화학"
+    },
+    {
+        "name": "트라스트정",
+        "ingredient": "알마게이트",
+        "manufacturer": "일동제약"
+    },
+    {
+        "name": "듀파락시럽",
+        "ingredient": "락툴로스",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "둘코락스정 5mg",
+        "ingredient": "비사코딜",
+        "manufacturer": "사노피"
+    },
+    {
+        "name": "마그밀정 500mg",
+        "ingredient": "산화마그네슘",
+        "manufacturer": "삼일제약"
+    },
+    {
+        "name": "훼스탈플러스정",
+        "ingredient": "판크레아틴/담즙엑스",
+        "manufacturer": "한독"
+    },
+    {
+        "name": "베아제정",
+        "ingredient": "판크레아틴/디메티콘",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "신일프로스타정",
+        "ingredient": "소팔메토열매추출물",
+        "manufacturer": "신일제약"
+    },
+    {
+        "name": "하루날디정 0.2mg",
+        "ingredient": "탐스로신염산염",
+        "manufacturer": "아스텔라스"
+    },
+    {
+        "name": "유로만정 4mg",
+        "ingredient": "실로도신",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "오메가3엔캡슐",
+        "ingredient": "오메가-3-지방산에틸에스테르",
+        "manufacturer": "대웅제약"
+    },
+    {
+        "name": "비타민D3정 1000IU",
+        "ingredient": "콜레칼시페롤",
+        "manufacturer": "환인제약"
+    },
+    {
+        "name": "훼로바유서방정",
+        "ingredient": "건조황산제일철",
+        "manufacturer": "태극제약"
+    },
+    {
+        "name": "마이보라정",
+        "ingredient": "데소게스트렐/에티닐에스트라디올",
+        "manufacturer": "바이엘코리아"
+    },
+    {
+        "name": "쎄레브렉스캡슐 200mg",
+        "ingredient": "셀레콕시브",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "아티반정 1mg",
+        "ingredient": "로라제팜",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "졸로푸트정 50mg",
+        "ingredient": "설트랄린염산염",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "트라조돈정 25mg",
+        "ingredient": "트라조돈염산염",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "도그마틸캡슐 50mg",
+        "ingredient": "설피리드",
+        "manufacturer": "사노피"
+    },
+    {
+        "name": "리스페달정 1mg",
+        "ingredient": "리스페리돈",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "리스페달정 2mg",
+        "ingredient": "리스페리돈",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "자이프렉사정 5mg",
+        "ingredient": "올란자핀",
+        "manufacturer": "한국릴리"
+    },
+    {
+        "name": "자이프렉사정 10mg",
+        "ingredient": "올란자핀",
+        "manufacturer": "한국릴리"
+    },
+    {
+        "name": "라미닉정 25mg",
+        "ingredient": "라모트리진",
+        "manufacturer": "글락소스미스클라인"
+    },
+    {
+        "name": "라미닉정 100mg",
+        "ingredient": "라모트리진",
+        "manufacturer": "글락소스미스클라인"
+    },
+    {
+        "name": "토파맥스정 25mg",
+        "ingredient": "토피라메이트",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "토파맥스정 100mg",
+        "ingredient": "토피라메이트",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "에빌리파이정 5mg",
+        "ingredient": "아리피프라졸",
+        "manufacturer": "한국오츠카제약"
+    },
+    {
+        "name": "코데인정 20mg",
+        "ingredient": "인산코데인수화물",
+        "manufacturer": "삼남제약"
+    },
+    {
+        "name": "트라마돌정 50mg",
+        "ingredient": "트라마돌염산염",
+        "manufacturer": "한미약품"
+    },
+    {
+        "name": "울트라셋정",
+        "ingredient": "트라마돌/아세트아미노펜",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "노르스판패치 5mcg",
+        "ingredient": "부프레노르핀",
+        "manufacturer": "한국먼디파마"
+    },
+    {
+        "name": "뉴론틴캡슐 100mg",
+        "ingredient": "가바펜틴",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "뉴론틴캡슐 300mg",
+        "ingredient": "가바펜틴",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "리리카캡슐 75mg",
+        "ingredient": "프레가발린",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "리리카캡슐 150mg",
+        "ingredient": "프레가발린",
+        "manufacturer": "한국화이자"
+    },
+    {
+        "name": "콘서타서방정 18mg",
+        "ingredient": "메틸페니데이트염산염",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "콘서타서방정 36mg",
+        "ingredient": "메틸페니데이트염산염",
+        "manufacturer": "한국얀센"
+    },
+    {
+        "name": "스트라테라캡슐 10mg",
+        "ingredient": "아토목세틴염산염",
+        "manufacturer": "한국릴리"
+    },
+    {
+        "name": "스트라테라캡슐 25mg",
+        "ingredient": "아토목세틴염산염",
+        "manufacturer": "한국릴리"
+    },
+    {
+        "name": "가바펜틴정 300mg",
+        "ingredient": "가바펜틴",
+        "manufacturer": "환인제약"
+    },
+    {
+        "name": "클로미프라민정 25mg",
+        "ingredient": "클로미프라민염산염",
+        "manufacturer": "노바티스"
+    },
+    {
+        "name": "이미프라민정 25mg",
+        "ingredient": "이미프라민염산염",
+        "manufacturer": "한국오가논"
+    },
+    {
+        "name": "아미트립틸린정 10mg",
+        "ingredient": "아미트립틸린염산염",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "아미트립틸린정 25mg",
+        "ingredient": "아미트립틸린염산염",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "설트랄정 50mg",
+        "ingredient": "설트랄린염산염",
+        "manufacturer": "환인제약"
+    },
+    {
+        "name": "프로작캡슐 20mg",
+        "ingredient": "플루옥세틴염산염",
+        "manufacturer": "한국릴리"
+    },
+    {
+        "name": "쿠에타핀정 25mg",
+        "ingredient": "쿠에티아핀푸마르산염",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "쿠에타핀정 100mg",
+        "ingredient": "쿠에티아핀푸마르산염",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "올란자핀정 5mg",
+        "ingredient": "올란자핀",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "올란자핀정 10mg",
+        "ingredient": "올란자핀",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "디아제팜정 2mg",
+        "ingredient": "디아제팜",
+        "manufacturer": "명인제약"
+    },
+    {
+        "name": "디아제팜정 5mg",
+        "ingredient": "디아제팜",
+        "manufacturer": "명인제약"
+    }
+]
