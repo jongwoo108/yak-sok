@@ -24,6 +24,8 @@ export const viewport: Viewport = {
     userScalable: false,
 };
 
+import AuthProvider from '@/components/AuthProvider';
+
 export default function RootLayout({
     children,
 }: {
@@ -33,9 +35,11 @@ export default function RootLayout({
         <html lang="ko">
             <body className={inter.className}>
                 <main className="min-h-screen bg-gray-50">
-                    <NotificationProvider>
-                        {children}
-                    </NotificationProvider>
+                    <AuthProvider>
+                        <NotificationProvider>
+                            {children}
+                        </NotificationProvider>
+                    </AuthProvider>
                 </main>
             </body>
         </html>

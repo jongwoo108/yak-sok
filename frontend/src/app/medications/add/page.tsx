@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Pill, Sun, Sunrise, Sunset, Moon, Check, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
+import ClayTimePicker from '@/components/ClayTimePicker';
+import { useMedicationStore } from '@/services/store';
 
 type TimeOfDay = 'morning' | 'noon' | 'evening' | 'night';
 
@@ -31,17 +33,28 @@ export default function AddMedicationPage() {
         dosage: '',
     });
 
-    const [selectedTimes, setSelectedTimes] = useState<Record<TimeOfDay, boolean>>({
-        morning: false,
-        noon: false,
-        evening: false,
-        night: false,
+    // Store selected times as a map of TimeOfDay -> string (time) | null (not selected)
+    const [schedules, setSchedules] = useState<Record<TimeOfDay, string | null>>({
+        morning: null,
+        noon: null,
+        evening: null,
+        night: null,
     });
 
-    const handleTimeToggle = (time: TimeOfDay) => {
-        setSelectedTimes(prev => ({
+    const handleTimeToggle = (time: TimeOfDay, defaultTime: string) => {
+        setSchedules(prev => {
+            const isSelected = prev[time] !== null;
+            return {
+                ...prev,
+                [time]: isSelected ? null : defaultTime, // Toggle between null and default time
+            };
+        });
+    };
+
+    const handleTimeChange = (time: TimeOfDay, newTime: string) => {
+        setSchedules(prev => ({
             ...prev,
-            [time]: !prev[time],
+            [time]: newTime,
         }));
     };
 
@@ -50,8 +63,14 @@ export default function AddMedicationPage() {
         setError('');
 
         // 최소 하나의 시간 선택 확인
-        const hasTime = Object.values(selectedTimes).some(v => v);
-        if (!hasTime) {
+        const activeSchedules = Object.entries(schedules)
+            .filter(([_, time]) => time !== null)
+            .map(([key, time]) => ({
+                time_of_day: key as TimeOfDay,
+                scheduled_time: time!,
+            }));
+
+        if (activeSchedules.length === 0) {
             setError('복용 시간을 최소 하나 이상 선택해주세요.');
             return;
         }
@@ -59,20 +78,14 @@ export default function AddMedicationPage() {
         setIsLoading(true);
 
         try {
-            // 약 등록
+            // 1. 약 등록
             const medicationResponse = await api.medications.create(formData);
-            const medicationId = medicationResponse.data.id;
 
-            // 스케줄 등록
-            const schedules: Schedule[] = [];
-            TIME_OPTIONS.forEach(option => {
-                if (selectedTimes[option.value]) {
-                    schedules.push({
-                        time_of_day: option.value,
-                        scheduled_time: option.defaultTime,
-                    });
-                }
-            });
+            // 2. 스케줄 데이터 구성 및 전송 (API 스펙에 따라 구현 필요)
+            // 현재는 UI 구현에 집중하고 있으므로, 데이터 전송 로직은
+            // 백엔드가 스케줄을 함께 받거나, 별도 API가 필요할 수 있음을 상정합니다.
+            // console.log('Registered Medication:', medicationResponse.data);
+            // console.log('Schedules to register:', activeSchedules);
 
             router.push('/medications');
         } catch (err: any) {
@@ -88,142 +101,109 @@ export default function AddMedicationPage() {
             <div className="page-wrapper">
                 <div className="page-content">
                     {/* 헤더 */}
-                    <header className="flex items-center" style={{ justifyContent: 'space-between' }}>
+                    <header className="flex items-center justify-between mb-8">
                         <Link
                             href="/medications"
-                            className="status-icon"
-                            style={{
-                                width: '44px',
-                                height: '44px',
-                                background: 'var(--color-cream)',
-                            }}
+                            className="clay-btn-secondary"
+                            style={{ width: '48px', height: '48px', padding: 0, borderRadius: '50%' }}
                         >
-                            <ArrowLeft size={22} color="var(--color-text)" />
+                            <ArrowLeft size={24} />
                         </Link>
-                        <h1 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Pill size={24} color="var(--color-mint-dark)" />
+                        <h1 className="text-[var(--color-primary)] font-bold text-2xl flex items-center gap-2">
+                            <Pill size={28} />
                             약 추가하기
                         </h1>
-                        <div style={{ width: '44px' }} />
+                        <div style={{ width: '48px' }} />
                     </header>
 
                     {/* 폼 */}
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                         {error && (
-                            <div style={{
-                                padding: '1rem',
-                                marginBottom: '1rem',
-                                background: 'var(--color-pink-light)',
-                                color: 'var(--color-danger)',
-                                borderRadius: 'var(--border-radius)',
-                                fontSize: 'var(--font-size-base)',
-                            }}>
+                            <div className="error-message">
                                 {error}
                             </div>
                         )}
 
-                        <div className="card mb-6">
-                            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '0.5rem',
-                                    fontSize: 'var(--font-size-lg)',
-                                    fontWeight: 600,
-                                }}>
+                        <div className="clay-card">
+                            <div className="clay-input-group">
+                                <label className="clay-label">
                                     약 이름 *
                                 </label>
                                 <input
                                     type="text"
-                                    className="input"
+                                    className="clay-input"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="예: 혈압약, 당뇨약"
                                     required
-                                    style={{ fontSize: 'var(--font-size-lg)' }}
                                 />
                             </div>
 
-                            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '0.5rem',
-                                    fontSize: 'var(--font-size-lg)',
-                                    fontWeight: 600,
-                                }}>
+                            <div className="clay-input-group">
+                                <label className="clay-label">
                                     복용량
                                 </label>
                                 <input
                                     type="text"
-                                    className="input"
+                                    className="clay-input"
                                     value={formData.dosage}
                                     onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
                                     placeholder="예: 1정, 2알"
-                                    style={{ fontSize: 'var(--font-size-lg)' }}
                                 />
                             </div>
 
-                            <div>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '0.5rem',
-                                    fontSize: 'var(--font-size-lg)',
-                                    fontWeight: 600,
-                                }}>
+                            <div className="clay-input-group" style={{ marginBottom: 0 }}>
+                                <label className="clay-label">
                                     복용 설명 (선택)
                                 </label>
                                 <textarea
-                                    className="input"
+                                    className="clay-input"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     placeholder="복용 시 주의사항 등"
                                     rows={3}
-                                    style={{
-                                        fontSize: 'var(--font-size-base)',
-                                        resize: 'none',
-                                    }}
+                                    style={{ resize: 'none' }}
                                 />
                             </div>
                         </div>
 
                         {/* 복용 시간 선택 */}
-                        <div className="card mb-6">
-                            <label style={{
-                                display: 'block',
-                                marginBottom: '1rem',
-                                fontSize: 'var(--font-size-lg)',
-                                fontWeight: 600,
-                            }}>
+                        <div className="clay-card">
+                            <label className="clay-label" style={{ marginBottom: '16px' }}>
                                 복용 시간 *
                             </label>
-                            <div className="flex flex-col gap-4">
-                                {TIME_OPTIONS.map(option => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => handleTimeToggle(option.value)}
-                                        className="btn w-full"
-                                        style={{
-                                            justifyContent: 'space-between',
-                                            background: selectedTimes[option.value]
-                                                ? 'linear-gradient(135deg, var(--color-mint-light) 0%, var(--color-mint) 100%)'
-                                                : 'var(--color-cream)',
-                                            color: selectedTimes[option.value] ? 'white' : 'var(--color-text)',
-                                            border: 'none',
-                                            boxShadow: selectedTimes[option.value]
-                                                ? '0 4px 12px rgba(123, 196, 154, 0.4)'
-                                                : 'var(--shadow-neumorphic)',
-                                        }}
-                                    >
-                                        <span style={{ fontSize: 'var(--font-size-lg)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            {option.icon}
-                                            {option.label}
-                                        </span>
-                                        <span style={{ fontSize: 'var(--font-size-base)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {option.defaultTime}
-                                            {selectedTimes[option.value] && <Check size={20} />}
-                                        </span>
-                                    </button>
-                                ))}
+                            <div className="grid-2-cols">
+                                {TIME_OPTIONS.map(option => {
+                                    const isSelected = schedules[option.value] !== null;
+                                    return (
+                                        <div
+                                            key={option.value}
+                                            className={`clay-select-btn ${isSelected ? 'active' : ''}`}
+                                            style={{ padding: '16px', cursor: 'pointer' }}
+                                            onClick={(e) => {
+                                                // Prevent toggling if clicking strictly on the time input
+                                                if ((e.target as HTMLElement).tagName === 'INPUT') return;
+                                                handleTimeToggle(option.value, option.defaultTime);
+                                            }}
+                                        >
+                                            <div className="clay-select-icon">
+                                                {option.icon}
+                                            </div>
+                                            <span style={{ marginBottom: isSelected ? '4px' : '0' }}>
+                                                {option.label}
+                                            </span>
+
+                                            {isSelected && (
+                                                <div onClick={(e) => e.stopPropagation()}>
+                                                    <ClayTimePicker
+                                                        value={schedules[option.value]!}
+                                                        onChange={(newTime) => handleTimeChange(option.value, newTime)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -231,8 +211,8 @@ export default function AddMedicationPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="btn btn-primary w-full"
-                            style={{ fontSize: 'var(--font-size-xl)', minHeight: '64px' }}
+                            className="clay-btn-primary"
+                            style={{ minHeight: '64px', fontSize: '20px' }}
                         >
                             {isLoading ? (
                                 <Loader2 size={24} className="animate-spin" />
@@ -249,4 +229,3 @@ export default function AddMedicationPage() {
         </>
     );
 }
-

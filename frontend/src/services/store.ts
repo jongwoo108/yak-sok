@@ -25,7 +25,10 @@ interface AppState {
     // 액션
     setUser: (user: User | null) => void;
     fetchUser: () => Promise<void>;
+    login: (credentials: { email: string; password?: string }) => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
     logout: () => void;
+
 
     fetchMedications: () => Promise<void>;
     fetchTodayLogs: () => Promise<void>;
@@ -57,7 +60,53 @@ export const useMedicationStore = create<AppState>((set, get) => ({
             const response = await api.auth.me();
             set({ user: response.data, isAuthenticated: true });
         } catch (error) {
-            set({ error: '사용자 정보를 불러올 수 없습니다.' });
+            // 토큰 만료 또는 비로그인 상태는 에러로 취급하지 않음 (조용히 실패)
+            set({ user: null, isAuthenticated: false });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    login: async (credentials) => {
+        try {
+            set({ isLoading: true, error: null });
+            const { user, tokens } = await import('./auth').then(m => m.authService.login(credentials));
+
+            // 토큰 저장
+            localStorage.setItem('access_token', tokens.access);
+            localStorage.setItem('refresh_token', tokens.refresh);
+
+            // API 헤더 설정 (axios interceptor가 처리하겠지만 명시적 호출 가능)
+
+            set({ user, isAuthenticated: true });
+        } catch (error: any) {
+            const msg = error.response?.data?.non_field_errors?.[0] || '로그인에 실패했습니다.';
+            set({ error: msg });
+            throw error;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    loginWithGoogle: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            // 1. Firebase Google 로그인 -> ID Token 획득
+            const { signInWithGoogle } = await import('./firebase');
+            const idToken = await signInWithGoogle();
+
+            // 2. 백엔드 로그인 -> JWT 토큰 획득
+            const { authService } = await import('./auth');
+            const { user, tokens } = await authService.googleLogin(idToken);
+
+            // 3. 저장 및 상태 업데이트
+            localStorage.setItem('access_token', tokens.access);
+            localStorage.setItem('refresh_token', tokens.refresh);
+
+            set({ user, isAuthenticated: true });
+        } catch (error: any) {
+            set({ error: 'Google 로그인에 실패했습니다.' });
+            throw error;
         } finally {
             set({ isLoading: false });
         }
@@ -67,6 +116,7 @@ export const useMedicationStore = create<AppState>((set, get) => ({
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         set({ user: null, isAuthenticated: false });
+        // Optional: window.location.href = '/login';
     },
 
     // 복약 액션

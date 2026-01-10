@@ -19,6 +19,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
+// Initialize Auth
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; // Import types if needed
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
 // Messaging instance (only in browser)
 let messaging: Messaging | null = null;
 
@@ -27,6 +32,22 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         messaging = getMessaging(app);
     } catch (error) {
         console.error('Firebase Messaging 초기화 실패:', error);
+    }
+}
+
+/**
+ * Google 로그인
+ * 팝업을 통해 Google 로그인 후 ID Token 반환
+ */
+export async function signInWithGoogle(): Promise<string> {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const idToken = await user.getIdToken();
+        return idToken;
+    } catch (error) {
+        console.error('Google 로그인 실패:', error);
+        throw error;
     }
 }
 

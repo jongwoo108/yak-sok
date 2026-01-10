@@ -288,3 +288,5 @@ npm start
 - [x] 처방전 스캔 중복 약품 감지
 - [x] 약품 설명 목록에서 1줄 truncate
 - [x] framer-motion 애니메이션 적용
+- [x] **Google 소셜 로그인 구현** (Firebase Auth + Backend ID Token 검증)
+    - 상세 내용: [04_authentication_implementation.md](./04_authentication_implementation.md)
