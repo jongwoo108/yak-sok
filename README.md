@@ -8,14 +8,14 @@
   </p>
 </div>
 
-### 프로젝트 소개 (About Yak-Sok)
+## 프로젝트 소개 (About Yak-Sok)
 **약속(Yak-Sok)**은 복약 순응도를 단순한 건강 지표가 아닌, 핵심적인 **"생존 신호 (Life-Sign)"**로 해석합니다. 이 프로젝트는 어르신들의 디지털 소외 문제를 해결함과 동시에, 강력한 사회 안전망을 구축하는 것을 목표로 합니다.
 
 **"3D 파스텔 클레이모피즘 (Claymorphism)"** 디자인 언어를 적용하여, 시니어 사용자에게는 높은 시인성과 편안한 인터페이스를, 보호자에게는 정교한 모니터링 대시보드를 제공합니다.
 ![제목 없는 디자인](https://github.com/user-attachments/assets/4a0c8141-2f35-40bc-b02e-76560e6bb1de)
 
-
-### 주요 기능 (Features)
+---
+## 주요 기능 (Features)
 
 #### 👴 시니어 중심 경험 (Senior-Centric Experience)
 - **접근성 설계 (Accessible Design)**: 고대비 색상, 대형 터치 영역(최소 48px), 인지 부하를 최소화한 직관적 인터페이스를 제공합니다.
@@ -32,15 +32,15 @@
 #### 🔐 보안 및 인증 (Security & Auth)
 - **역할 기반 접근 제어 (RBAC)**: 시니어와 보호자를 구분하여 최적화된 인터페이스와 권한을 부여합니다.
 - **안전한 인증**: Firebase Admin 검증을 거친 Google OAuth 로그인을 통해 강력한 보안을 보장합니다.
-
-### 기술 스택 (Tech Stack)
+---
+## 기술 스택 (Tech Stack)
 
 - **Frontend**: [Next.js 14](https://nextjs.org/) (App Router), [TypeScript](https://www.typescriptlang.org/), [Zustand](https://github.com/pmndrs/zustand), [Tailwind CSS](https://tailwindcss.com/)
 - **Backend**: [Django REST Framework](https://www.django-rest-framework.org/), [Python 3.11+](https://www.python.org/)
 - **Infrastructure**: [Docker](https://www.docker.com/), [PostgreSQL](https://www.postgresql.org/), [Redis](https://redis.io/), [Celery](https://docs.celeryq.dev/)
 - **AI Services**: [OpenAI GPT-4o](https://openai.com/) (Vision), [Whisper](https://openai.com/research/whisper)
-
-### 개발자 빠른 시작 (Developer Quickstart)
+---
+## 개발자 빠른 시작 (Developer Quickstart)
 
 로컬 환경에서 실행하려면 **Docker**와 **Docker Compose**가 설치되어 있어야 합니다.
 
@@ -67,7 +67,7 @@ docker-compose up -d --build
 - **Frontend App**: [http://localhost:3000](http://localhost:3000)
 - **Backend API**: [http://localhost:8000/api](http://localhost:8000/api)
 - **Admin Panel**: [http://localhost:8000/admin](http://localhost:8000/admin)
-
+---
 ### 기여하기 (Contributing)
 기여는 언제나 환영합니다! 버그 제보, 기능 제안, PR 제출 방법은 [CONTRIBUTING.md](docs/CONTRIBUTING.md)를 참고해 주세요.
 
