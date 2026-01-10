@@ -70,29 +70,39 @@ export const api = {
             apiClient.get('users/me'),
     },
 
+    // 약품 그룹
+    medicationGroups: {
+        list: () =>
+            apiClient.get('medications/groups/'),
+        create: (data: { name: string; color?: string }) =>
+            apiClient.post('medications/groups/', data),
+        delete: (id: number) =>
+            apiClient.delete(`medications/groups/${id}/`),
+    },
+
     // 복약
     medications: {
         list: () =>
             apiClient.get('medications/'),
         get: (id: number) =>
-            apiClient.get(`medications/${id}`),
+            apiClient.get(`medications/${id}/`),
         create: (data: any) =>
             apiClient.post('medications/', data),
         update: (id: number, data: any) =>
             apiClient.put(`medications/${id}/`, data),
         delete: (id: number) =>
-            apiClient.delete(`medications/${id}`),
+            apiClient.delete(`medications/${id}/`),
         scanPrescription: (image: File) => {
             const formData = new FormData();
             formData.append('image', image);
-            return apiClient.post('medications/scan_prescription', formData, {
+            return apiClient.post('medications/scan_prescription/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
         },
         voiceCommand: (audio: File) => {
             const formData = new FormData();
             formData.append('audio', audio);
-            return apiClient.post('medications/voice_command', formData, {
+            return apiClient.post('medications/voice_command/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
         },
@@ -101,9 +111,11 @@ export const api = {
     // 복약 기록
     logs: {
         today: () =>
-            apiClient.get('medications/logs/today'),
+            apiClient.get('medications/logs/today/'),
         take: (id: number) =>
-            apiClient.post(`medications/logs/${id}/take`),
+            apiClient.post(`medications/logs/${id}/take/`),
+        batchTake: (logIds: number[]) =>
+            apiClient.post('medications/logs/batch_take/', { log_ids: logIds }),
     },
 
     // 알림

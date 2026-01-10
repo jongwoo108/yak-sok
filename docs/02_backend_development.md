@@ -209,6 +209,81 @@ celery -A core beat --loglevel=info
 
 - [x] ~~OpenAI Vision API 연동 (OCR 실제 구현)~~ ✅ 완료
 - [x] ~~OpenAI Whisper API 연동 (STT 실제 구현)~~ ✅ 완료
+- [x] ~~약품 그룹 기능 (MedicationGroup 모델)~~ ✅ 완료
+- [ ] **OCR 정확도 향상 - RAG 구현** (아래 참조)
 - [ ] Firebase Admin SDK 연동 (푸시 알림 - Safety Line)
 - [ ] 유닛 테스트 작성
 - [ ] API 문서화 (Swagger/drf-spectacular)
+
+---
+
+## OCR 정확도 향상 - RAG 구현 계획
+
+### 문제점
+현재 GPT-4o 기반 OCR에서 약품명 인식 오류 발생 (예: "파록스씨알정" → "파록스씨일정")
+
+### 해결방안: 하이브리드 RAG 접근
+
+```
+[처방전 이미지] → [GPT-4o OCR] → [RAG 검색 보정] → [정확한 약품명]
+```
+
+### 비용 분석 (✅ 추천: RAG 방식)
+
+| 항목 | 비용 |
+|------|------|
+| 초기 임베딩 생성 (60K 약품) | ~$1-2 (1회) |
+| 벡터 DB (무료 티어) | $0 |
+| 검색 API (월 1,000회) | ~$0.02 |
+| **월 총 추가 비용** | **≈ $0.02** |
+
+### 데이터 소스
+- **약학정보원 (health.kr)**: 대한민국 공인 의약품 데이터베이스
+- 약 60,000+ 제품 정보
+- 제품명, 성분명, 제조사, 효능, 외형정보 포함
+
+### 구현 계획
+
+#### 1단계: 데이터 수집
+```python
+# 약학정보원 크롤링 스크립트
+# 저장 형식: {"name": "파록스씨알정 12.5mg", "ingredient": "파록세틴", "manufacturer": "한미약품"}
+```
+
+#### 2단계: 임베딩 생성 및 저장
+```python
+# 벡터 DB: Pinecone (무료 티어) 또는 Supabase pgvector
+embeddings = openai.embeddings.create(
+    model="text-embedding-3-small",  # 비용 효율적
+    input="파록스씨알정 12.5mg 파록세틴 한미약품"
+)
+```
+
+#### 3단계: OCR 서비스 수정
+```python
+class OCRService:
+    def parse_prescription(self, image_file):
+        # 1. GPT-4o로 대략적 약품명 추출
+        raw_medications = self._ocr_with_gpt4o(image_file)
+        
+        # 2. RAG로 정확한 약품명 보정
+        for med in raw_medications:
+            med['name'] = self._correct_with_rag(med['name'])
+        
+        return raw_medications
+    
+    def _correct_with_rag(self, raw_name):
+        # 유사도 검색으로 가장 가까운 실제 약품명 반환
+        query_embedding = get_embedding(raw_name)
+        result = vector_db.similarity_search(query_embedding, top_k=1)
+        return result[0]['name'] if result else raw_name
+```
+
+### 벡터 DB 옵션
+
+| 서비스 | 무료 티어 | 추천도 |
+|--------|----------|--------|
+| **Pinecone** | 100K 벡터, 무제한 쿼리 | ⭐⭐⭐ |
+| **Supabase pgvector** | 500MB | ⭐⭐ |
+| **ChromaDB (로컬)** | 무제한 | ⭐ (운영 복잡) |
+
