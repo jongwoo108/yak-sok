@@ -19,7 +19,7 @@
 
 ### 👴 시니어 중심 경험 (Senior-Centric Experience)
 - **접근성 설계 (Accessible Design)**: 고대비 색상, 대형 터치 영역(최소 48px), 인지 부하를 최소화한 직관적 인터페이스를 제공합니다.
-- **자동 입력 자동화**: OpenAI Vision 기반의 처방전 OCR과 Whisper 음성 인식(STT)을 통해 복잡한 입력 과정을 자동화했습니다.
+- **자동 입력 자동화**: OpenAI Vision 기반의 처방전 OCR 스캔을 통해 복잡한 입력 과정을 자동화했습니다.
 - **PWA 지원**: 앱스토어 다운로드 없이 홈 화면에 설치하여 네이티브 앱처럼 사용할 수 있으며, 오프라인 환경을 지원합니다.
 
 ### 🛡️ 골든타임 세이프티 라인 (Safety Line)
@@ -39,6 +39,7 @@
 - **Backend**: [Django REST Framework](https://www.django-rest-framework.org/), [Python 3.11+](https://www.python.org/)
 - **Infrastructure**: [Docker](https://www.docker.com/), [PostgreSQL](https://www.postgresql.org/), [Redis](https://redis.io/), [Celery](https://docs.celeryq.dev/)
 - **AI Services**: [OpenAI GPT-4o](https://openai.com/) (Vision), [Whisper](https://openai.com/research/whisper)
+
 ---
 ## 개발자 빠른 시작 (Developer Quickstart)
 

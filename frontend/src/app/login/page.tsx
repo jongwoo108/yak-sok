@@ -40,7 +40,7 @@ export default function LoginPage() {
                         환영합니다!
                     </h1>
                     <p className="auth-subtitle">
-                        약속 시간을 지키는 가장 쉬운 방법,<br />
+                        복약 시간을 지키는 가장 쉬운 방법,<br />
                         약속(Yak-Sok)과 함께하세요.
                     </p>
                 </div>
