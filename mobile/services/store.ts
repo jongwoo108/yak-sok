@@ -29,6 +29,7 @@ interface AppState {
     logout: () => Promise<void>;
 
     fetchMedications: () => Promise<void>;
+    deleteMedication: (id: number) => Promise<void>;
     fetchTodayLogs: () => Promise<void>;
     takeMedication: (logId: number) => Promise<void>;
     batchTakeMedications: (logIds: number[]) => Promise<void>;
@@ -76,6 +77,19 @@ export const useMedicationStore = create<AppState>((set, get) => ({
             set({ medications: response.data.results || [] });
         } catch (error) {
             set({ error: '약 목록을 불러올 수 없습니다.' });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    deleteMedication: async (id) => {
+        try {
+            set({ isLoading: true, error: null });
+            await api.medications.delete(id);
+            const currentMeds = get().medications;
+            set({ medications: currentMeds.filter((med) => med.id !== id) });
+        } catch (error) {
+            set({ error: '약 삭제에 실패했습니다.' });
         } finally {
             set({ isLoading: false });
         }

@@ -13,6 +13,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     Platform,
+    Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -74,8 +75,9 @@ const NeumorphFab = ({
 
 export default function MedicationsScreen() {
     const router = useRouter();
-    const { medications, fetchMedications, isLoading } = useMedicationStore();
+    const { medications, fetchMedications, deleteMedication, isLoading } = useMedicationStore();
     const [refreshing, setRefreshing] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     useEffect(() => {
         fetchMedications();
@@ -87,7 +89,24 @@ export default function MedicationsScreen() {
         setRefreshing(false);
     };
 
-    // 그룹별로 약품 분류
+    const handleDelete = (id: number, name: string) => {
+        Alert.alert(
+            '약 삭제',
+            `'${name}'을(를) 삭제하시겠습니까?`,
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '삭제',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteMedication(id);
+                    }
+                }
+            ]
+        );
+    };
+
+    // ... (groupedMedications logic unchanged) ...
     const groupedMedications = medications.reduce((acc, med) => {
         const groupName = med.group_name || '기타';
         if (!acc[groupName]) {
@@ -129,8 +148,14 @@ export default function MedicationsScreen() {
                         <Text style={styles.headerTitle}>내 약 목록</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.editButton} activeOpacity={0.8}>
-                        <Text style={styles.editButtonText}>편집</Text>
+                    <TouchableOpacity
+                        style={[styles.editButton, isEditMode && styles.editButtonActive]}
+                        onPress={() => setIsEditMode(!isEditMode)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.editButtonText, isEditMode && styles.editButtonTextActive]}>
+                            {isEditMode ? '완료' : '편집'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
@@ -170,40 +195,52 @@ export default function MedicationsScreen() {
 
                             {/* 약품 카드들 */}
                             {meds.map((med) => (
-                                <NeumorphCard key={med.id} style={styles.medicationCard}>
-                                    <View style={styles.cardHeader}>
-                                        <Text style={styles.medicationName}>{med.name}</Text>
-                                        <View style={[
-                                            styles.statusBadge,
-                                            med.is_active ? styles.statusActive : styles.statusInactive
-                                        ]}>
-                                            <Text style={[
-                                                styles.statusText,
-                                                med.is_active ? styles.statusTextActive : styles.statusTextInactive
+                                <View key={med.id} style={{ position: 'relative' }}>
+                                    <NeumorphCard style={styles.medicationCard}>
+                                        <View style={styles.cardHeader}>
+                                            <Text style={styles.medicationName}>{med.name}</Text>
+                                            <View style={[
+                                                styles.statusBadge,
+                                                med.is_active ? styles.statusActive : styles.statusInactive
                                             ]}>
-                                                {med.is_active ? '복용 중' : '중단'}
-                                            </Text>
+                                                <Text style={[
+                                                    styles.statusText,
+                                                    med.is_active ? styles.statusTextActive : styles.statusTextInactive
+                                                ]}>
+                                                    {med.is_active ? '복용 중' : '중단'}
+                                                </Text>
+                                            </View>
                                         </View>
-                                    </View>
 
-                                    {med.dosage && (
-                                        <Text style={styles.dosage}>{med.dosage}</Text>
-                                    )}
+                                        {med.dosage && (
+                                            <Text style={styles.dosage}>{med.dosage}</Text>
+                                        )}
 
-                                    {/* 복용 시간 태그 */}
-                                    {med.schedules && med.schedules.length > 0 && (
-                                        <View style={styles.scheduleRow}>
-                                            {med.schedules.map((schedule) => (
-                                                <View key={schedule.id} style={styles.scheduleTag}>
-                                                    <Ionicons name="time-outline" size={12} color={colors.primary} />
-                                                    <Text style={styles.scheduleTagText}>
-                                                        {schedule.time_of_day_display} {schedule.scheduled_time?.slice(0, 5)}
-                                                    </Text>
-                                                </View>
-                                            ))}
-                                        </View>
+                                        {/* 복용 시간 태그 */}
+                                        {med.schedules && med.schedules.length > 0 && (
+                                            <View style={styles.scheduleRow}>
+                                                {med.schedules.map((schedule) => (
+                                                    <View key={schedule.id} style={styles.scheduleTag}>
+                                                        <Ionicons name="time-outline" size={12} color={colors.primary} />
+                                                        <Text style={styles.scheduleTagText}>
+                                                            {schedule.time_of_day_display} {schedule.scheduled_time?.slice(0, 5)}
+                                                        </Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+                                    </NeumorphCard>
+
+                                    {/* 삭제 버튼 (편집 모드일 때만 표시) */}
+                                    {isEditMode && (
+                                        <TouchableOpacity
+                                            style={styles.deleteButtonBadge}
+                                            onPress={() => handleDelete(med.id, med.name)}
+                                        >
+                                            <Ionicons name="remove" size={16} color="white" />
+                                        </TouchableOpacity>
                                     )}
-                                </NeumorphCard>
+                                </View>
                             ))}
                         </View>
                     ))
@@ -238,6 +275,7 @@ export default function MedicationsScreen() {
 }
 
 const styles = StyleSheet.create({
+    // ... existing styles ...
     container: {
         flex: 1,
         backgroundColor: colors.base,
@@ -250,13 +288,14 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'ios' ? 60 : 50,
     },
 
-    // 헤더
+    // 헤더 (스타일 업데이트 필요할 수 있음)
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: spacing.xxl,
     },
+    // ... (rest of styles, need to ensure I don't break them)
     backButton: {
         position: 'relative',
     },
@@ -289,10 +328,16 @@ const styles = StyleSheet.create({
         backgroundColor: colors.base,
         ...shadows.soft,
     },
+    editButtonActive: {
+        backgroundColor: colors.primary,
+    },
     editButtonText: {
         fontSize: fontSize.sm,
         color: colors.primary,
         fontWeight: fontWeight.semibold,
+    },
+    editButtonTextActive: {
+        color: 'white',
     },
 
     // 뉴모피즘 카드
@@ -471,6 +516,25 @@ const styles = StyleSheet.create({
         fontSize: fontSize.xs,
         color: colors.blueDark,
         fontWeight: fontWeight.medium,
+    },
+
+    // 삭제 버튼 배지
+    deleteButtonBadge: {
+        position: 'absolute',
+        top: -8,
+        right: -4,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#FF5252',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+        elevation: 6,
+        shadowColor: '#FF5252',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
 
     // FAB 버튼

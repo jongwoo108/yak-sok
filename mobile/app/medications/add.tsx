@@ -90,8 +90,10 @@ export default function AddMedicationScreen() {
 
             await fetchMedications();
             router.back();
-        } catch (error) {
-            Alert.alert('오류', '약 추가에 실패했습니다.');
+        } catch (error: any) {
+            console.error(error);
+            const message = error.response?.data?.error || error.response?.data?.detail || '약 추가에 실패했습니다.';
+            Alert.alert('오류', typeof message === 'string' ? message : JSON.stringify(message));
         } finally {
             setLoading(false);
         }

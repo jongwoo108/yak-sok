@@ -12,7 +12,7 @@ from .views import (
     GoogleLoginView
 )
 
-router = DefaultRouter(trailing_slash=False)
+router = DefaultRouter()
 router.register('guardians', GuardianRelationViewSet, basename='guardian-relation')
 router.register('', UserViewSet, basename='user')
 

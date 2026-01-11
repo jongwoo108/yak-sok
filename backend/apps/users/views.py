@@ -179,6 +179,26 @@ class UserViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    @action(detail=False, methods=['post'], url_path='test-push')
+    def test_push(self, request):
+        """테스트 푸시 알림 발송"""
+        from apps.alerts.fcm_service import FCMService
+        
+        user = request.user
+        if not user.fcm_token:
+            return Response({'error': 'FCM 토큰이 없습니다.'}, status=400)
+            
+        success = FCMService.send_notification(
+            token=user.fcm_token,
+            title="🔔 테스트 알림",
+            body="알림이 정상적으로 수신되었습니다!",
+            data={"type": "test"}
+        )
+        
+        if success:
+            return Response({'status': 'sent'})
+        return Response({'error': '발송 실패'}, status=500)
+
 
 class GuardianRelationViewSet(viewsets.ModelViewSet):
     """보호자 관계 ViewSet"""

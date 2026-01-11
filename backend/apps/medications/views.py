@@ -37,17 +37,21 @@ class MedicationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Medication.objects.filter(user=self.request.user).select_related('group')
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='scan')
     def scan_prescription(self, request):
         """처방전 OCR 스캔으로 약품 자동 등록"""
         serializer = OCRScanSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
         try:
+            import base64
+            import io
+            
+            image_data = base64.b64decode(serializer.validated_data['image_base64'])
+            image_file = io.BytesIO(image_data)
+            
             ocr_service = OCRService()
-            result = ocr_service.parse_prescription(
-                serializer.validated_data['image']
-            )
+            result = ocr_service.parse_prescription(image_file)
             return Response(result)
         except Exception as e:
             return Response(
@@ -125,7 +129,7 @@ class MedicationLogViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(log)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='batch-take')
     def batch_take(self, request):
         """
         그룹 일괄 복약 완료 처리

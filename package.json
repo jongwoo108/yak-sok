@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "expo-auth-session": "~7.0.10",
     "expo-image-picker": "^17.0.10",
+    "expo-web-browser": "~15.0.10",
     "firebase": "^12.7.0",
     "framer-motion": "^12.25.0",
     "react-dom": "^19.1.0",

@@ -11,9 +11,16 @@ import {
     ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { api } from '../../services/api';
+import { useMedicationStore } from '../../services/store';
+import { GradientBackground } from '../../components/GradientBackground';
+import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 
 export default function RegisterScreen() {
     const router = useRouter();
+    const { setUser } = useMedicationStore();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         email: '',
@@ -46,291 +53,382 @@ export default function RegisterScreen() {
 
     const handleRegister = async () => {
         try {
-            // TODO: 실제 회원가입 API 연동
-            Alert.alert('알림', '회원가입 기능은 아직 구현 중입니다.', [
-                { text: '확인', onPress: () => router.replace('/(auth)/login') },
+            const response = await api.auth.register({
+                email: formData.email,
+                password: formData.password,
+                first_name: formData.firstName,
+                role: formData.role,
+                phone_number: formData.phoneNumber,
+                username: formData.email,
+            });
+
+            const { user, tokens } = response.data;
+
+            await SecureStore.setItemAsync('access_token', tokens.access);
+            await SecureStore.setItemAsync('refresh_token', tokens.refresh);
+
+            setUser(user);
+
+            Alert.alert('가입 완료', `${user.first_name}님 환영합니다!`, [
+                { text: '시작하기', onPress: () => router.replace('/(tabs)') }
             ]);
-        } catch (error) {
-            Alert.alert('회원가입 실패', '다시 시도해주세요.');
+        } catch (error: any) {
+            console.error(error);
+            const message = error.response?.data?.error || '회원가입에 실패했습니다. 다시 시도해주세요.';
+            Alert.alert('회원가입 실패', message);
         }
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.content}>
-                    {/* 헤더 */}
-                    <View style={styles.header}>
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => (step > 1 ? setStep(step - 1) : router.back())}
-                        >
-                            <Text style={styles.backButtonText}>← 뒤로</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.stepIndicator}>
-                            {step}/2
-                        </Text>
-                    </View>
-
-                    <View style={styles.titleContainer}>
-                        <Text style={styles.title}>회원가입</Text>
-                        <Text style={styles.subtitle}>
-                            {step === 1 ? '계정 정보를 입력해주세요' : '추가 정보를 입력해주세요'}
-                        </Text>
-                    </View>
-
-                    {/* 폼 */}
-                    <View style={styles.form}>
-                        {step === 1 ? (
-                            <>
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>이메일</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="example@email.com"
-                                        placeholderTextColor="#999"
-                                        value={formData.email}
-                                        onChangeText={(text) =>
-                                            setFormData({ ...formData, email: text })
-                                        }
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>비밀번호</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="8자 이상 입력"
-                                        placeholderTextColor="#999"
-                                        value={formData.password}
-                                        onChangeText={(text) =>
-                                            setFormData({ ...formData, password: text })
-                                        }
-                                        secureTextEntry
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>비밀번호 확인</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="비밀번호 재입력"
-                                        placeholderTextColor="#999"
-                                        value={formData.confirmPassword}
-                                        onChangeText={(text) =>
-                                            setFormData({ ...formData, confirmPassword: text })
-                                        }
-                                        secureTextEntry
-                                    />
-                                </View>
-                            </>
-                        ) : (
-                            <>
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>이름</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="이름을 입력해주세요"
-                                        placeholderTextColor="#999"
-                                        value={formData.firstName}
-                                        onChangeText={(text) =>
-                                            setFormData({ ...formData, firstName: text })
-                                        }
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>사용자 유형</Text>
-                                    <View style={styles.roleContainer}>
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.roleButton,
-                                                formData.role === 'senior' && styles.roleButtonActive,
-                                            ]}
-                                            onPress={() =>
-                                                setFormData({ ...formData, role: 'senior' })
-                                            }
-                                        >
-                                            <Text style={styles.roleEmoji}>👴</Text>
-                                            <Text
-                                                style={[
-                                                    styles.roleText,
-                                                    formData.role === 'senior' && styles.roleTextActive,
-                                                ]}
-                                            >
-                                                시니어
-                                            </Text>
-                                            <Text style={styles.roleDescription}>
-                                                복약 관리를 받습니다
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.roleButton,
-                                                formData.role === 'guardian' && styles.roleButtonActive,
-                                            ]}
-                                            onPress={() =>
-                                                setFormData({ ...formData, role: 'guardian' })
-                                            }
-                                        >
-                                            <Text style={styles.roleEmoji}>👨‍👩‍👧</Text>
-                                            <Text
-                                                style={[
-                                                    styles.roleText,
-                                                    formData.role === 'guardian' && styles.roleTextActive,
-                                                ]}
-                                            >
-                                                보호자
-                                            </Text>
-                                            <Text style={styles.roleDescription}>
-                                                시니어를 관리합니다
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </>
-                        )}
-
-                        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                            <Text style={styles.nextButtonText}>
-                                {step === 1 ? '다음' : '가입 완료'}
+        <GradientBackground variant="ocean" style={styles.container}>
+            <KeyboardAvoidingView
+                style={styles.keyboardView}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <View style={styles.content}>
+                        {/* 헤더 */}
+                        <View style={styles.header}>
+                            <TouchableOpacity
+                                style={styles.backButton}
+                                onPress={() => (step > 1 ? setStep(step - 1) : router.back())}
+                            >
+                                <Ionicons name="arrow-back" size={24} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Text style={styles.stepIndicator}>
+                                {step}/2 단계
                             </Text>
-                        </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.title}>회원가입</Text>
+                            <Text style={styles.subtitle}>
+                                {step === 1 ? '계정 정보를 입력해주세요' : '추가 정보를 입력해주세요'}
+                            </Text>
+                        </View>
+
+                        {/* 폼 카드 */}
+                        <View style={styles.cardContainer}>
+                            <View style={styles.shadowDark} />
+                            <View style={styles.shadowLight} />
+                            <View style={styles.cardSurface}>
+                                {step === 1 ? (
+                                    <>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>이메일</Text>
+                                            <View style={styles.inputWrapper}>
+                                                <Ionicons name="mail-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="example@email.com"
+                                                    placeholderTextColor={colors.textLight}
+                                                    value={formData.email}
+                                                    onChangeText={(text) =>
+                                                        setFormData({ ...formData, email: text })
+                                                    }
+                                                    keyboardType="email-address"
+                                                    autoCapitalize="none"
+                                                />
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>비밀번호</Text>
+                                            <View style={styles.inputWrapper}>
+                                                <Ionicons name="lock-closed-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="8자 이상 입력"
+                                                    placeholderTextColor={colors.textLight}
+                                                    value={formData.password}
+                                                    onChangeText={(text) =>
+                                                        setFormData({ ...formData, password: text })
+                                                    }
+                                                    secureTextEntry
+                                                />
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>비밀번호 확인</Text>
+                                            <View style={styles.inputWrapper}>
+                                                <Ionicons name="checkmark-circle-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="비밀번호 재입력"
+                                                    placeholderTextColor={colors.textLight}
+                                                    value={formData.confirmPassword}
+                                                    onChangeText={(text) =>
+                                                        setFormData({ ...formData, confirmPassword: text })
+                                                    }
+                                                    secureTextEntry
+                                                />
+                                            </View>
+                                        </View>
+                                    </>
+                                ) : (
+                                    <>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>이름</Text>
+                                            <View style={styles.inputWrapper}>
+                                                <Ionicons name="person-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="이름을 입력해주세요"
+                                                    placeholderTextColor={colors.textLight}
+                                                    value={formData.firstName}
+                                                    onChangeText={(text) =>
+                                                        setFormData({ ...formData, firstName: text })
+                                                    }
+                                                />
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>사용자 유형</Text>
+                                            <View style={styles.roleContainer}>
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.roleButton,
+                                                        formData.role === 'senior' && styles.roleButtonActive,
+                                                    ]}
+                                                    onPress={() =>
+                                                        setFormData({ ...formData, role: 'senior' })
+                                                    }
+                                                >
+                                                    <View style={[
+                                                        styles.roleIconCircle,
+                                                        formData.role === 'senior' && styles.roleIconCircleActive
+                                                    ]}>
+                                                        <FontAwesome5
+                                                            name="user-alt"
+                                                            size={24}
+                                                            color={formData.role === 'senior' ? colors.primary : colors.textLight}
+                                                        />
+                                                    </View>
+                                                    <Text
+                                                        style={[
+                                                            styles.roleText,
+                                                            formData.role === 'senior' && styles.roleTextActive,
+                                                        ]}
+                                                    >
+                                                        시니어
+                                                    </Text>
+                                                    <Text style={styles.roleDescription}>
+                                                        복약 관리를 받습니다
+                                                    </Text>
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.roleButton,
+                                                        formData.role === 'guardian' && styles.roleButtonActive,
+                                                    ]}
+                                                    onPress={() =>
+                                                        setFormData({ ...formData, role: 'guardian' })
+                                                    }
+                                                >
+                                                    <View style={[
+                                                        styles.roleIconCircle,
+                                                        formData.role === 'guardian' && styles.roleIconCircleActive
+                                                    ]}>
+                                                        <FontAwesome5
+                                                            name="user-friends"
+                                                            size={24}
+                                                            color={formData.role === 'guardian' ? colors.primary : colors.textLight}
+                                                        />
+                                                    </View>
+                                                    <Text
+                                                        style={[
+                                                            styles.roleText,
+                                                            formData.role === 'guardian' && styles.roleTextActive,
+                                                        ]}
+                                                    >
+                                                        보호자
+                                                    </Text>
+                                                    <Text style={styles.roleDescription}>
+                                                        시니어를 관리합니다
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    </>
+                                )}
+
+                                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                                    <Text style={styles.nextButtonText}>
+                                        {step === 1 ? '다음' : '가입 완료'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </View>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </GradientBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
+    },
+    keyboardView: {
+        flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
     },
     content: {
         flex: 1,
-        padding: 24,
-        paddingTop: 60,
+        padding: spacing.xl,
+        paddingTop: Platform.OS === 'ios' ? 60 : 50,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 32,
+        marginBottom: spacing.xl,
     },
     backButton: {
-        padding: 8,
-    },
-    backButtonText: {
-        fontSize: 16,
-        color: '#2D8B72',
-        fontWeight: '600',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.base,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...shadows.light, // Using simplistic shadow here for small button
     },
     stepIndicator: {
-        fontSize: 14,
-        color: '#999',
-        fontWeight: '600',
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: fontWeight.bold,
     },
     titleContainer: {
-        marginBottom: 32,
+        marginBottom: spacing.xl,
     },
     title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: fontSize.xxxl,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+        marginBottom: spacing.xs,
     },
     subtitle: {
-        fontSize: 16,
-        color: '#666',
+        fontSize: fontSize.base,
+        color: colors.textSecondary,
     },
-    form: {
-        backgroundColor: '#FFFDF5',
-        borderRadius: 24,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
-        elevation: 8,
+
+    // Neumorphic Card Styles
+    cardContainer: {
+        position: 'relative',
+        marginBottom: spacing.xl,
     },
+    shadowDark: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.base,
+        ...shadows.dark,
+        borderRadius: borderRadius.xxl,
+    },
+    shadowLight: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.base,
+        ...shadows.light,
+        borderRadius: borderRadius.xxl,
+    },
+    cardSurface: {
+        backgroundColor: colors.base,
+        borderRadius: borderRadius.xxl,
+        padding: spacing.xl,
+    },
+
     inputContainer: {
-        marginBottom: 20,
+        marginBottom: spacing.lg,
     },
     inputLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.semibold,
+        color: colors.text,
+        marginBottom: spacing.sm,
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.background,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+        paddingHorizontal: spacing.md,
+    },
+    inputIcon: {
+        marginRight: spacing.sm,
     },
     input: {
-        backgroundColor: '#F0F7F4',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 16,
-        color: '#333',
+        flex: 1,
+        paddingVertical: spacing.md,
+        fontSize: fontSize.base,
+        color: colors.text,
     },
+
     roleContainer: {
         flexDirection: 'row',
-        gap: 12,
+        gap: spacing.md,
     },
     roleButton: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
-        borderRadius: 16,
-        padding: 16,
+        backgroundColor: colors.background,
+        borderRadius: borderRadius.xl,
+        padding: spacing.lg,
         alignItems: 'center',
         borderWidth: 2,
         borderColor: 'transparent',
     },
     roleButtonActive: {
-        borderColor: '#2D8B72',
-        backgroundColor: 'rgba(45, 139, 114, 0.1)',
+        borderColor: colors.primary,
+        backgroundColor: 'rgba(45, 139, 114, 0.05)',
     },
-    roleEmoji: {
-        fontSize: 32,
-        marginBottom: 8,
+    roleIconCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: colors.base,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.md,
+        // Small neumorphism for these circles
+        shadowColor: '#B8C4CE',
+        shadowOffset: { width: 3, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 3,
+    },
+    roleIconCircleActive: {
+        backgroundColor: colors.mintLight,
     },
     roleText: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 4,
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+        marginBottom: spacing.xs,
     },
     roleTextActive: {
-        color: '#2D8B72',
+        color: colors.primary,
     },
     roleDescription: {
-        fontSize: 12,
-        color: '#999',
+        fontSize: fontSize.xs,
+        color: colors.textSecondary,
         textAlign: 'center',
     },
     nextButton: {
-        backgroundColor: '#2D8B72',
-        borderRadius: 16,
-        paddingVertical: 16,
+        backgroundColor: colors.primary,
+        borderRadius: borderRadius.pill,
+        paddingVertical: spacing.md,
         alignItems: 'center',
-        marginTop: 8,
-        shadowColor: '#2D8B72',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        marginTop: spacing.lg,
+        ...shadows.mint,
     },
     nextButtonText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: 'white',
+        fontSize: fontSize.lg,
+        fontWeight: fontWeight.bold,
+        color: colors.white,
     },
 });

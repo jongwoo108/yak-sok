@@ -23,6 +23,7 @@ export interface Medication {
     prescription_image?: string;
     is_active: boolean;
     schedules: MedicationSchedule[];
+    group_name?: string;
     created_at: string;
     updated_at: string;
 }

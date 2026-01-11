@@ -60,6 +60,10 @@ ROOT_URLCONF = 'core.urls'
 # Next.js 프록시가 슬래시를 제거하는 문제 해결
 APPEND_SLASH = False
 
+# 데이터 업로드 크기 제한 (10MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

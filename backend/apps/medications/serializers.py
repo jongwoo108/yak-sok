@@ -95,11 +95,18 @@ class MedicationSerializer(serializers.ModelSerializer):
             scheduled_datetime = timezone.make_aware(
                 datetime.combine(today, schedule_data['scheduled_time'])
             )
-            MedicationLog.objects.create(
+            log = MedicationLog.objects.create(
                 schedule=schedule,
                 scheduled_datetime=scheduled_datetime,
                 status=MedicationLog.Status.PENDING
             )
+            
+            # 비상 알림 스케줄링 (.delay() 사용)
+            try:
+                from apps.alerts.tasks import schedule_medication_alert
+                schedule_medication_alert.delay(log.id)
+            except Exception as e:
+                print(f"알림 스케줄링 실패: {e}")
         
         return medication
 
@@ -130,12 +137,11 @@ class MedicationLogSerializer(serializers.ModelSerializer):
 class OCRScanSerializer(serializers.Serializer):
     """처방전 OCR 스캔 시리얼라이저"""
     
-    image = serializers.ImageField(required=True)
+    image_base64 = serializers.CharField(required=True)
     
-    def validate_image(self, value):
-        # 이미지 크기 제한 (10MB)
-        if value.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError('이미지 크기는 10MB를 초과할 수 없습니다.')
+    def validate_image_base64(self, value):
+        if not value:
+            raise serializers.ValidationError('이미지 데이터가 비어있습니다.')
         return value
 
 

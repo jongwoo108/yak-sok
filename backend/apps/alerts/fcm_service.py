@@ -51,6 +51,45 @@ class FCMService:
         Returns:
             성공 여부
         """
+        # Expo Push Token 처리 (Expo Go 또는 EAS Build)
+        if token.startswith('ExponentPushToken'):
+            try:
+                from exponent_server_sdk import PushClient, PushMessage
+                from exponent_server_sdk import PushServerError, PushTicketError
+                
+                print(f"[Expo] Expo Push Token 감지: {token[:20]}...")
+                
+                response = PushClient().publish(
+                    PushMessage(
+                        to=token,
+                        title=title,
+                        body=body,
+                        data=data or {},
+                        sound='default',
+                    )
+                )
+                
+                try:
+                    response.validate_response()
+                    print(f"[Expo] 알림 발송 성공: {response.id}")
+                    return True
+                except PushTicketError as exc:
+                    print(f"[Expo] 알림 발송 실패 (TicketError): {exc.push_response._asdict()}")
+                    return False
+                except PushServerError as exc:
+                    print(f"[Expo] 알림 발송 실패 (ServerError): {exc.errors}")
+                    return False
+                    
+            except ImportError:
+                print("[Expo] exponent_server_sdk가 설치되지 않았습니다. pip install exponent_server_sdk")
+                return False
+            except Exception as e:
+                print(f"[Expo] 알림 발송 중 예외 발생: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
+
+        # 기존 FCM 처리 (Native)
         cls.initialize()
         
         if not cls._initialized:

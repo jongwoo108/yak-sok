@@ -4,10 +4,17 @@
 
 import axios, { AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import type { User, Medication, MedicationLog, Alert, ApiResponse } from './types';
 
-// 환경변수에서 API URL 가져오기 (기본값: localhost)
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api';
+// 환경변수에서 API URL 가져오기
+// 주의: 물리 기기(폰)에서 테스트하려면 아래 'YOUR_LOCAL_IP'를 컴퓨터의 IP 주소(예: 192.168.0.x)로 변경하고 주석을 해제하세요.
+const MANUAL_IP = 'http://172.30.1.56:8000/api';
+
+const API_BASE_URL =
+    MANUAL_IP ||
+    process.env.EXPO_PUBLIC_API_URL ||
+    (Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api');
 
 // Axios 인스턴스 생성
 const apiClient: AxiosInstance = axios.create({
@@ -66,10 +73,27 @@ apiClient.interceptors.response.use(
 export const api = {
     // 인증
     auth: {
+        // 내 정보 조회
         me: () => apiClient.get<User>('/users/me/'),
+
+        // 이메일 로그인
+        login: (data: any) =>
+            apiClient.post<{ user: User; tokens: { access: string; refresh: string } }>(
+                '/users/login/',
+                data
+            ),
+
+        // 회원가입
+        register: (data: any) =>
+            apiClient.post<{ user: User; tokens: { access: string; refresh: string } }>(
+                '/users/register/',
+                data
+            ),
+
+        // 구글 로그인
         googleLogin: (idToken: string) =>
             apiClient.post<{ user: User; tokens: { access: string; refresh: string } }>(
-                '/users/google-login/',
+                '/users/login/google/',
                 { id_token: idToken }
             ),
     },
@@ -110,6 +134,7 @@ export const api = {
     users: {
         updateFcmToken: (token: string) =>
             apiClient.patch('/users/update_fcm_token/', { fcm_token: token }),
+        testPush: () => apiClient.post('/users/test-push/'),
     },
 };
 

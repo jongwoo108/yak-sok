@@ -13,3 +13,4 @@ openai>=1.0
 gunicorn>=21.0
 pinecone
 firebase-admin>=6.0.0
+exponent_server_sdk>=1.0.0
