@@ -12,7 +12,8 @@
 **'약속(Yak-Sok)'**은 복약 순응도를 단순한 건강 지표가 아닌, 핵심적인 **"생존 신호 (Life-Sign)"**로 해석합니다. 이 프로젝트는 어르신들의 디지털 소외 문제를 해결함과 동시에, 강력한 사회 안전망을 구축하는 것을 목표로 합니다.
 
 **"3D 파스텔 클레이모피즘 (Claymorphism)"** 디자인 언어를 적용하여, 시니어 사용자에게는 높은 시인성과 편안한 인터페이스를, 보호자에게는 정교한 모니터링 대시보드를 제공합니다.
-![제목 없는 디자인](https://github.com/user-attachments/assets/4a0c8141-2f35-40bc-b02e-76560e6bb1de)
+<img width="4950" height="2088" alt="yak-sok_UI" src="https://github.com/user-attachments/assets/f93ef8b2-6e11-4ea6-8585-c34c6bab022f" />
+
 
 ---
 ## 주요 기능 (Features)
