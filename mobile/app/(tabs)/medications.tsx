@@ -20,68 +20,68 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useMedicationStore } from '../../services/store';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
+import { NeumorphCard, NeumorphIconButton } from '../../components';
 
-// 뉴모피즘 카드 컴포넌트
-const NeumorphCard = ({ children, style, variant = 'default' }: {
-    children: React.ReactNode;
-    style?: any;
-    variant?: 'default' | 'inset';
-}) => {
-    // style 배열에서 alignItems, justifyContent 등의 스타일을 분리
-    const flatStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : (style || {});
-    const { alignItems, justifyContent, paddingVertical, ...containerStyle } = flatStyle;
-    const surfaceStyle = { alignItems, justifyContent, paddingVertical };
-
-    if (variant === 'inset') {
-        return (
-            <View style={[styles.insetCard, style]}>
-                {children}
-            </View>
-        );
-    }
-
-    return (
-        <View style={[styles.neumorphContainer, containerStyle]}>
-            <View style={[styles.shadowDark, { borderRadius: borderRadius.xl }]} />
-            <View style={[styles.shadowLight, { borderRadius: borderRadius.xl }]} />
-            <View style={[styles.cardSurface, surfaceStyle]}>
-                {children}
-            </View>
-        </View>
-    );
-};
-
-// 뉴모피즘 FAB 버튼
-const NeumorphFab = ({
-    children,
-    onPress,
-    style,
-    color = colors.primary
-}: {
-    children: React.ReactNode;
-    onPress: () => void;
-    style?: any;
-    color?: string;
-}) => (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={style}>
-        <View style={[styles.fabContainer]}>
-            <View style={[styles.fabShadow, { shadowColor: color }]} />
-            <View style={[styles.fabSurface, { backgroundColor: color }]}>
-                {children}
-            </View>
-        </View>
-    </TouchableOpacity>
-);
 
 export default function MedicationsScreen() {
     const router = useRouter();
-    const { medications, fetchMedications, deleteMedication, isLoading } = useMedicationStore();
+    const { medications, fetchMedications, deleteMedication, deleteMedicationGroup, isLoading } = useMedicationStore();
     const [refreshing, setRefreshing] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         fetchMedications();
     }, []);
+
+    // Edit Mode Toggle: Clear selection when exiting
+    useEffect(() => {
+        if (!isEditMode) {
+            setSelectedIds(new Set());
+        }
+    }, [isEditMode]);
+
+    const toggleSelection = (id: number) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.size === medications.length) {
+            setSelectedIds(new Set()); // Deselect All
+        } else {
+            const allIds = new Set(medications.map(m => m.id));
+            setSelectedIds(allIds);
+        }
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedIds.size === 0) return;
+
+        Alert.alert(
+            '선택 삭제',
+            `선택한 ${selectedIds.size}개의 약을 삭제하시겠습니까?`,
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '삭제',
+                    style: 'destructive',
+                    onPress: async () => {
+                        // Batch delete logic (Client-side loop since backend batch endpoint might not exist yet)
+                        for (const id of selectedIds) {
+                            await deleteMedication(id);
+                        }
+                        setIsEditMode(false);
+                    }
+                }
+            ]
+        );
+    };
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -100,6 +100,23 @@ export default function MedicationsScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         await deleteMedication(id);
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleDeleteGroup = (groupId: number, groupName: string) => {
+        Alert.alert(
+            '그룹 삭제',
+            `'${groupName}' 그룹과 포함된 약을 모두 삭제하시겠습니까?`,
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '그룹 삭제',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteMedicationGroup(groupId);
                     }
                 }
             ]
@@ -131,32 +148,12 @@ export default function MedicationsScreen() {
                     />
                 }
             >
-                {/* 헤더 */}
+                {/* 중앙 헤더 (buttons moved to absolute view) */}
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => router.back()}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.backButtonInner}>
-                            <Ionicons name="chevron-back" size={22} color={colors.text} />
-                        </View>
-                    </TouchableOpacity>
-
-                    <View style={styles.headerTitleRow}>
-                        <Ionicons name="medical" size={24} color={colors.primary} style={{ marginRight: 8 }} />
-                        <Text style={styles.headerTitle}>내 약 목록</Text>
-                    </View>
-
-                    <TouchableOpacity
-                        style={[styles.editButton, isEditMode && styles.editButtonActive]}
-                        onPress={() => setIsEditMode(!isEditMode)}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={[styles.editButtonText, isEditMode && styles.editButtonTextActive]}>
-                            {isEditMode ? '완료' : '편집'}
-                        </Text>
-                    </TouchableOpacity>
+                    <NeumorphIconButton style={styles.headerIconBtn}>
+                        <Ionicons name="medical" size={32} color={colors.primary} />
+                    </NeumorphIconButton>
+                    <Text style={styles.headerTitle}>내 약 목록</Text>
                 </View>
 
                 {/* 약 목록 */}
@@ -184,13 +181,24 @@ export default function MedicationsScreen() {
                             <View style={styles.groupHeader}>
                                 <View style={styles.groupTitleRow}>
                                     <View style={styles.groupIconCircle}>
-                                        <Feather name="folder" size={14} color={colors.lavenderDark} />
+                                        <Feather name="folder" size={14} color={colors.primary} />
                                     </View>
                                     <Text style={styles.groupName}>{groupName}</Text>
                                     <View style={styles.countBadge}>
                                         <Text style={styles.countBadgeText}>{meds.length}</Text>
                                     </View>
                                 </View>
+
+                                {/* Group Delete Button (Edit Mode) */}
+                                {isEditMode && meds[0]?.group_id && (
+                                    <TouchableOpacity
+                                        style={styles.groupDeleteButton}
+                                        onPress={() => handleDeleteGroup(meds[0].group_id!, groupName)}
+                                    >
+                                        <Text style={styles.groupDeleteText}>그룹 삭제</Text>
+                                        <Ionicons name="trash-outline" size={14} color={colors.dangerDark} />
+                                    </TouchableOpacity>
+                                )}
                             </View>
 
                             {/* 약품 카드들 */}
@@ -231,13 +239,21 @@ export default function MedicationsScreen() {
                                         )}
                                     </NeumorphCard>
 
-                                    {/* 삭제 버튼 (편집 모드일 때만 표시) */}
+                                    {/* Selection Overlay for Edit Mode */}
                                     {isEditMode && (
                                         <TouchableOpacity
-                                            style={styles.deleteButtonBadge}
-                                            onPress={() => handleDelete(med.id, med.name)}
+                                            style={styles.selectionOverlay}
+                                            activeOpacity={1}
+                                            onPress={() => toggleSelection(med.id)}
                                         >
-                                            <Ionicons name="remove" size={16} color="white" />
+                                            <View style={[
+                                                styles.checkbox,
+                                                selectedIds.has(med.id) && styles.checkboxSelected
+                                            ]}>
+                                                {selectedIds.has(med.id) && (
+                                                    <Ionicons name="checkmark" size={16} color="white" />
+                                                )}
+                                            </View>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -250,25 +266,88 @@ export default function MedicationsScreen() {
                 <View style={{ height: 140 }} />
             </ScrollView>
 
-            {/* 약 추가 FAB 버튼들 */}
-            <View style={styles.fabRow}>
-                <NeumorphFab
-                    onPress={() => router.push('/medications/scan' as any)}
-                    style={{ flex: 1 }}
-                    color={colors.base}
-                >
-                    <Ionicons name="camera" size={20} color={colors.primary} />
-                    <Text style={[styles.fabText, { color: colors.primary }]}>처방전 스캔</Text>
-                </NeumorphFab>
+            {/* 상단 컨트롤 버튼 (Absolute Position) */}
+            <View style={styles.absoluteTopBar} pointerEvents="box-none">
+                {isEditMode ? (
+                    <TouchableOpacity
+                        style={styles.selectAllButton}
+                        onPress={handleSelectAll}
+                    >
+                        <Text style={styles.selectAllText}>
+                            {selectedIds.size === medications.length ? '선택 해제' : '전체 선택'}
+                        </Text>
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => router.back()}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.backButtonInner}>
+                            <Ionicons name="chevron-back" size={22} color={colors.text} />
+                        </View>
+                    </TouchableOpacity>
+                )}
 
-                <NeumorphFab
-                    onPress={() => router.push('/medications/add')}
-                    style={{ flex: 1 }}
-                    color={colors.primary}
+                <TouchableOpacity
+                    style={[styles.editButton, isEditMode && styles.editButtonActive]}
+                    onPress={() => setIsEditMode(!isEditMode)}
+                    activeOpacity={0.8}
                 >
-                    <Ionicons name="add" size={20} color={colors.white} />
-                    <Text style={styles.fabText}>직접 추가</Text>
-                </NeumorphFab>
+                    <Text style={[styles.editButtonText, isEditMode && styles.editButtonTextActive]}>
+                        {isEditMode ? '완료' : '편집'}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* 약 추가 FAB 버튼들 */}
+            {/* 약 추가 FAB 버튼들 (NeumorphFab is removed, using inline style for now or replace with ClayCard variant if needed, but let's keep inline structure simplified for brevity or use NeumorphCard logic) -> Actually I removed NeumorphFab definition. I should provide a quick inline replacement or restore it.
+            Wait, I removed NeumorphFab but didn't provide a shared replacement. I should probably re-implement it as a shared component or just use a standard View style here. 
+            Re-implementing inline here to avoid breaking changes, but better structure.
+            */}
+            <View style={styles.fabRow}>
+                {isEditMode ? (
+                    <TouchableOpacity
+                        onPress={handleDeleteSelected}
+                        style={{ flex: 1 }}
+                        activeOpacity={0.8}
+                        disabled={selectedIds.size === 0}
+                    >
+                        <View style={styles.fabContainer}>
+                            <View style={[styles.fabShadow, { shadowColor: selectedIds.size > 0 ? '#FF5252' : colors.textLight }]} />
+                            <View style={[styles.fabSurface, { backgroundColor: selectedIds.size > 0 ? '#FF5252' : colors.textLight }]}>
+                                <Ionicons name="trash" size={20} color={colors.white} />
+                                <Text style={styles.fabText}>
+                                    {selectedIds.size > 0 ? `${selectedIds.size}개 삭제하기` : '삭제할 항목 선택'}
+                                </Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                ) : (
+                    <>
+                        <TouchableOpacity onPress={() => router.push('/medications/scan' as any)} style={{ flex: 1 }} activeOpacity={0.8}>
+                            <View style={styles.fabContainer}>
+                                <View style={styles.fabShadow} />
+                                <View style={styles.fabShadowLight} />
+                                <View style={[styles.fabSurface, { backgroundColor: colors.base }]}>
+                                    <Ionicons name="camera" size={20} color={colors.primary} />
+                                    <Text style={[styles.fabText, { color: colors.primary }]}>처방전 스캔</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => router.push('/medications/add')} style={{ flex: 1 }} activeOpacity={0.8}>
+                            <View style={styles.fabContainer}>
+                                <View style={[styles.fabShadow, { shadowColor: colors.primary }]} />
+                                <View style={styles.fabShadowLight} />
+                                <View style={[styles.fabSurface, { backgroundColor: colors.primary }]}>
+                                    <Ionicons name="add" size={20} color={colors.white} />
+                                    <Text style={styles.fabText}>직접 추가</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
         </GradientBackground>
     );
@@ -288,12 +367,29 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'ios' ? 60 : 50,
     },
 
-    // 헤더 (스타일 업데이트 필요할 수 있음)
-    header: {
+    topBar: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        marginBottom: spacing.md,
+    },
+    // 상단 절대 위치 바
+    absoluteTopBar: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 60 : 50,
+        left: spacing.xl,
+        right: spacing.xl,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    header: {
+        alignItems: 'center',
         marginBottom: spacing.xxl,
+    },
+    headerIconBtn: {
+        marginBottom: spacing.lg,
     },
     // ... (rest of styles, need to ensure I don't break them)
     backButton: {
@@ -308,16 +404,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         ...shadows.soft,
     },
-    headerTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    headerIcon: {
-        fontSize: 20,
-        marginRight: spacing.sm,
-    },
     headerTitle: {
-        fontSize: fontSize.xl,
+        fontSize: fontSize.xxl,
         fontWeight: fontWeight.bold,
         color: colors.text,
     },
@@ -340,37 +428,6 @@ const styles = StyleSheet.create({
         color: 'white',
     },
 
-    // 뉴모피즘 카드
-    neumorphContainer: {
-        position: 'relative',
-        marginBottom: spacing.md,
-    },
-    shadowDark: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.base,
-        ...shadows.dark,
-    },
-    shadowLight: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.base,
-        ...shadows.light,
-    },
-    cardSurface: {
-        backgroundColor: colors.base,
-        borderRadius: borderRadius.xl,
-        padding: spacing.lg,
-    },
-    insetCard: {
-        backgroundColor: colors.base,
-        borderRadius: borderRadius.xl,
-        padding: spacing.lg,
-        marginBottom: spacing.md,
-        borderWidth: 2,
-        borderTopColor: 'rgba(184, 196, 206, 0.4)',
-        borderLeftColor: 'rgba(184, 196, 206, 0.4)',
-        borderBottomColor: 'rgba(255, 255, 255, 0.8)',
-        borderRightColor: 'rgba(255, 255, 255, 0.8)',
-    },
 
     // 로딩
     loadingCard: {
@@ -428,7 +485,7 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: colors.lavenderLight,
+        backgroundColor: colors.mintLight,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: spacing.sm,
@@ -551,19 +608,79 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.pill,
         overflow: 'visible',
     },
+
+    // 선택 모드 UI
+    selectionOverlay: {
+        position: 'absolute',
+        top: -8,
+        right: -4,
+        zIndex: 10,
+    },
+    // 그룹 삭제 버튼
+    groupDeleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.danger + '20', // Opacity 20%
+        paddingHorizontal: spacing.md,
+        paddingVertical: 4,
+        borderRadius: borderRadius.md,
+        gap: 4,
+    },
+    groupDeleteText: {
+        fontSize: fontSize.xs,
+        color: colors.dangerDark,
+        fontWeight: fontWeight.bold,
+    },
+    checkbox: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: colors.white,
+        borderWidth: 2,
+        borderColor: colors.textLight,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...shadows.soft,
+    },
+    checkboxSelected: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    selectAllButton: {
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+    },
+    selectAllText: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.bold,
+        color: colors.primary,
+    },
     fabShadow: {
         ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.base,
         borderRadius: borderRadius.pill,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowColor: '#B8C4CE',
+        shadowOffset: { width: 6, height: 6 },
+        shadowOpacity: 0.6,
         shadowRadius: 10,
         elevation: 8,
+    },
+    fabShadowLight: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.base,
+        borderRadius: borderRadius.pill,
+        shadowColor: '#FFFFFF',
+        shadowOffset: { width: -4, height: -4 },
+        shadowOpacity: 1,
+        shadowRadius: 6,
+        elevation: 0,
     },
     fabSurface: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: spacing.lg,
+        paddingHorizontal: spacing.xl,
         borderRadius: borderRadius.pill,
         gap: spacing.sm,
     },

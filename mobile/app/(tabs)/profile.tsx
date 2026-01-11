@@ -10,24 +10,8 @@ import { useMedicationStore } from '../../services/store';
 import { api } from '../../services/api';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
+import { NeumorphCard, NeumorphIconButton } from '../../components';
 
-// 뉴모피즘 카드 컴포넌트
-const NeumorphCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
-    // style 배열에서 alignItems, justifyContent 등의 스타일을 분리
-    const flatStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : (style || {});
-    const { alignItems, justifyContent, paddingVertical, ...containerStyle } = flatStyle;
-    const surfaceStyle = { alignItems, justifyContent, paddingVertical };
-
-    return (
-        <View style={[styles.neumorphContainer, containerStyle]}>
-            <View style={[styles.shadowDark, { borderRadius: borderRadius.xl }]} />
-            <View style={[styles.shadowLight, { borderRadius: borderRadius.xl }]} />
-            <View style={[styles.cardSurface, surfaceStyle]}>
-                {children}
-            </View>
-        </View>
-    );
-};
 
 // 메뉴 아이템
 const MenuItem = ({
@@ -94,9 +78,9 @@ export default function ProfileScreen() {
             >
                 {/* 헤더 */}
                 <View style={styles.header}>
-                    <View style={styles.headerIconCircle}>
-                        <Ionicons name="settings" size={28} color={colors.lavenderDark} />
-                    </View>
+                    <NeumorphIconButton style={styles.headerIconBtn}>
+                        <Ionicons name="settings" size={28} color={colors.primary} />
+                    </NeumorphIconButton>
                     <Text style={styles.headerTitle}>설정</Text>
                 </View>
 
@@ -236,27 +220,12 @@ const styles = StyleSheet.create({
         color: colors.text,
     },
 
-    // 뉴모피즘 카드
-    neumorphContainer: {
-        position: 'relative',
-    },
-    shadowDark: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.base,
-        ...shadows.dark,
-    },
-    shadowLight: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.base,
-        ...shadows.light,
-    },
-    cardSurface: {
-        backgroundColor: colors.base,
-        borderRadius: borderRadius.xl,
-        padding: spacing.xl,
-    },
     cardSpacing: {
         marginBottom: spacing.xl,
+    },
+
+    headerIconBtn: {
+        marginBottom: spacing.lg,
     },
 
     // 프로필

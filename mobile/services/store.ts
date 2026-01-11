@@ -30,6 +30,7 @@ interface AppState {
 
     fetchMedications: () => Promise<void>;
     deleteMedication: (id: number) => Promise<void>;
+    deleteMedicationGroup: (id: number) => Promise<void>;
     fetchTodayLogs: () => Promise<void>;
     takeMedication: (logId: number) => Promise<void>;
     batchTakeMedications: (logIds: number[]) => Promise<void>;
@@ -95,6 +96,20 @@ export const useMedicationStore = create<AppState>((set, get) => ({
         }
     },
 
+    deleteMedicationGroup: async (id: number) => {
+        try {
+            set({ isLoading: true, error: null });
+            await api.medicationGroups.delete(id);
+            const currentMeds = get().medications;
+            // 해당 그룹의 약들을 제거
+            set({ medications: currentMeds.filter((med) => med.group_id !== id) });
+        } catch (error) {
+            set({ error: '그룹 삭제에 실패했습니다.' });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
     fetchTodayLogs: async () => {
         try {
             set({ isLoading: true, error: null });
@@ -109,7 +124,7 @@ export const useMedicationStore = create<AppState>((set, get) => ({
 
     takeMedication: async (logId) => {
         try {
-            set({ isLoading: true, error: null });
+            set({ error: null });
             await api.logs.take(logId);
 
             const logs = get().todayLogs.map((log) =>
@@ -127,7 +142,7 @@ export const useMedicationStore = create<AppState>((set, get) => ({
 
     batchTakeMedications: async (logIds) => {
         try {
-            set({ isLoading: true, error: null });
+            set({ error: null });
             await api.logs.batchTake(logIds);
 
             const logs = get().todayLogs.map((log) =>

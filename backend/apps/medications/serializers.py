@@ -54,11 +54,12 @@ class MedicationSerializer(serializers.ModelSerializer):
     schedules_input = MedicationScheduleWriteSerializer(many=True, write_only=True, required=False)
     group_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     group = MedicationGroupSerializer(read_only=True)
+    group_name = serializers.CharField(source='group.name', read_only=True, allow_null=True)
     
     class Meta:
         model = Medication
         fields = [
-            'id', 'name', 'description', 'dosage', 'group', 'group_id',
+            'id', 'name', 'description', 'dosage', 'group', 'group_id', 'group_name',
             'prescription_image', 'is_active', 'schedules', 'schedules_input',
             'created_at', 'updated_at'
         ]

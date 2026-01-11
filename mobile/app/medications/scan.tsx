@@ -302,6 +302,7 @@ export default function ScanScreen() {
 
     // 등록 확정
     const handleConfirm = async () => {
+        console.log('[handleConfirm] 시작');
         const newMedications = medicationsToEdit.filter(med =>
             !med.isDuplicate && med.schedules.some(s => s.enabled)
         );
@@ -311,15 +312,22 @@ export default function ScanScreen() {
             return;
         }
 
+        console.log('[handleConfirm] 등록할 약 개수:', newMedications.length);
         setIsLoading(true);
+        setError(''); // 이전 에러 클리어
+
         try {
             let groupId: number | null = null;
             if (symptom) {
+                console.log('[handleConfirm] 그룹 생성 중:', symptom);
                 const groupResponse = await api.medicationGroups.create({ name: symptom });
                 groupId = groupResponse.data.id;
+                console.log('[handleConfirm] 그룹 생성 완료, groupId:', groupId);
             }
 
-            for (const med of newMedications) {
+            for (let i = 0; i < newMedications.length; i++) {
+                const med = newMedications[i];
+                console.log(`[handleConfirm] 약 ${i + 1}/${newMedications.length} 등록 중:`, med.name);
                 const enabledSchedules = med.schedules
                     .filter(s => s.enabled)
                     .map(s => ({
@@ -334,11 +342,25 @@ export default function ScanScreen() {
                     schedules_input: enabledSchedules,
                     group_id: groupId,
                 });
+                console.log(`[handleConfirm] 약 ${i + 1} 등록 완료`);
             }
 
-            await fetchMedications();
+            console.log('[handleConfirm] 모든 약 등록 완료, fetchMedications 호출');
+            // 등록 성공 - fetchMedications 실패는 무시하고 진행
+            try {
+                await fetchMedications();
+                console.log('[handleConfirm] fetchMedications 완료');
+            } catch (e) {
+                console.log('[handleConfirm] fetchMedications 실패 (무시):', e);
+            }
+
+            console.log('[handleConfirm] router.replace 호출');
             router.replace('/(tabs)/medications');
+            console.log('[handleConfirm] 완료');
         } catch (err: any) {
+            console.error('[handleConfirm] 에러 발생:', err);
+            console.error('[handleConfirm] 에러 메시지:', err?.message);
+            console.error('[handleConfirm] 에러 응답:', err?.response?.data);
             setError('약 등록에 실패했습니다.');
         } finally {
             setIsLoading(false);
@@ -665,6 +687,7 @@ const styles = StyleSheet.create({
         marginBottom: spacing.lg,
     },
     analyzeContent: {
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: spacing.xl,

@@ -7,3 +7,5 @@ export { ClayCard } from './ClayCard';
 export { ClayButton } from './ClayButton';
 export { ClayInput } from './ClayInput';
 export { OrganicBackground } from './OrganicBackground';
+export { NeumorphCard } from './NeumorphCard';
+export { NeumorphIconButton } from './NeumorphIconButton';

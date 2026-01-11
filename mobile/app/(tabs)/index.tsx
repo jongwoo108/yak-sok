@@ -20,6 +20,7 @@ import { useMedicationStore } from '../../services/store';
 import type { MedicationLog } from '../../services/types';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows, neumorphism } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
+import { NeumorphCard, NeumorphIconButton } from '../../components';
 
 interface GroupedLogs {
     key: string;
@@ -31,34 +32,6 @@ interface GroupedLogs {
     allTaken: boolean;
 }
 
-// 뉴모피즘 카드 컴포넌트 (인라인)
-const NeumorphCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
-    // style 배열에서 alignItems, justifyContent 등의 스타일을 분리
-    const flatStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : (style || {});
-    const { alignItems, justifyContent, paddingVertical, ...containerStyle } = flatStyle;
-    const surfaceStyle = { alignItems, justifyContent, paddingVertical };
-
-    return (
-        <View style={[styles.neumorphContainer, containerStyle]}>
-            <View style={[styles.shadowDark, { borderRadius: borderRadius.xxl }]} />
-            <View style={[styles.shadowLight, { borderRadius: borderRadius.xxl }]} />
-            <View style={[styles.cardSurface, surfaceStyle]}>
-                {children}
-            </View>
-        </View>
-    );
-};
-
-// 뉴모피즘 아이콘 버튼
-const NeumorphIconButton = ({ children, style }: { children: React.ReactNode; style?: any }) => (
-    <View style={[styles.iconButtonContainer, style]}>
-        <View style={[styles.shadowDarkSmall, { borderRadius: 30 }]} />
-        <View style={[styles.shadowLightSmall, { borderRadius: 30 }]} />
-        <View style={styles.iconButtonSurface}>
-            {children}
-        </View>
-    </View>
-);
 
 export default function HomeScreen() {
     const { todayLogs, fetchTodayLogs, batchTakeMedications, isLoading } = useMedicationStore();
@@ -356,35 +329,8 @@ const styles = StyleSheet.create({
     },
 
     // 뉴모피즘 아이콘 버튼
-    iconButtonContainer: {
-        position: 'relative',
-        width: 60,
-        height: 60,
-    },
-    shadowDarkSmall: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.base,
-        shadowColor: '#B8C4CE',
-        shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 0.5,
-        shadowRadius: 6,
-        elevation: 6,
-    },
-    shadowLightSmall: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.base,
-        shadowColor: '#FFFFFF',
-        shadowOffset: { width: -4, height: -4 },
-        shadowOpacity: 1,
-        shadowRadius: 6,
-        elevation: 0,
-    },
-    iconButtonSurface: {
-        flex: 1,
-        backgroundColor: colors.base,
-        borderRadius: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
+    headerIconBtn: {
+        marginBottom: spacing.lg,
     },
 
     // 레이아웃

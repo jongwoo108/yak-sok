@@ -115,6 +115,7 @@ export const api = {
     medicationGroups: {
         list: () => apiClient.get('/medications/groups/'),
         create: (data: { name: string }) => apiClient.post('/medications/groups/', data),
+        delete: (id: number) => apiClient.delete(`/medications/groups/${id}/`),
     },
 
     // 복약 기록
