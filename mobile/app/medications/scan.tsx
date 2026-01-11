@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useMedicationStore } from '../../services/store';
 import { api } from '../../services/api';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
@@ -74,6 +75,22 @@ export default function ScanScreen() {
     const [medicationsToEdit, setMedicationsToEdit] = useState<MedicationEdit[]>([]);
     const [symptom, setSymptom] = useState('');
 
+    // 이미지 전처리 (HEIC -> JPEG 변환 및 압축)
+    const processImage = async (uri: string) => {
+        try {
+            const manipResult = await ImageManipulator.manipulateAsync(
+                uri,
+                [], // 크기 조절이나 회전이 필요하면 여기에 추가
+                { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            );
+            return manipResult;
+        } catch (error) {
+            console.error('Image manipulation error:', error);
+            Alert.alert('오류', '이미지 처리 중 문제가 발생했습니다.');
+            return null;
+        }
+    };
+
     // 카메라로 촬영
     const takePhoto = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -85,12 +102,14 @@ export default function ScanScreen() {
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.8,
-            base64: true,
+            // base64: true, // ImageManipulator에서 생성하므로 제거
         });
 
         if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            setImages(prev => [...prev, { uri: asset.uri, base64: asset.base64 || undefined }]);
+            const processed = await processImage(result.assets[0].uri);
+            if (processed) {
+                setImages(prev => [...prev, { uri: processed.uri, base64: processed.base64 }]);
+            }
         }
     };
 
@@ -105,12 +124,14 @@ export default function ScanScreen() {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.8,
-            base64: true,
+            // base64: true, // ImageManipulator에서 생성하므로 제거
         });
 
         if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            setImages(prev => [...prev, { uri: asset.uri, base64: asset.base64 || undefined }]);
+            const processed = await processImage(result.assets[0].uri);
+            if (processed) {
+                setImages(prev => [...prev, { uri: processed.uri, base64: processed.base64 }]);
+            }
         }
     };
 
