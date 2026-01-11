@@ -8,8 +8,8 @@
 
 | 파일 | 설명 | 주요 설정 |
 |------|------|-----------|
-| `settings.py` | Django 메인 설정 | PostgreSQL, Celery, JWT, CORS |
-| `urls.py` | URL 라우팅 | API 엔드포인트 매핑 |
+| `settings.py` | Django 메인 설정 | PostgreSQL, Celery, JWT, CORS, 업로드 제한(10MB) |
+| `urls.py` | URL 라우팅 | API 엔드포인트 매핑 (Trailing Slash 허용) |
 | `celery.py` | Celery 설정 | Redis 브로커, 자동 태스크 탐색 |
 | `wsgi.py` / `asgi.py` | 서버 설정 | Gunicorn 연동 |
 
@@ -75,7 +75,7 @@ class MedicationLog(models.Model):
 | Method | Endpoint | 설명 |
 |--------|----------|------|
 | GET/POST | `/api/medications/` | 약품 목록/등록 |
-| POST | `/api/medications/scan_prescription/` | 처방전 OCR 스캔 |
+| POST | `/api/medications/scan/` | 처방전 OCR 스캔 (Base64) |
 | POST | `/api/medications/voice_command/` | 음성 명령 처리 |
 | GET | `/api/medications/logs/today/` | 오늘의 복약 기록 |
 | POST | `/api/medications/logs/{id}/take/` | 복약 완료 처리 |
@@ -86,10 +86,11 @@ class MedicationLog(models.Model):
 class OCRService:
     """처방전 OCR 스캔 (OpenAI Vision API - gpt-4o)"""
     def parse_prescription(self, image_file) -> dict:
-        # 이미지를 base64로 인코딩
+        # 이미지를 base64로 인코딩 (프론트에서 이미 base64로 보낼 경우 처리)
         # gpt-4o 모델로 테이블 형태의 처방전 분석
         # 약품명, 용량, 복용법, 효능 설명 추출
         # JSON 형식으로 반환
+        # (최신): 프론트엔드 모바일 지원을 위해 Base64 문자열 직접 처리 로직 추가
 
 class STTService:
     """음성 명령 처리 (OpenAI Whisper - whisper-1)"""
@@ -146,7 +147,11 @@ def trigger_safety_alert(alert_id):
 
 @shared_task
 def send_push_notification(user_id, title, message):
-    """FCM 푸시 알림 발송"""
+    """하이브리드 푸시 알림 발송 (FCM + Expo)"""
+    # 1. User의 fcm_token 조회
+    # 2. 토큰 형식 감지 (ExponentPushToken[...] 여부)
+    # 3. Expo 토큰인 경우 exponent_server_sdk 사용
+    # 4. 그 외 경우 firebase-admin (FCM) 사용
 
 def revoke_alert_task(task_id):
     """예약된 알림 취소 (복약 완료 시)"""
@@ -170,6 +175,7 @@ Pillow>=10.0
 python-dotenv>=1.0
 openai>=1.0
 gunicorn>=21.0
+exponent_server_sdk>=2.2.0  # Expo 푸시 알림 지원
 ```
 
 ---

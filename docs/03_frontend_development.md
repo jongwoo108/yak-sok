@@ -290,3 +290,15 @@ npm start
 - [x] framer-motion 애니메이션 적용
 - [x] **Google 소셜 로그인 구현** (Firebase Auth + Backend ID Token 검증)
     - 상세 내용: [04_authentication_implementation.md](./04_authentication_implementation.md)
+
+---
+
+## 📱 Mobile First (Expo) 개발 전환 (2026-01-11)
+
+현재 개발의 중심이 웹(Next.js)에서 **모바일 앱(React Native/Expo)**으로 전환되었습니다.
+
+1.  **디자인 시스템**: 파스텔 뉴모피즘(Pastel Neumorphism) 및 오션(Ocean) 테마 적용.
+2.  **푸시 알림**: Expo/FCM 하이브리드 지원 및 서버 사이드 토큰 관리 시스템 구축.
+3.  **성능 최적화**: 고화질 처방전 OCR 처리를 위한 Base64 전송 방식 도입.
+
+상세 구현 내용은 [05_react_native_implementation.md](./05_react_native_implementation.md)을 참조하세요.

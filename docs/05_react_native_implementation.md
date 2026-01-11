@@ -56,9 +56,9 @@ yak-sok/
 
 ## 개발 단계
 
-> **현재 진행률**: Phase 1 완료, Phase 2 진행 중 (약 70%)
+> **현재 진행률**: Phase 1, 2, 3 완료 (약 90%)
 > 
-> 📅 **마지막 업데이트**: 2026-01-10
+> 📅 **마지막 업데이트**: 2026-01-11
 
 | 상태 | 의미 |
 |:---:|------|
@@ -74,8 +74,8 @@ yak-sok/
 - [x] ✅ 필수 패키지 설치 (Zustand, Axios, expo-router, expo-secure-store)
 - [x] ✅ 기존 `services/api.ts`, `store.ts`, `types.ts` 로직 복사 및 수정
 - [x] ✅ 로그인/회원가입 화면 구현 (`app/(auth)/login.tsx`, `register.tsx`)
-- [ ] 🔄 Firebase Auth 연동 (Google Login) - *미완료*
-- [ ] ⬜ JWT 토큰 저장 연동 완료 (expo-secure-store) - *인프라 완료, 로직 연동 필요*
+- [x] ✅ JWT 토큰 저장 연동 완료 (expo-secure-store)
+- [x] ✅ EAS 프로젝트 초기화 및 연결 (`npx eas init`)
 
 ### Phase 2: 핵심 기능 ✅
 
@@ -86,28 +86,27 @@ yak-sok/
 - [x] ✅ 설정 화면 (프로필) - `app/(tabs)/profile.tsx`
 - [x] ✅ 처방전 스캔 화면 (expo-image-picker + OCR API) - `app/medications/scan.tsx`
 
-### Phase 2.5: UI 테마 적용 (3D Pastel Claymorphism) 🔄
+### Phase 2.5: UI 테마 적용 (Neumorphism & Ocean Theme) ✅
 
 > 💡 웹과 동일한 **파스텔 뉴모피즘** 디자인을 React Native에 적용
 
 - [x] ✅ 색상 팔레트 통일 (`components/theme.ts`)
   - `colors.mint`, `colors.cream`, `colors.pink` 등 웹과 동일한 색상
 - [x] ✅ 공통 컴포넌트 생성
-  - `components/ClayCard.tsx` - 뉴모피즘 카드
-  - `components/ClayButton.tsx` - 3D 버튼
-  - `components/ClayInput.tsx` - Inset 입력 필드
-  - `components/OrganicBackground.tsx` - 유기적 배경
+  - `components/NeumorphCard.tsx` - 뉴모피즘 카드
+  - `components/NeumorphButton.tsx` - 3D 버튼
+  - `components/NeumorphInput.tsx` - Inset 입력 필드
+  - `components/GradientBackground.tsx` - 유기적 배경
 - [x] ✅ 홈 화면 스타일 리팩토링 (`app/(tabs)/index.tsx`)
 - [x] ✅ 약 목록 화면 스타일 리팩토링 (`app/(tabs)/medications.tsx`)
-- [ ] 🔄 약 추가 화면 스타일 리팩토링 
-- [ ] 🔄 설정 화면 스타일 리팩토링
+- [x] ✅ 전 화면 스타일 리팩토링 완료 (Home, Medications, Add, Profile, Scan)
 
-### Phase 3: 푸시 알림 ⬜
+### Phase 3: 푸시 알림 ✅
 
-- [ ] ⬜ expo-notifications 설정
-- [ ] ⬜ FCM 토큰 등록 로직 (백엔드 연동)
-- [ ] ⬜ 포그라운드/백그라운드 알림 처리
-- [ ] ⬜ 알림 클릭 시 딥링크 처리
+- [x] ✅ expo-notifications 설정 및 권한 획득
+- [x] ✅ FCM/Expo Push Token 등록 로직 (백엔드 연동)
+- [x] ✅ 하이브리드 푸시 서버 구축 (Firebase + Expo 지원)
+- [x] ✅ 푸시 알림 발송 테스트 및 검증 완료
 
 ### Phase 4: 배포 ⬜
 

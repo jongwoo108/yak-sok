@@ -124,6 +124,22 @@ Authorization: Bearer {token}
 }
 ```
 
+### 푸시 알림 테스트
+
+```http
+POST /api/users/test-push/
+Authorization: Bearer {token}
+```
+
+**Response (200)**
+```json
+{
+  "success": true,
+  "message": "테스트 푸시 알림을 보냈습니다.",
+  "token": "ExponentPushToken[...]"
+}
+```
+
 ---
 
 ## 복약 API
@@ -180,26 +196,26 @@ Authorization: Bearer {token}
 ### 처방전 OCR 스캔
 
 ```http
-POST /api/medications/scan_prescription/
+POST /api/medications/scan/
 Authorization: Bearer {token}
-Content-Type: multipart/form-data
 ```
 
 **Request Body**
-```
-image: (binary file)
+```json
+{
+  "image_base64": "data:image/jpeg;base64,..."
+}
 ```
 
 **Response (200)**
 ```json
 {
-  "success": true,
   "medications": [
     {
       "name": "아스피린",
       "dosage": "1정",
       "frequency": "하루 3회",
-      "times": ["08:00", "12:00", "18:00"]
+      "times": ["morning", "noon", "evening"]
     }
   ],
   "message": "OCR 처리가 완료되었습니다."
