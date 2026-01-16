@@ -23,20 +23,24 @@ class OCRService:
         """
         EXIF 데이터를 기반으로 이미지 자동 회전
         모바일에서 세로로 촬영한 사진을 올바른 방향으로 회전
+        iOS HEIC 포맷도 처리 가능하도록 개선
         """
         from PIL import ImageOps
         
         try:
+            # 이미지 열기 시도
             image = Image.open(io.BytesIO(image_content))
             
             # EXIF 기반 자동 회전 (가장 신뢰할 수 있는 방법)
             image = ImageOps.exif_transpose(image)
             
-            # RGB 모드로 변환 (PNG 등 대응)
-            if image.mode != 'RGB':
+            # RGB 모드로 변환 (PNG, RGBA 등 대응)
+            if image.mode in ('RGBA', 'P'):
+                image = image.convert('RGB')
+            elif image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # 회전된 이미지를 bytes로 변환
+            # 회전된 이미지를 JPEG bytes로 변환
             output = io.BytesIO()
             image.save(output, format='JPEG', quality=90)
             print(f"[이미지 회전] 원본 → 회전 완료 (크기: {image.size})")
@@ -44,6 +48,15 @@ class OCRService:
             
         except Exception as e:
             print(f"이미지 회전 처리 건너뜀: {e}")
+            # 원본이 이미 JPEG인 경우 그대로 반환
+            if image_content[:2] == b'\xff\xd8':  # JPEG magic bytes
+                print("[이미지] 원본 JPEG 그대로 사용")
+                return image_content
+            # PNG인 경우
+            if image_content[:4] == b'\x89PNG':
+                print("[이미지] 원본 PNG 그대로 사용")
+                return image_content
+            # 그 외의 경우에도 원본 반환 (GPT가 처리 시도)
             return image_content
     
     def parse_prescription(self, image_file):
@@ -59,7 +72,9 @@ class OCRService:
         try:
             # 이미지 읽기 및 자동 회전
             image_content = image_file.read()
+            print(f"[OCR Debug] 원본 바이트 크기: {len(image_content)}, 앞 10바이트: {image_content[:10] if len(image_content) > 10 else image_content}")
             image_content = self._auto_rotate_image(image_content)
+            print(f"[OCR Debug] 처리 후 바이트 크기: {len(image_content)}, 앞 10바이트: {image_content[:10] if len(image_content) > 10 else image_content}")
             image_base64 = base64.b64encode(image_content).decode('utf-8')
             
             prompt = """
@@ -101,8 +116,20 @@ class OCRService:
             )
             
             content = response.choices[0].message.content
-            # JSON 파싱 (혹시 모를 마크다운 코드블록 제거)
+            print(f"[GPT Response] Raw Content:\n{content}")  # 디버깅 로그 추가
+            
+            # JSON 파싱 (마크다운 코드블록 제거 강화)
             content = content.replace('```json', '').replace('```', '').strip()
+            
+            # 혹시 JSON이 아닌 텍스트가 섞여있을 경우 대비 (첫 '{' 부터 마지막 '}' 까지만 추출)
+            try:
+                start_idx = content.find('{')
+                end_idx = content.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    content = content[start_idx:end_idx+1]
+            except:
+                pass
+
             result = json.loads(content)
             
             # RAG를 통한 약품명 보정

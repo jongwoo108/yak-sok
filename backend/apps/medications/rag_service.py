@@ -5,8 +5,18 @@ Medication RAG Service
 
 import os
 import json
+import ssl
+import httpx
+import urllib3
+import certifi
 from typing import Optional
 from pathlib import Path
+
+# Windows anaconda/venv SSL 충돌 해결: certifi 경로 명시적 설정
+os.environ['SSL_CERT_FILE'] = certifi.where()
+os.environ['CURL_CA_BUNDLE'] = certifi.where()
+os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from openai import OpenAI
 from pinecone import Pinecone
@@ -16,7 +26,9 @@ class MedicationRAGService:
     """약품명 RAG 보정 서비스"""
     
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        # Windows SSL 권한 문제 해결을 위해 SSL 검증 비활성화
+        http_client = httpx.Client(verify=False)
+        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'), http_client=http_client)
         
         pinecone_api_key = os.getenv('PINECONE_API_KEY')
         if pinecone_api_key:
@@ -39,7 +51,7 @@ class MedicationRAGService:
         )
         return response.data[0].embedding
     
-    def correct_medication_name(self, raw_name: str, threshold: float = 0.75) -> dict:
+    def correct_medication_name(self, raw_name: str, threshold: float = 0.7) -> dict:
         """
         OCR로 인식된 약품명을 RAG로 보정
         
@@ -129,8 +141,16 @@ class MedicationRAGService:
             
             vectors = []
             for idx, med in enumerate(medications):
-                # 약품명 + 성분으로 임베딩 텍스트 생성
-                text = f"{med['name']} {med.get('ingredient', '')}"
+                # 약품명 + 성분 + 용법 + 주의사항으로 임베딩 텍스트 생성 (풍부한 의미 정보)
+                text_parts = [med['name']]
+                if med.get('ingredient'):
+                    text_parts.append(med['ingredient'])
+                if med.get('manufacturer'):
+                    text_parts.append(med['manufacturer'])
+                if med.get('usage'):
+                    text_parts.append(med['usage'][:100])  # 용법용량 일부
+                
+                text = ' '.join(text_parts)
                 embedding = self.get_embedding(text)
                 
                 vectors.append({
@@ -139,19 +159,23 @@ class MedicationRAGService:
                     'metadata': {
                         'name': med['name'],
                         'ingredient': med.get('ingredient', ''),
-                        'manufacturer': med.get('manufacturer', '')
+                        'manufacturer': med.get('manufacturer', ''),
+                        'usage': med.get('usage', '')[:200],
+                        'warning': med.get('warning', '')[:200]
                     }
                 })
                 
-                # 배치 업로드 (100개씩)
+                # 배치 업로드 (100개씩) + 진행 상황 출력
                 if len(vectors) >= 100:
                     self.index.upsert(vectors=vectors)
+                    print(f"[RAG] {idx + 1}/{len(medications)} 업로드 완료...")
                     vectors = []
             
             # 남은 벡터 업로드
             if vectors:
                 self.index.upsert(vectors=vectors)
             
+            print(f"[RAG] ✅ 전체 {len(medications)}개 업로드 완료!")
             return {
                 'success': True,
                 'uploaded_count': len(medications),

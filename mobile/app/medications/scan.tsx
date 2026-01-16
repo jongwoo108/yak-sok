@@ -381,8 +381,13 @@ export default function ScanScreen() {
         } catch (err: any) {
             console.error('[handleConfirm] 에러 발생:', err);
             console.error('[handleConfirm] 에러 메시지:', err?.message);
-            console.error('[handleConfirm] 에러 응답:', err?.response?.data);
-            setError('약 등록에 실패했습니다.');
+            if (err.response) {
+                console.error('[handleConfirm] 에러 응답 상태:', err.response.status);
+                console.error('[handleConfirm] 에러 응답 데이터:', JSON.stringify(err.response.data, null, 2));
+            } else {
+                console.error('[handleConfirm] 응답 없음 (네트워크 오류 가능성)');
+            }
+            setError('약 등록에 실패했습니다: ' + (err.response?.data?.error || err.message));
         } finally {
             setIsLoading(false);
         }
