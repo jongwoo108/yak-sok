@@ -318,14 +318,15 @@ class AcceptInviteView(APIView):
         inviter = invite.user
         accepter = request.user
         
-        # 시니어-보호자 매칭
-        if inviter.role == User.Role.SENIOR and accepter.role == User.Role.GUARDIAN:
+        # 복약자/시니어 - 보호자 매칭
+        # 복약자와 시니어 모두 보호자와 연결 가능
+        if inviter.role == User.Role.GUARDIAN and accepter.role in [User.Role.PATIENT, User.Role.SENIOR]:
+            senior, guardian = accepter, inviter  # senior 필드에 복약자/시니어 저장
+        elif inviter.role in [User.Role.PATIENT, User.Role.SENIOR] and accepter.role == User.Role.GUARDIAN:
             senior, guardian = inviter, accepter
-        elif inviter.role == User.Role.GUARDIAN and accepter.role == User.Role.SENIOR:
-            senior, guardian = accepter, inviter
         else:
             return Response(
-                {'error': '시니어와 보호자만 연결할 수 있습니다. (같은 역할끼리는 연결 불가)'},
+                {'error': '복약자/시니어와 보호자만 연결할 수 있습니다.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

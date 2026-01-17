@@ -5,7 +5,9 @@ Medications Views
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from .models import Medication, MedicationSchedule, MedicationLog, MedicationGroup
 from .serializers import (
     MedicationSerializer,
@@ -15,6 +17,7 @@ from .serializers import (
     OCRScanSerializer,
 )
 from .services import OCRService
+from apps.users.models import User, GuardianRelation
 
 
 class MedicationGroupViewSet(viewsets.ModelViewSet):
@@ -247,4 +250,152 @@ class MedicationLogViewSet(viewsets.ModelViewSet):
         ).order_by('schedule__scheduled_time')
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
+
+
+class SeniorMonitoringMixin:
+    """보호자의 시니어 모니터링 권한 검증 믹스인"""
+    
+    def get_senior_or_403(self, request, senior_id):
+        """
+        보호자가 해당 시니어에 대한 접근 권한이 있는지 확인
+        권한이 없으면 403, 시니어가 없으면 404 반환
+        """
+        senior = get_object_or_404(User, id=senior_id, role=User.Role.SENIOR)
+        
+        # 보호자-시니어 연결 관계 확인
+        if request.user.role != User.Role.GUARDIAN:
+            return None, Response(
+                {'error': '보호자만 시니어를 모니터링할 수 있습니다.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        relation_exists = GuardianRelation.objects.filter(
+            guardian=request.user,
+            senior=senior
+        ).exists()
+        
+        if not relation_exists:
+            return None, Response(
+                {'error': '연결되지 않은 시니어입니다.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return senior, None
+
+
+class SeniorTodayView(SeniorMonitoringMixin, APIView):
+    """시니어의 오늘 복약 현황 조회 API"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, senior_id):
+        senior, error_response = self.get_senior_or_403(request, senior_id)
+        if error_response:
+            return error_response
+        
+        today = timezone.localdate()
+        logs = MedicationLog.objects.filter(
+            schedule__medication__user=senior,
+            scheduled_datetime__date=today
+        ).select_related('schedule__medication__group', 'schedule').order_by('schedule__scheduled_time')
+        
+        serializer = MedicationLogSerializer(logs, many=True)
+        
+        # 요약 정보 추가
+        total = logs.count()
+        taken = logs.filter(status=MedicationLog.Status.TAKEN).count()
+        
+        return Response({
+            'senior_id': senior.id,
+            'senior_name': senior.first_name or senior.username,
+            'date': today.isoformat(),
+            'summary': {
+                'total': total,
+                'taken': taken,
+                'pending': total - taken,
+            },
+            'logs': serializer.data
+        })
+
+
+class SeniorMedicationsView(SeniorMonitoringMixin, APIView):
+    """시니어의 약 목록 조회 API"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, senior_id):
+        senior, error_response = self.get_senior_or_403(request, senior_id)
+        if error_response:
+            return error_response
+        
+        medications = Medication.objects.filter(
+            user=senior,
+            is_active=True
+        ).select_related('group')
+        
+        serializer = MedicationSerializer(medications, many=True)
+        
+        return Response({
+            'senior_id': senior.id,
+            'senior_name': senior.first_name or senior.username,
+            'count': medications.count(),
+            'medications': serializer.data
+        })
+
+
+class SeniorCalendarView(SeniorMonitoringMixin, APIView):
+    """시니어의 캘린더 데이터 조회 API"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, senior_id):
+        senior, error_response = self.get_senior_or_403(request, senior_id)
+        if error_response:
+            return error_response
+        
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+        
+        logs = MedicationLog.objects.filter(
+            schedule__medication__user=senior,
+            scheduled_datetime__year=year,
+            scheduled_datetime__month=month
+        )
+        
+        # 날짜별 집계
+        daily_summary = {}
+        for log in logs:
+            date_str = log.scheduled_datetime.date().isoformat()
+            if date_str not in daily_summary:
+                daily_summary[date_str] = {'total': 0, 'taken': 0, 'missed': 0}
+            daily_summary[date_str]['total'] += 1
+            if log.status == MedicationLog.Status.TAKEN:
+                daily_summary[date_str]['taken'] += 1
+            elif log.status == MedicationLog.Status.MISSED:
+                daily_summary[date_str]['missed'] += 1
+        
+        # 병원 방문일 (약 떨어지는 날) 계산
+        hospital_visits = []
+        medications = Medication.objects.filter(
+            user=senior,
+            is_active=True,
+            days_supply__isnull=False,
+            start_date__isnull=False
+        )
+        
+        for med in medications:
+            end_date = med.end_date
+            if end_date and end_date.year == year and end_date.month == month:
+                hospital_visits.append({
+                    'date': end_date.isoformat(),
+                    'medication_id': med.id,
+                    'medication_name': med.name,
+                    'days_supply': med.days_supply,
+                })
+        
+        return Response({
+            'senior_id': senior.id,
+            'senior_name': senior.first_name or senior.username,
+            'year': year,
+            'month': month,
+            'daily_summary': daily_summary,
+            'hospital_visits': hospital_visits,
+        })
 

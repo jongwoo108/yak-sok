@@ -9,17 +9,18 @@ from django.db import models
 class User(AbstractUser):
     """
     커스텀 사용자 모델
-    시니어와 보호자 역할 구분
+    복약자, 시니어, 보호자 역할 구분
     """
     
     class Role(models.TextChoices):
-        SENIOR = 'senior', '시니어'
-        GUARDIAN = 'guardian', '보호자'
+        PATIENT = 'patient', '복약자'      # 자신의 약만 관리 (모니터링 없음)
+        SENIOR = 'senior', '시니어'        # 약 관리 + 보호자에게 모니터링 받음
+        GUARDIAN = 'guardian', '보호자'    # 시니어 모니터링만
     
     role = models.CharField(
         max_length=10,
         choices=Role.choices,
-        default=Role.SENIOR,
+        default=Role.PATIENT,
         verbose_name='역할'
     )
     phone_number = models.CharField(
