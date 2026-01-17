@@ -8,11 +8,12 @@ import { Platform } from 'react-native';
 import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelation, EmergencyContact, CalendarData } from './types';
 
 // 환경변수에서 API URL 가져오기
-// 주의: 물리 기기(폰)에서 테스트하려면 아래 'YOUR_LOCAL_IP'를 컴퓨터의 IP 주소(예: 192.168.0.x)로 변경하고 주석을 해제하세요.
-const MANUAL_IP = 'http://172.30.1.56:8000/api';
+// 프로덕션 서버 URL (AWS Lightsail + SSL)
+const PRODUCTION_API_URL = 'https://yaksok-care.com/api';
 
+// 개발 시 로컬 IP로 변경, 프로덕션은 위 URL 사용
 const API_BASE_URL =
-    MANUAL_IP ||
+    PRODUCTION_API_URL ||
     process.env.EXPO_PUBLIC_API_URL ||
     (Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api');
 
@@ -164,10 +165,10 @@ export const api = {
     // 초대 코드
     invite: {
         get: () => apiClient.get<{ code: string | null; expires_at?: string }>('/users/invite/'),
-        generate: () => apiClient.post<{ 
-            success: boolean; 
-            invite: { code: string; expires_at: string }; 
-            message: string 
+        generate: () => apiClient.post<{
+            success: boolean;
+            invite: { code: string; expires_at: string };
+            message: string
         }>('/users/invite/'),
         accept: (code: string) => apiClient.post<{
             success: boolean;
@@ -202,8 +203,8 @@ export const api = {
     // 알림
     alerts: {
         list: () => apiClient.get<ApiResponse<Alert>>('/alerts/'),
-        send: (data: { 
-            recipient_id: number; 
+        send: (data: {
+            recipient_id: number;
             message_type: 'check_in' | 'reminder' | 'im_ok' | 'need_help' | 'custom';
             custom_message?: string;
         }) => apiClient.post<{ success: boolean; message: string; alert_id: number }>('/alerts/send/', data),
@@ -212,7 +213,7 @@ export const api = {
     // 시니어 모니터링 (보호자용)
     seniors: {
         // 시니어의 오늘 복약 현황
-        getToday: (seniorId: number) => 
+        getToday: (seniorId: number) =>
             apiClient.get<{
                 senior_id: number;
                 senior_name: string;
@@ -220,18 +221,18 @@ export const api = {
                 summary: { total: number; taken: number; pending: number };
                 logs: MedicationLog[];
             }>(`/medications/senior/${seniorId}/today/`),
-        
+
         // 시니어의 약 목록
-        getMedications: (seniorId: number) => 
+        getMedications: (seniorId: number) =>
             apiClient.get<{
                 senior_id: number;
                 senior_name: string;
                 count: number;
                 medications: Medication[];
             }>(`/medications/senior/${seniorId}/medications/`),
-        
+
         // 시니어의 캘린더 데이터
-        getCalendar: (seniorId: number, year: number, month: number) => 
+        getCalendar: (seniorId: number, year: number, month: number) =>
             apiClient.get<{
                 senior_id: number;
                 senior_name: string;

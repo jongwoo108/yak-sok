@@ -1,26 +1,43 @@
-# 배포 문서 목차
+# 배포 문서
 
-> Yak-Sok AWS 배포 관련 문서
+> Yak-Sok 서비스 AWS 배포 가이드
 
 ## 📚 문서 목록
 
 | 문서 | 설명 |
 |------|------|
-| [01_aws_lightsail_setup.md](./01_aws_lightsail_setup.md) | AWS Lightsail 인스턴스 설정 |
-| [02_cicd_pipeline.md](./02_cicd_pipeline.md) | GitHub Actions CI/CD 파이프라인 |
-| [03_monitoring_setup.md](./03_monitoring_setup.md) | 모니터링 구성 (CloudWatch, Sentry) |
+| [01_aws_lightsail_setup.md](./01_aws_lightsail_setup.md) | 서버 설정 및 배포 명령어 |
+| [02_cicd_pipeline.md](./02_cicd_pipeline.md) | GitHub Actions 자동 배포 |
+| [03_monitoring_setup.md](./03_monitoring_setup.md) | Sentry 에러 트래킹 |
 
-## 🚀 빠른 시작
+---
 
-1. [Lightsail 설정](./01_aws_lightsail_setup.md) - 인스턴스 생성 및 초기 설정
-2. [CI/CD 구성](./02_cicd_pipeline.md) - 자동 배포 파이프라인
-3. [모니터링](./03_monitoring_setup.md) - 알람 및 에러 트래킹
+## 🚀 Quick Start
 
-## 💰 예상 비용
+### API URL
+```
+https://yaksok-care.com/api/
+```
 
-| 항목 | 비용/월 |
-|------|---------|
-| Lightsail Instance ($7) | $7 |
+### SSH 접속
+```bash
+ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
+```
+
+### 수동 배포
+```bash
+cd /app/yak-sok
+git pull origin main
+docker-compose -f docker-compose.prod.yml up -d --build backend
+```
+
+---
+
+## 💰 월 비용
+
+| 항목 | 비용 |
+|------|------|
+| Lightsail (2GB) | $12 |
 | Route 53 | $0.50 |
-| 모니터링 | $0.50 |
-| **합계** | **$8** |
+| 도메인 | ~$1 |
+| **합계** | **~$14/월** |

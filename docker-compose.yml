@@ -116,25 +116,25 @@ services:
     command: celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
   # Next.js Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: yaksok-frontend
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    command: npm run dev
+#   frontend:
+#     build:
+#       context: ./frontend
+#       dockerfile: Dockerfile
+#     container_name: yaksok-frontend
+#     environment:
+#       - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+#     volumes:
+#       - ./frontend:/app
+#       - /app/node_modules
+#       - /app/.next
+#     ports:
+#       - "3000:3000"
+#     depends_on:
+#       - backend
+#     command: npm run dev
 
-volumes:
-  postgres_data:
-  redis_data:
-  static_volume:
-  media_volume:
+# volumes:
+#   postgres_data:
+#   redis_data:
+#   static_volume:
+#   media_volume:
