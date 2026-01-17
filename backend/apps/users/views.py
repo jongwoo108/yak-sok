@@ -14,13 +14,14 @@ from django.conf import settings
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 
-from .models import GuardianRelation
+from .models import GuardianRelation, EmergencyContact
 from .serializers import (
     UserSerializer,
     UserCreateSerializer,
     GuardianRelationSerializer,
     LoginSerializer,
-    GoogleLoginSerializer
+    GoogleLoginSerializer,
+    EmergencyContactSerializer
 )
 
 User = get_user_model()
@@ -213,3 +214,14 @@ class GuardianRelationViewSet(viewsets.ModelViewSet):
         elif user.role == User.Role.GUARDIAN:
             return GuardianRelation.objects.filter(guardian=user)
         return GuardianRelation.objects.none()
+
+
+class EmergencyContactViewSet(viewsets.ModelViewSet):
+    """비상 연락처 ViewSet"""
+    
+    serializer_class = EmergencyContactSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return EmergencyContact.objects.filter(user=self.request.user)
+

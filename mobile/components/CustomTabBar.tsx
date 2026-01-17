@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from './theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_BAR_WIDTH = SCREEN_WIDTH * 0.55; // 화면 너비의 55%
+const TAB_BAR_WIDTH = SCREEN_WIDTH * 0.70; // 화면 너비의 70% (4탭 적용)
 
 interface CustomTabBarProps {
     state: any;
@@ -19,6 +19,7 @@ interface CustomTabBarProps {
 
 const icons: Record<string, string> = {
     index: 'home',
+    calendar: 'calendar',
     medications: 'add-circle',
     profile: 'person',
 };

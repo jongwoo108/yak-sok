@@ -5,21 +5,19 @@ Medication RAG Service
 
 import os
 import json
-import ssl
 import httpx
 import urllib3
-import certifi
+import requests
 from typing import Optional
 from pathlib import Path
 
-# Windows anaconda/venv SSL 충돌 해결: certifi 경로 명시적 설정
-os.environ['SSL_CERT_FILE'] = certifi.where()
-os.environ['CURL_CA_BUNDLE'] = certifi.where()
-os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+# SSL 경고 비활성화
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from openai import OpenAI
-from pinecone import Pinecone
+
+# Pinecone REST API 설정
+PINECONE_HOST = "https://medications-xbyhqv2.svc.aped-4627-b74a.pinecone.io"
 
 
 class MedicationRAGService:
@@ -30,18 +28,43 @@ class MedicationRAGService:
         http_client = httpx.Client(verify=False)
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'), http_client=http_client)
         
-        pinecone_api_key = os.getenv('PINECONE_API_KEY')
-        if pinecone_api_key:
-            self.pc = Pinecone(api_key=pinecone_api_key)
-            self.index_name = os.getenv('PINECONE_INDEX_NAME', 'medications')
+        self.pinecone_api_key = os.getenv('PINECONE_API_KEY')
+        self.pinecone_host = PINECONE_HOST
+        
+        # Pinecone 연결 테스트 (REST API)
+        if self.pinecone_api_key:
             try:
-                self.index = self.pc.Index(self.index_name)
+                self._test_pinecone_connection()
+                self.index = True  # 연결 성공 표시
+                print(f"[Pinecone] REST API 연결 성공 ✅")
             except Exception as e:
                 print(f"Pinecone 연결 실패: {e}")
                 self.index = None
         else:
-            self.pc = None
             self.index = None
+    
+    def _test_pinecone_connection(self):
+        """Pinecone 연결 테스트"""
+        url = f"{self.pinecone_host}/describe_index_stats"
+        headers = {"Api-Key": self.pinecone_api_key}
+        response = requests.get(url, headers=headers, verify=False, timeout=10)
+        response.raise_for_status()
+    
+    def _query_pinecone(self, vector: list, top_k: int = 1) -> dict:
+        """Pinecone 벡터 검색 (REST API 직접 호출)"""
+        url = f"{self.pinecone_host}/query"
+        headers = {
+            "Api-Key": self.pinecone_api_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "vector": vector,
+            "topK": top_k,
+            "includeMetadata": True
+        }
+        response = requests.post(url, json=payload, headers=headers, verify=False, timeout=30)
+        response.raise_for_status()
+        return response.json()
     
     def get_embedding(self, text: str) -> list[float]:
         """텍스트 임베딩 생성"""
@@ -80,32 +103,56 @@ class MedicationRAGService:
             # 약품명 임베딩 생성
             query_embedding = self.get_embedding(raw_name)
             
-            # 유사도 검색
-            results = self.index.query(
-                vector=query_embedding,
-                top_k=1,
-                include_metadata=True
-            )
+            # 유사도 검색 (REST API 직접 호출)
+            results = self._query_pinecone(query_embedding, top_k=1)
             
-            if results.matches and results.matches[0].score >= threshold:
-                match = results.matches[0]
-                print(f"[RAG] '{raw_name}' → '{match.metadata.get('name')}' (유사도: {match.score:.3f}) ✅")
-                return {
-                    'original': raw_name,
-                    'corrected': match.metadata.get('name', raw_name),
-                    'ingredient': match.metadata.get('ingredient', ''),
-                    'manufacturer': match.metadata.get('manufacturer', ''),
-                    'confidence': match.score,
-                    'matched': True
-                }
-            else:
-                score = results.matches[0].score if results.matches else 0
-                closest = results.matches[0].metadata.get('name', 'N/A') if results.matches else 'N/A'
+            matches = results.get('matches', [])
+            best_match = matches[0] if matches else None
+            
+            if best_match:
+                metadata = best_match.get('metadata', {})
+                score = best_match.get('score', 0)
+                matched_name = metadata.get('name', '')
+                
+                # 1. 유사도가 임계값 이상인 경우 (일반적인 RAG 매칭)
+                if score >= threshold:
+                    print(f"[RAG] '{raw_name}' → '{matched_name}' (유사도: {score:.3f}) ✅")
+                    return {
+                        'original': raw_name,
+                        'corrected': matched_name,
+                        'ingredient': metadata.get('ingredient', ''),
+                        'manufacturer': metadata.get('manufacturer', ''),
+                        'confidence': score,
+                        'matched': True
+                    }
+                
+                # 2. 유사도는 낮지만 문자열이 완전히 일치하는 경우 (임베딩Context 차이에 의한 유사도 저하 대응)
+                if raw_name.replace(' ', '') == matched_name.replace(' ', ''):
+                    print(f"[RAG] '{raw_name}' → '{matched_name}' (문자열 완전 일치로 강제 매칭) ✅")
+                    return {
+                        'original': raw_name,
+                        'corrected': matched_name,
+                        'ingredient': metadata.get('ingredient', ''),
+                        'manufacturer': metadata.get('manufacturer', ''),
+                        'confidence': 1.0,  # 완전 일치이므로 점수 1.0 부여
+                        'matched': True
+                    }
+                
+                # 3. 매칭 실패
+                closest = matched_name if matched_name else 'N/A'
                 print(f"[RAG] '{raw_name}' → 매칭 실패 (가장 가까운: '{closest}', 유사도: {score:.3f}, 임계값: {threshold}) ❌")
                 return {
                     'original': raw_name,
                     'corrected': raw_name,
                     'confidence': score,
+                    'matched': False
+                }
+            else:
+                print(f"[RAG] '{raw_name}' → 검색 결과 없음 ❌")
+                return {
+                    'original': raw_name,
+                    'corrected': raw_name,
+                    'confidence': 0,
                     'matched': False
                 }
                 
@@ -141,16 +188,9 @@ class MedicationRAGService:
             
             vectors = []
             for idx, med in enumerate(medications):
-                # 약품명 + 성분 + 용법 + 주의사항으로 임베딩 텍스트 생성 (풍부한 의미 정보)
-                text_parts = [med['name']]
-                if med.get('ingredient'):
-                    text_parts.append(med['ingredient'])
-                if med.get('manufacturer'):
-                    text_parts.append(med['manufacturer'])
-                if med.get('usage'):
-                    text_parts.append(med['usage'][:100])  # 용법용량 일부
-                
-                text = ' '.join(text_parts)
+                # 약품명으로만 임베딩 생성 (OCR 결과와 일치시키기 위함)
+                # 성분, 제조사 등은 메타데이터로만 저장하여 풍부한 정보 유지
+                text = med['name']
                 embedding = self.get_embedding(text)
                 
                 vectors.append({

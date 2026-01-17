@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { api } from '../../services/api';
 import { useMedicationStore } from '../../services/store';
 import { GradientBackground } from '../../components/GradientBackground';
@@ -23,6 +24,13 @@ import * as Google from 'expo-auth-session/providers/google';
 
 WebBrowser.maybeCompleteAuthSession();
 
+// 환경변수에서 Google 클라이언트 ID 가져오기
+const googleClientIds = {
+    iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
+    androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
+    webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+};
+
 export default function LoginScreen() {
     const router = useRouter();
     const { setUser } = useMedicationStore();
@@ -31,10 +39,8 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        // TODO: Google Cloud Console에서 클라이언트 ID 발급 필요
-        iosClientId: 'YOUR_IOS_CLIENT_ID',
-        androidClientId: 'YOUR_ANDROID_CLIENT_ID',
-        webClientId: 'YOUR_WEB_CLIENT_ID',
+        ...googleClientIds,
+        redirectUri: 'https://auth.expo.io/@jongwoo108/yak-sok' // 구글 콘솔에 등록한 리디렉션 URI와 일치시킴
     });
 
     useEffect(() => {

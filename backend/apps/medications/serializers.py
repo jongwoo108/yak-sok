@@ -13,7 +13,7 @@ class MedicationGroupSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = MedicationGroup
-        fields = ['id', 'name', 'color', 'medications_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'color', 'is_severe', 'medications_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_medications_count(self, obj):
@@ -55,23 +55,29 @@ class MedicationSerializer(serializers.ModelSerializer):
     group_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     group = MedicationGroupSerializer(read_only=True)
     group_name = serializers.CharField(source='group.name', read_only=True, allow_null=True)
+    end_date = serializers.DateField(read_only=True)  # 처방 종료일 (계산됨)
     
     class Meta:
         model = Medication
         fields = [
             'id', 'name', 'description', 'dosage', 'group', 'group_id', 'group_name',
+            'days_supply', 'start_date', 'end_date',
             'prescription_image', 'is_active', 'schedules', 'schedules_input',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'end_date']
     
     def create(self, validated_data):
-        from datetime import datetime, date
+        from datetime import datetime
         from django.utils import timezone
         
         schedules_data = validated_data.pop('schedules_input', [])
         group_id = validated_data.pop('group_id', None)
         validated_data['user'] = self.context['request'].user
+        
+        # 시작일이 없으면 오늘로 설정
+        if not validated_data.get('start_date'):
+            validated_data['start_date'] = timezone.localdate()
         
         # 그룹 설정
         if group_id:
@@ -84,7 +90,7 @@ class MedicationSerializer(serializers.ModelSerializer):
         medication = super().create(validated_data)
         
         # 스케줄 생성 + 오늘의 로그 자동 생성
-        today = date.today()
+        today = timezone.localdate()
         for schedule_data in schedules_data:
             schedule = MedicationSchedule.objects.create(
                 medication=medication,
@@ -146,13 +152,3 @@ class OCRScanSerializer(serializers.Serializer):
         return value
 
 
-class STTCommandSerializer(serializers.Serializer):
-    """음성 명령 STT 시리얼라이저"""
-    
-    audio = serializers.FileField(required=True)
-    
-    def validate_audio(self, value):
-        # 오디오 파일 크기 제한 (25MB - Whisper API 제한)
-        if value.size > 25 * 1024 * 1024:
-            raise serializers.ValidationError('오디오 파일 크기는 25MB를 초과할 수 없습니다.')
-        return value

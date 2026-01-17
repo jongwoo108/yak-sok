@@ -32,6 +32,16 @@ class User(AbstractUser):
         blank=True,
         verbose_name='비상 연락처'
     )
+    emergency_relation = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='비상 연락처 관계'
+    )
+    emergency_name = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='비상 연락처 이름'
+    )
     
     # FCM Token for push notifications
     fcm_token = models.CharField(
@@ -81,3 +91,52 @@ class GuardianRelation(models.Model):
     
     def __str__(self):
         return f"{self.senior.username} ← {self.guardian.username}"
+
+
+class EmergencyContact(models.Model):
+    """
+    비상 연락처 모델
+    한 사용자에 여러 연락처 등록 가능
+    """
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='emergency_contacts',
+        verbose_name='사용자'
+    )
+    name = models.CharField(
+        max_length=50,
+        verbose_name='이름'
+    )
+    relation = models.CharField(
+        max_length=50,
+        verbose_name='관계'
+    )
+    phone_number = models.CharField(
+        max_length=15,
+        blank=True,
+        verbose_name='전화번호'
+    )
+    email = models.EmailField(
+        blank=True,
+        verbose_name='이메일'
+    )
+    notify_by_email = models.BooleanField(
+        default=True,
+        verbose_name='이메일 알림'
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name='주 연락처 여부'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = '비상 연락처'
+        verbose_name_plural = '비상 연락처 목록'
+        ordering = ['-is_primary', '-created_at']
+    
+    def __str__(self):
+        return f"{self.user.username}의 비상연락처: {self.name} ({self.relation})"

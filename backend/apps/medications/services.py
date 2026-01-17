@@ -5,6 +5,7 @@ Medications Services - OCR 및 STT 처리
 import json
 import base64
 import io
+import httpx
 from openai import OpenAI
 from django.conf import settings
 from PIL import Image, ExifTags
@@ -17,7 +18,9 @@ class OCRService:
     """
     
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        # Windows SSL 권한 문제 해결을 위해 SSL 검증 비활성화
+        http_client = httpx.Client(verify=False)
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY, http_client=http_client)
     
     def _auto_rotate_image(self, image_content: bytes) -> bytes:
         """
@@ -184,61 +187,3 @@ class OCRService:
                 ],
                 'message': 'OCR 처리가 완료되었습니다. (데모 데이터)'
             }
-
-
-
-class STTService:
-    """
-    음성 명령 처리 서비스
-    OpenAI Whisper API 활용
-    """
-    
-    def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    
-    def transcribe(self, audio_file):
-        """
-        음성을 텍스트로 변환
-        """
-        try:
-            # Whisper API는 파일 객체를 직접 받음
-            # 파일 포인터를 처음으로 되돌림 (혹시 모를 상황 대비)
-            if hasattr(audio_file, 'seek'):
-                audio_file.seek(0)
-                
-            response = self.client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file
-            )
-            return response.text
-        except Exception as e:
-            print(f"STT Error: {str(e)}")
-            return ""
-    
-    def process_command(self, audio_file, user):
-        """
-        음성 명령 처리
-        """
-        # 음성을 텍스트로 변환
-        text = self.transcribe(audio_file)
-        
-        if not text:
-            return {
-                'success': False,
-                'message': '음성을 인식하지 못했습니다.'
-            }
-        
-        # 간단한 키워드 기반 의도 분류 (임시 구현)
-        # 실제로는 여기서도 GPT를 사용하여 의도를 파악하고 구조화된 데이터를 뽑아내면 좋습니다.
-        action = 'unknown'
-        if '먹었어' in text or '복용' in text:
-            action = 'take_medication'
-        elif '추가' in text or '등록' in text:
-            action = 'add_schedule'
-        
-        return {
-            'success': True,
-            'transcribed_text': text,
-            'action': action,
-            'message': f'음성 인식 결과: "{text}"'
-        }

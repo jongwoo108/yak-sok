@@ -6,33 +6,36 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
 
 :root {
-  /* 파스텔 색상 팔레트 */
-  --color-mint: #A8D5BA;
-  --color-mint-light: #C5E8D5;
-  --color-mint-dark: #7BC49A;
+  /* 파스텔 색상 팔레트 - 모바일과 통일 */
+  --color-mint: #B2DFDB;
+  --color-mint-light: #E0F2F1;
+  --color-mint-dark: #80CBC4;
 
-  --color-blue: #8EB8C9;
-  --color-blue-light: #B5D1DC;
-  --color-blue-dark: #6A9AAD;
+  --color-blue: #B3E5FC;
+  --color-blue-light: #E1F5FE;
+  --color-blue-dark: #81D4FA;
 
-  --color-cream: #F5EDE3;
-  --color-cream-light: #FAF6F1;
-  --color-cream-dark: #EBE3D5;
+  /* Base 색상 (뉴모피즘 배경 - 모바일과 동일) */
+  --color-cream: #F2F5F8;
+  --color-cream-light: #FFFFFF;
+  --color-cream-dark: #D8DEE6;
 
-  --color-pink: #F5D6D0;
-  --color-pink-light: #FAE9E5;
-  --color-pink-dark: #E8B4A8;
+  --color-pink: #FFCCBC;
+  --color-pink-light: #FBE9E7;
+  --color-pink-dark: #FFAB91;
 
   /* 기본 색상 */
-  --color-primary: var(--color-mint-dark);
-  --color-primary-light: var(--color-mint-light);
-  --color-success: #7BC49A;
-  --color-warning: #E8B4A8;
-  --color-danger: #D98B8B;
-  --color-text: #5A6B5D;
-  --color-text-light: #8A9B8D;
-  --color-background: var(--color-cream-light);
-  --color-surface: var(--color-cream);
+  --color-primary: #80CBC4;
+  --color-primary-light: #B2DFDB;
+  --color-success: #A5D6A7;
+  --color-warning: #FFE0B2;
+  --color-danger: #FFCDD2;
+  --color-text: #37474F;
+  --color-text-light: #607D8B;
+  /* 카드/표면 배경색 - 모바일 base 색상과 동일 */
+  --color-base: #F2F5F8;
+  --color-background: #F2F5F8;
+  --color-surface: #F2F5F8;
 
   /* 뉴모피즘 그림자 */
   --shadow-neumorphic:
@@ -121,7 +124,7 @@ body {
     radial-gradient(ellipse at 0% 0%, var(--color-mint-light) 0%, transparent 50%),
     radial-gradient(ellipse at 100% 0%, var(--color-blue-light) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 100%, var(--color-pink-light) 0%, transparent 50%),
-    var(--color-cream-light);
+    var(--color-base);
 }
 
 /* 뉴모피즘 버튼 스타일 */
@@ -139,7 +142,7 @@ body {
   border-radius: var(--border-radius-pill);
   cursor: pointer;
   transition: all 0.3s ease;
-  background: var(--color-cream);
+  background: var(--color-base);
   color: var(--color-text);
   box-shadow: var(--shadow-neumorphic);
   text-decoration: none;
@@ -201,7 +204,7 @@ body {
 
 /* 뉴모피즘 카드 스타일 */
 .card {
-  background: var(--color-cream);
+  background: var(--color-base);
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-neumorphic);
@@ -435,7 +438,7 @@ body {
 /* 진행 바 */
 .progress-bar {
   height: 8px;
-  background: var(--color-cream-dark);
+  background: #D8DEE6;
   border-radius: 4px;
   overflow: hidden;
   box-shadow: var(--shadow-neumorphic-inset);
@@ -453,7 +456,7 @@ body {
   position: relative;
   width: 60px;
   height: 32px;
-  background: var(--color-cream-dark);
+  background: #D8DEE6;
   border-radius: 16px;
   box-shadow: var(--shadow-neumorphic-inset);
   cursor: pointer;
@@ -647,7 +650,7 @@ body {
 
 /* Containers */
 .clay-card {
-  background: var(--color-surface);
+  background: var(--color-base);
   border-radius: 30px;
   padding: 30px;
   box-shadow:
@@ -676,7 +679,7 @@ body {
   padding: 18px 24px;
   border: none;
   border-radius: 20px;
-  background: #EFF3F6;
+  background: #E8EDF2;
   /* Slightly darker than surface for contrast */
   box-shadow:
     inset 8px 8px 16px #D1D9E6,

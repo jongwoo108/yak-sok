@@ -49,6 +49,7 @@ export default function AddMedicationScreen() {
         name: '',
         dosage: '',
         description: '',
+        days_supply: '',  // 처방 일수
         selectedTimes: [] as string[],
     });
 
@@ -85,6 +86,7 @@ export default function AddMedicationScreen() {
                 name: formData.name,
                 dosage: formData.dosage,
                 description: formData.description,
+                days_supply: formData.days_supply ? parseInt(formData.days_supply) : null,
                 schedules_input: schedules,
             });
 
@@ -147,6 +149,23 @@ export default function AddMedicationScreen() {
                                 onChangeText={(text) => setFormData({ ...formData, dosage: text })}
                             />
                         </View>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>처방 일수</Text>
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="예: 30 (병원 방문일 계산용)"
+                                placeholderTextColor={colors.textLight}
+                                value={formData.days_supply}
+                                onChangeText={(text) => setFormData({ ...formData, days_supply: text.replace(/[^0-9]/g, '') })}
+                                keyboardType="number-pad"
+                            />
+                        </View>
+                        <Text style={styles.inputHint}>
+                            약이 떨어지는 날을 캘린더에 표시합니다
+                        </Text>
                     </View>
 
                     <View style={styles.inputContainer}>
@@ -323,6 +342,11 @@ const styles = StyleSheet.create({
         fontWeight: fontWeight.semibold,
         color: colors.text,
         marginBottom: spacing.sm,
+    },
+    inputHint: {
+        fontSize: fontSize.xs,
+        color: colors.textSecondary,
+        marginTop: spacing.xs,
     },
     inputWrapper: {
         backgroundColor: '#FFFFFF',  // 흰색 배경

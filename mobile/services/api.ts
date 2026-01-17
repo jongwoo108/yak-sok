@@ -5,7 +5,7 @@
 import axios, { AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { User, Medication, MedicationLog, Alert, ApiResponse } from './types';
+import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelation, EmergencyContact, CalendarData } from './types';
 
 // 환경변수에서 API URL 가져오기
 // 주의: 물리 기기(폰)에서 테스트하려면 아래 'YOUR_LOCAL_IP'를 컴퓨터의 IP 주소(예: 192.168.0.x)로 변경하고 주석을 해제하세요.
@@ -37,31 +37,57 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// 인증이 필요없는 엔드포인트 목록
+const PUBLIC_ENDPOINTS = ['/users/login/', '/users/register/', '/users/login/google/'];
+
 // 응답 인터셉터: 토큰 갱신 처리
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const requestUrl = originalRequest?.url || '';
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // 로그인/회원가입 등 공개 엔드포인트는 토큰 갱신 시도하지 않음
+        const isPublicEndpoint = PUBLIC_ENDPOINTS.some(endpoint => requestUrl.includes(endpoint));
+
+        // 401 에러이고 아직 재시도하지 않은 경우 (공개 엔드포인트 제외)
+        if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint) {
             originalRequest._retry = true;
+            console.log('[API] 401 Unauthorized 감지 - 토큰 갱신 시도');
 
             try {
                 const refreshToken = await SecureStore.getItemAsync('refresh_token');
-                if (refreshToken) {
-                    const response = await axios.post(`${API_BASE_URL}/users/token-refresh/`, {
-                        refresh: refreshToken,
-                    });
-
-                    const { access } = response.data;
-                    await SecureStore.setItemAsync('access_token', access);
-
-                    originalRequest.headers.Authorization = `Bearer ${access}`;
-                    return apiClient(originalRequest);
+                if (!refreshToken) {
+                    console.log('[API] 리프레시 토큰이 없습니다. 로그아웃 처리 유도.');
+                    throw new Error('No refresh token');
                 }
+
+                // SimpleJWT 토큰 갱신 요청
+                const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+                    refresh: refreshToken,
+                });
+
+                const { access, refresh } = response.data;
+                console.log('[API] 토큰 갱신 성공');
+
+                // 새 토큰 저장
+                await SecureStore.setItemAsync('access_token', access);
+                if (refresh) {
+                    await SecureStore.setItemAsync('refresh_token', refresh);
+                }
+
+                // 기존 요청 재시도 (새 토큰 적용)
+                originalRequest.headers = {
+                    ...originalRequest.headers,
+                    Authorization: `Bearer ${access}`,
+                };
+
+                return apiClient(originalRequest);
             } catch (refreshError) {
+                console.error('[API] 토큰 갱신 실패:', refreshError);
                 await SecureStore.deleteItemAsync('access_token');
                 await SecureStore.deleteItemAsync('refresh_token');
+                // 여기서 rejection을 던지면 호출한 곳(scan.tsx 등)의 catch 블록으로 이동
             }
         }
 
@@ -114,8 +140,34 @@ export const api = {
     // 약품 그룹
     medicationGroups: {
         list: () => apiClient.get('/medications/groups/'),
-        create: (data: { name: string }) => apiClient.post('/medications/groups/', data),
+        create: (data: { name: string; is_severe?: boolean }) =>
+            apiClient.post('/medications/groups/', data),
         delete: (id: number) => apiClient.delete(`/medications/groups/${id}/`),
+    },
+
+    // 복약 스케줄
+    schedules: {
+        create: (data: { medication: number; time_of_day: string; scheduled_time: string }) =>
+            apiClient.post('/medications/schedules/', data),
+        update: (id: number, data: any) =>
+            apiClient.patch(`/medications/schedules/${id}/`, data),
+        delete: (id: number) => apiClient.delete(`/medications/schedules/${id}/`),
+    },
+
+
+    // 보호자 관계
+    guardians: {
+        list: () => apiClient.get<ApiResponse<GuardianRelation>>('/users/guardians/'),
+    },
+
+    // 비상 연락처
+    emergencyContacts: {
+        list: () => apiClient.get<ApiResponse<EmergencyContact>>('/users/emergency-contacts/'),
+        create: (data: Partial<EmergencyContact>) =>
+            apiClient.post<EmergencyContact>('/users/emergency-contacts/', data),
+        update: (id: number, data: Partial<EmergencyContact>) =>
+            apiClient.patch<EmergencyContact>(`/users/emergency-contacts/${id}/`, data),
+        delete: (id: number) => apiClient.delete(`/users/emergency-contacts/${id}/`),
     },
 
     // 복약 기록
@@ -124,15 +176,28 @@ export const api = {
         take: (logId: number) => apiClient.post(`/medications/logs/${logId}/take/`),
         batchTake: (logIds: number[]) =>
             apiClient.post('/medications/logs/batch-take/', { log_ids: logIds }),
+        calendar: (year: number, month: number) =>
+            apiClient.get<CalendarData>(`/medications/logs/calendar/?year=${year}&month=${month}`),
+        byDate: (date: string) =>
+            apiClient.get<MedicationLog[]>(`/medications/logs/by-date/?date=${date}`),
     },
 
     // 알림
     alerts: {
         list: () => apiClient.get<ApiResponse<Alert>>('/alerts/'),
+        send: (data: { 
+            recipient_id: number; 
+            message_type: 'check_in' | 'reminder' | 'im_ok' | 'need_help' | 'custom';
+            custom_message?: string;
+        }) => apiClient.post<{ success: boolean; message: string; alert_id: number }>('/alerts/send/', data),
     },
 
-    // FCM 토큰
+    // 사용자
     users: {
+        // 정보 수정
+        update: (id: number, data: Partial<User>) => apiClient.patch<User>(`/users/${id}/`, data),
+
+        // FCM 토큰
         updateFcmToken: (token: string) =>
             apiClient.patch('/users/update_fcm_token/', { fcm_token: token }),
         testPush: () => apiClient.post('/users/test-push/'),

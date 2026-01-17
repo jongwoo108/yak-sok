@@ -27,6 +27,12 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="calendar"
+                options={{
+                    title: '캘린더',
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: '설정',

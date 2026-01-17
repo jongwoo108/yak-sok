@@ -14,6 +14,8 @@ import {
     RefreshControl,
     Platform,
     Alert,
+    Modal,
+    TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -21,14 +23,42 @@ import { useMedicationStore } from '../../services/store';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
 import { NeumorphCard, NeumorphIconButton } from '../../components';
+import type { Medication, MedicationSchedule } from '../../services/types';
 
+// 기본 복용 시간 매핑
+const TIME_PRESETS: { [key: string]: { time_of_day: string; scheduled_time: string; label: string } } = {
+    morning: { time_of_day: 'morning', scheduled_time: '08:00', label: '아침' },
+    noon: { time_of_day: 'noon', scheduled_time: '12:00', label: '점심' },
+    evening: { time_of_day: 'evening', scheduled_time: '18:00', label: '저녁' },
+    night: { time_of_day: 'night', scheduled_time: '22:00', label: '취침 전' },
+};
+
+interface EditingMedication {
+    id: number;
+    name: string;
+    dosage: string;
+    schedules: MedicationSchedule[];
+}
 
 export default function MedicationsScreen() {
     const router = useRouter();
-    const { medications, fetchMedications, deleteMedication, deleteMedicationGroup, isLoading } = useMedicationStore();
+    const { medications, fetchMedications, deleteMedication, deleteMedicationGroup, updateMedication, isLoading } = useMedicationStore();
     const [refreshing, setRefreshing] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+    // 편집 모달 상태
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editingMed, setEditingMed] = useState<EditingMedication | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editDosage, setEditDosage] = useState('');
+    const [editSchedules, setEditSchedules] = useState<{ [key: string]: boolean }>({
+        morning: false,
+        noon: false,
+        evening: false,
+        night: false,
+    });
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         fetchMedications();
@@ -123,6 +153,87 @@ export default function MedicationsScreen() {
         );
     };
 
+    // 편집 모달 열기
+    const openEditModal = (med: Medication) => {
+        if (isEditMode) return; // 편집 모드(다중 선택)에서는 탭으로 편집 불가
+
+        setEditingMed({
+            id: med.id,
+            name: med.name,
+            dosage: med.dosage || '',
+            schedules: med.schedules || [],
+        });
+        setEditName(med.name);
+        setEditDosage(med.dosage || '');
+
+        // 현재 스케줄 상태 초기화
+        const scheduleState: { [key: string]: boolean } = {
+            morning: false,
+            noon: false,
+            evening: false,
+            night: false,
+        };
+        med.schedules?.forEach((s) => {
+            if (s.time_of_day && scheduleState.hasOwnProperty(s.time_of_day)) {
+                scheduleState[s.time_of_day] = true;
+            }
+        });
+        setEditSchedules(scheduleState);
+        setEditModalVisible(true);
+    };
+
+    // 스케줄 토글
+    const toggleEditSchedule = (timeOfDay: string) => {
+        setEditSchedules((prev) => ({
+            ...prev,
+            [timeOfDay]: !prev[timeOfDay],
+        }));
+    };
+
+    // 편집 저장
+    const handleSaveEdit = async () => {
+        if (!editingMed) return;
+        if (!editName.trim()) {
+            Alert.alert('오류', '약 이름을 입력해주세요.');
+            return;
+        }
+
+        // 최소 하나의 스케줄 필요
+        const hasSchedule = Object.values(editSchedules).some((v) => v);
+        if (!hasSchedule) {
+            Alert.alert('오류', '최소 하나의 복용 시간을 선택해주세요.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // 스케줄 변경사항 계산
+            const currentScheduleTimes = editingMed.schedules.map((s) => s.time_of_day);
+            const schedulesToRemove = editingMed.schedules
+                .filter((s) => !editSchedules[s.time_of_day])
+                .map((s) => s.id);
+            const schedulesToAdd = Object.entries(editSchedules)
+                .filter(([timeOfDay, enabled]) => enabled && !currentScheduleTimes.includes(timeOfDay))
+                .map(([timeOfDay]) => ({
+                    time_of_day: timeOfDay,
+                    scheduled_time: TIME_PRESETS[timeOfDay].scheduled_time,
+                }));
+
+            await updateMedication(
+                editingMed.id,
+                { name: editName.trim(), dosage: editDosage.trim() },
+                { add: schedulesToAdd, remove: schedulesToRemove }
+            );
+
+            setEditModalVisible(false);
+            setEditingMed(null);
+        } catch (error) {
+            Alert.alert('오류', '약 수정에 실패했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     // ... (groupedMedications logic unchanged) ...
     const groupedMedications = medications.reduce((acc, med) => {
         const groupName = med.group_name || '기타';
@@ -204,40 +315,54 @@ export default function MedicationsScreen() {
                             {/* 약품 카드들 */}
                             {meds.map((med) => (
                                 <View key={med.id} style={{ position: 'relative' }}>
-                                    <NeumorphCard style={styles.medicationCard}>
-                                        <View style={styles.cardHeader}>
-                                            <Text style={styles.medicationName}>{med.name}</Text>
-                                            <View style={[
-                                                styles.statusBadge,
-                                                med.is_active ? styles.statusActive : styles.statusInactive
-                                            ]}>
-                                                <Text style={[
-                                                    styles.statusText,
-                                                    med.is_active ? styles.statusTextActive : styles.statusTextInactive
+                                    <TouchableOpacity
+                                        activeOpacity={isEditMode ? 1 : 0.8}
+                                        onPress={() => openEditModal(med)}
+                                        disabled={isEditMode}
+                                    >
+                                        <NeumorphCard style={styles.medicationCard}>
+                                            <View style={styles.cardHeader}>
+                                                <Text style={styles.medicationName}>{med.name}</Text>
+                                                <View style={[
+                                                    styles.statusBadge,
+                                                    med.is_active ? styles.statusActive : styles.statusInactive
                                                 ]}>
-                                                    {med.is_active ? '복용 중' : '중단'}
-                                                </Text>
+                                                    <Text style={[
+                                                        styles.statusText,
+                                                        med.is_active ? styles.statusTextActive : styles.statusTextInactive
+                                                    ]}>
+                                                        {med.is_active ? '복용 중' : '중단'}
+                                                    </Text>
+                                                </View>
                                             </View>
-                                        </View>
 
-                                        {med.dosage && (
-                                            <Text style={styles.dosage}>{med.dosage}</Text>
-                                        )}
+                                            {med.dosage && (
+                                                <Text style={styles.dosage}>{med.dosage}</Text>
+                                            )}
 
-                                        {/* 복용 시간 태그 */}
-                                        {med.schedules && med.schedules.length > 0 && (
-                                            <View style={styles.scheduleRow}>
-                                                {med.schedules.map((schedule) => (
-                                                    <View key={schedule.id} style={styles.scheduleTag}>
-                                                        <Ionicons name="time-outline" size={12} color={colors.primary} />
-                                                        <Text style={styles.scheduleTagText}>
-                                                            {schedule.time_of_day_display} {schedule.scheduled_time?.slice(0, 5)}
-                                                        </Text>
-                                                    </View>
-                                                ))}
-                                            </View>
-                                        )}
-                                    </NeumorphCard>
+                                            {/* 복용 시간 태그 */}
+                                            {med.schedules && med.schedules.length > 0 && (
+                                                <View style={styles.scheduleRow}>
+                                                    {med.schedules.map((schedule) => (
+                                                        <View key={schedule.id} style={styles.scheduleTag}>
+                                                            <Ionicons name="time-outline" size={12} color={colors.primary} />
+                                                            <Text style={styles.scheduleTagText}>
+                                                                {schedule.time_of_day_display} {schedule.scheduled_time?.slice(0, 5)}
+                                                            </Text>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            )}
+
+                                            {/* 편집 힌트 */}
+                                            {!isEditMode && (
+                                                <View style={styles.editHint}>
+                                                    <Ionicons name="create-outline" size={14} color={colors.textLight} />
+                                                    <Text style={styles.editHintText}>탭하여 편집</Text>
+                                                </View>
+                                            )}
+                                        </NeumorphCard>
+                                    </TouchableOpacity>
 
                                     {/* Selection Overlay for Edit Mode */}
                                     {isEditMode && (
@@ -327,28 +452,102 @@ export default function MedicationsScreen() {
                     <>
                         <TouchableOpacity onPress={() => router.push('/medications/scan' as any)} style={{ flex: 1 }} activeOpacity={0.8}>
                             <View style={styles.fabContainer}>
-                                <View style={styles.fabShadow} />
+                                <View style={[styles.fabShadow, { shadowColor: colors.primary }]} />
                                 <View style={styles.fabShadowLight} />
-                                <View style={[styles.fabSurface, { backgroundColor: colors.base }]}>
-                                    <Ionicons name="camera" size={20} color={colors.primary} />
-                                    <Text style={[styles.fabText, { color: colors.primary }]}>처방전 스캔</Text>
+                                <View style={[styles.fabSurface, { backgroundColor: colors.primary }]}>
+                                    <Ionicons name="camera" size={20} color={colors.white} />
+                                    <Text style={styles.fabText}>처방전 스캔</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => router.push('/medications/add')} style={{ flex: 1 }} activeOpacity={0.8}>
                             <View style={styles.fabContainer}>
-                                <View style={[styles.fabShadow, { shadowColor: colors.primary }]} />
+                                <View style={styles.fabShadow} />
                                 <View style={styles.fabShadowLight} />
-                                <View style={[styles.fabSurface, { backgroundColor: colors.primary }]}>
-                                    <Ionicons name="add" size={20} color={colors.white} />
-                                    <Text style={styles.fabText}>직접 추가</Text>
+                                <View style={[styles.fabSurface, { backgroundColor: colors.base }]}>
+                                    <Ionicons name="add" size={20} color={colors.primary} />
+                                    <Text style={[styles.fabText, { color: colors.primary }]}>직접 추가</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
                     </>
                 )}
             </View>
+
+            {/* 편집 모달 */}
+            <Modal
+                visible={editModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setEditModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>약 정보 편집</Text>
+                            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                                <Ionicons name="close" size={24} color={colors.text} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* 약 이름 */}
+                        <Text style={styles.inputLabel}>약 이름</Text>
+                        <TextInput
+                            style={styles.textInput}
+                            value={editName}
+                            onChangeText={setEditName}
+                            placeholder="약 이름을 입력하세요"
+                            placeholderTextColor={colors.textLight}
+                        />
+
+                        {/* 용량 */}
+                        <Text style={styles.inputLabel}>용량</Text>
+                        <TextInput
+                            style={styles.textInput}
+                            value={editDosage}
+                            onChangeText={setEditDosage}
+                            placeholder="예: 1정, 2알"
+                            placeholderTextColor={colors.textLight}
+                        />
+
+                        {/* 복용 시간 */}
+                        <Text style={styles.inputLabel}>복용 시간</Text>
+                        <View style={styles.scheduleButtons}>
+                            {Object.entries(TIME_PRESETS).map(([key, preset]) => (
+                                <TouchableOpacity
+                                    key={key}
+                                    style={[
+                                        styles.scheduleButton,
+                                        editSchedules[key] && styles.scheduleButtonActive
+                                    ]}
+                                    onPress={() => toggleEditSchedule(key)}
+                                >
+                                    <Text style={[
+                                        styles.scheduleButtonText,
+                                        editSchedules[key] && styles.scheduleButtonTextActive
+                                    ]}>
+                                        {preset.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* 저장 버튼 */}
+                        <TouchableOpacity
+                            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                            onPress={handleSaveEdit}
+                            disabled={isSaving}
+                        >
+                            {isSaving ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text style={styles.saveButtonText}>저장</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </GradientBackground>
     );
 }
@@ -686,6 +885,102 @@ const styles = StyleSheet.create({
     },
     fabText: {
         fontSize: fontSize.sm,
+        fontWeight: fontWeight.bold,
+        color: colors.white,
+    },
+
+    // 편집 힌트
+    editHint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        marginTop: spacing.sm,
+        gap: spacing.xs,
+    },
+    editHintText: {
+        fontSize: fontSize.xs,
+        color: colors.textLight,
+    },
+
+    // 편집 모달
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: colors.base,
+        borderTopLeftRadius: borderRadius.xxl,
+        borderTopRightRadius: borderRadius.xxl,
+        padding: spacing.xl,
+        paddingBottom: Platform.OS === 'ios' ? 40 : spacing.xl,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.xl,
+    },
+    modalTitle: {
+        fontSize: fontSize.xl,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+    },
+    inputLabel: {
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.semibold,
+        color: colors.textSecondary,
+        marginBottom: spacing.xs,
+        marginTop: spacing.md,
+    },
+    textInput: {
+        backgroundColor: colors.baseLight,
+        borderRadius: borderRadius.md,
+        padding: spacing.md,
+        fontSize: fontSize.base,
+        color: colors.text,
+        borderWidth: 1,
+        borderColor: colors.baseDark,
+    },
+    scheduleButtons: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: spacing.sm,
+        marginTop: spacing.sm,
+    },
+    scheduleButton: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderRadius: borderRadius.pill,
+        backgroundColor: colors.baseLight,
+        borderWidth: 1,
+        borderColor: colors.baseDark,
+    },
+    scheduleButtonActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    scheduleButtonText: {
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.medium,
+        color: colors.text,
+    },
+    scheduleButtonTextActive: {
+        color: colors.white,
+    },
+    saveButton: {
+        backgroundColor: colors.primary,
+        borderRadius: borderRadius.pill,
+        paddingVertical: spacing.lg,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: spacing.xl,
+    },
+    saveButtonDisabled: {
+        opacity: 0.5,
+    },
+    saveButtonText: {
+        fontSize: fontSize.base,
         fontWeight: fontWeight.bold,
         color: colors.white,
     },

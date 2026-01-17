@@ -13,9 +13,8 @@ from .serializers import (
     MedicationLogSerializer,
     MedicationGroupSerializer,
     OCRScanSerializer,
-    STTCommandSerializer,
 )
-from .services import OCRService, STTService
+from .services import OCRService
 
 
 class MedicationGroupViewSet(viewsets.ModelViewSet):
@@ -59,24 +58,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    @action(detail=False, methods=['post'])
-    def voice_command(self, request):
-        """음성 명령으로 복약 일정 관리"""
-        serializer = STTCommandSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        try:
-            stt_service = STTService()
-            result = stt_service.process_command(
-                serializer.validated_data['audio'],
-                user=request.user
-            )
-            return Response(result)
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+
 
 
 class MedicationScheduleViewSet(viewsets.ModelViewSet):
@@ -187,9 +169,81 @@ class MedicationLogViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def today(self, request):
         """오늘의 복약 기록 조회"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         logs = self.get_queryset().filter(
             scheduled_datetime__date=today
+        ).order_by('schedule__scheduled_time')
+        serializer = self.get_serializer(logs, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def calendar(self, request):
+        """월별 복약 현황 및 병원 방문일 조회"""
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+        
+        logs = self.get_queryset().filter(
+            scheduled_datetime__year=year,
+            scheduled_datetime__month=month
+        )
+        
+        # 날짜별 집계
+        daily_summary = {}
+        for log in logs:
+            date_str = log.scheduled_datetime.date().isoformat()
+            if date_str not in daily_summary:
+                daily_summary[date_str] = {'total': 0, 'taken': 0, 'missed': 0}
+            daily_summary[date_str]['total'] += 1
+            if log.status == MedicationLog.Status.TAKEN:
+                daily_summary[date_str]['taken'] += 1
+            elif log.status == MedicationLog.Status.MISSED:
+                daily_summary[date_str]['missed'] += 1
+        
+        # 병원 방문일 (약 떨어지는 날) 계산
+        hospital_visits = []
+        medications = Medication.objects.filter(
+            user=request.user,
+            is_active=True,
+            days_supply__isnull=False,
+            start_date__isnull=False
+        )
+        
+        for med in medications:
+            end_date = med.end_date
+            if end_date and end_date.year == year and end_date.month == month:
+                hospital_visits.append({
+                    'date': end_date.isoformat(),
+                    'medication_id': med.id,
+                    'medication_name': med.name,
+                    'days_supply': med.days_supply,
+                })
+        
+        return Response({
+            'daily_summary': daily_summary,
+            'hospital_visits': hospital_visits,
+        })
+    
+    @action(detail=False, methods=['get'], url_path='by-date')
+    def by_date(self, request):
+        """특정 날짜의 복약 기록 조회"""
+        date_str = request.query_params.get('date')
+        if not date_str:
+            return Response(
+                {'error': 'date parameter is required (YYYY-MM-DD)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from datetime import datetime
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        logs = self.get_queryset().filter(
+            scheduled_datetime__date=target_date
         ).order_by('schedule__scheduled_time')
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)

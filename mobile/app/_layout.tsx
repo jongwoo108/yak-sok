@@ -6,10 +6,13 @@ import * as SecureStore from 'expo-secure-store';
 import { colors } from '../components/theme';
 import { api } from '../services/api';
 
+import { useMedicationStore } from '../services/store';
+
 export default function RootLayout() {
     const router = useRouter();
     const segments = useSegments();
     const [isLoading, setIsLoading] = useState(true);
+    const { setUser } = useMedicationStore();
 
     useEffect(() => {
         checkAuth();
@@ -26,7 +29,9 @@ export default function RootLayout() {
             } else if (token) {
                 // 토큰 있음: 사용자 정보 가져오기 시도 (토큰 유효성 검증)
                 try {
-                    await api.auth.me();
+                    const response = await api.auth.me();
+                    // 스토어에 사용자 정보 저장 (중요: 앱 재시작 시 상태 복원)
+                    setUser(response.data);
 
                     // 알림 토큰 업데이트 (비동기)
                     console.log('Attempting to update notification token...');

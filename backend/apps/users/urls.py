@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, 
     GuardianRelationViewSet, 
+    EmergencyContactViewSet,
     RegisterView, 
     LoginView, 
     GoogleLoginView
@@ -14,6 +15,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register('guardians', GuardianRelationViewSet, basename='guardian-relation')
+router.register('emergency-contacts', EmergencyContactViewSet, basename='emergency-contact')
 router.register('', UserViewSet, basename='user')
 
 urlpatterns = [
@@ -22,3 +24,4 @@ urlpatterns = [
     path('login/google/', GoogleLoginView.as_view(), name='google-login'),
     path('', include(router.urls)),
 ]
+

@@ -12,50 +12,105 @@ from django.conf import settings
 @shared_task(bind=True, max_retries=3)
 def schedule_medication_alert(self, medication_log_id):
     """
-    복약 알림 예약
-    복약 시간 등록 시 호출되어 비상 알림 작업 예약
+    복약 알림 전체 예약 (정시 리마인더 + 비상 알림)
     """
     from apps.medications.models import MedicationLog
     from apps.alerts.models import Alert
+    from django.conf import settings
     
     try:
         log = MedicationLog.objects.get(id=medication_log_id)
         user = log.schedule.medication.user
-        threshold = settings.SAFETY_LINE_SETTINGS['DEFAULT_THRESHOLD_MINUTES']
         
-        # 비상 알림 시간 계산 (예정 시간 + 임계 시간)
+        # 1. 정시 리마인더 예약 (예정 시간)
+        send_scheduled_reminder.apply_async(
+            args=[log.id],
+            eta=log.scheduled_datetime
+        )
+        
+        # 2. 비상 알림 예약 (예정 시간 + 임계 시간)
+        # 중증 질환인 경우 임계 시간을 0으로 설정하여 보호자에게 즉시 알림
+        is_severe = log.schedule.medication.group.is_severe if log.schedule.medication.group else False
+        
+        if is_severe:
+            threshold = 0
+            alert_title = '[긴급/중증] 미복약 알림'
+            alert_message = f'중증 질환 약({log.schedule.medication.name})의 복용 시간이 되었습니다. 즉시 확인이 필요합니다.'
+        else:
+            threshold = settings.SAFETY_LINE_SETTINGS.get('DEFAULT_THRESHOLD_MINUTES', 30)
+            alert_title = '미복약 알림'
+            alert_message = f'{log.schedule.medication.name} 복용 시간이 {threshold}분 경과했습니다.'
+            
         alert_time = log.scheduled_datetime + timezone.timedelta(minutes=threshold)
         
-        # 알림 레코드 생성
+        # 알림 레코드 생성 (비상 알림용)
         alert = Alert.objects.create(
             user=user,
             medication_log=log,
-            alert_type=Alert.AlertType.WARNING,
-            title='미복약 알림',
-            message=f'{log.schedule.medication.name} 복용 시간이 {threshold}분 경과했습니다.',
+            alert_type=Alert.AlertType.EMERGENCY if is_severe else Alert.AlertType.WARNING,
+            title=alert_title,
+            message=alert_message,
             scheduled_at=alert_time,
         )
         
         # 비상 알림 태스크 예약
-        eta = alert_time
         task = trigger_safety_alert.apply_async(
             args=[alert.id],
-            eta=eta
+            eta=alert_time
         )
         
-        # 태스크 ID 저장 (취소를 위해)
         alert.celery_task_id = task.id
         alert.save()
         
         log.celery_task_id = task.id
         log.save()
         
-        return {'status': 'scheduled', 'alert_id': alert.id, 'task_id': task.id}
+        return {'status': 'all_scheduled', 'log_id': log.id}
         
     except MedicationLog.DoesNotExist:
         return {'status': 'error', 'message': '복약 기록을 찾을 수 없습니다.'}
     except Exception as exc:
+        print(f"[Alert] 예약 중 예외 발생: {exc}")
         self.retry(exc=exc, countdown=60)
+
+
+@shared_task
+def send_scheduled_reminder(medication_log_id):
+    """
+    정시 복약 리마인더 발송
+    """
+    from apps.medications.models import MedicationLog
+    from apps.alerts.fcm_service import FCMService
+    
+    try:
+        log = MedicationLog.objects.select_related('schedule', 'schedule__medication', 'schedule__medication__user').get(id=medication_log_id)
+        
+        # 이미 복용했으면 리마인더 안 보냄
+        if log.status == 'taken':
+            return {'status': 'skipped', 'reason': 'already_taken'}
+            
+        user = log.schedule.medication.user
+        if not user.fcm_token:
+            return {'status': 'skipped', 'reason': 'no_token'}
+            
+        med_name = log.schedule.medication.name
+        time_display = log.get_time_of_day_display()
+        
+        success = FCMService.send_notification(
+            token=user.fcm_token,
+            title="💊 복약 시간이에요!",
+            body=f"{time_display} 약을 복용할 시간입니다: {med_name}",
+            data={
+                'type': 'medication_reminder',
+                'log_id': str(medication_log_id),
+                'medication_name': med_name
+            }
+        )
+        
+        return {'status': 'sent' if success else 'failed'}
+    except Exception as e:
+        print(f"[Reminder] 발송 에러: {e}")
+        return {'status': 'error', 'message': str(e)}
 
 
 @shared_task(bind=True)

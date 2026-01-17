@@ -4,7 +4,7 @@ Users Serializers
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
-from .models import GuardianRelation
+from .models import GuardianRelation, EmergencyContact
 
 User = get_user_model()
 
@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'role', 'phone_number', 'emergency_contact'
+            'role', 'phone_number', 'emergency_contact', 'emergency_relation', 'emergency_name'
         ]
         read_only_fields = ['id']
 
@@ -25,12 +25,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """사용자 생성 시리얼라이저 (회원가입)"""
     
     password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True)
+    password_confirm = serializers.CharField(write_only=True, required=False)
     
     # Make optional fields explicit
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=User.Role.choices, default=User.Role.SENIOR)
     
     class Meta:
@@ -44,7 +44,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         }
     
     def validate(self, attrs):
-        if attrs['password'] != attrs.pop('password_confirm'):
+        password_confirm = attrs.pop('password_confirm', None)
+        if password_confirm and attrs['password'] != password_confirm:
             raise serializers.ValidationError({'password_confirm': '비밀번호가 일치하지 않습니다.'})
         
         # Email duplication check
@@ -57,6 +58,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Use email as username
         validated_data['username'] = validated_data.get('email')
+        if 'last_name' not in validated_data:
+            validated_data['last_name'] = ''
         return User.objects.create_user(**validated_data)
 
 
@@ -106,3 +109,20 @@ class GuardianRelationSerializer(serializers.ModelSerializer):
         model = GuardianRelation
         fields = ['id', 'senior', 'guardian', 'senior_name', 'guardian_name', 'is_primary', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class EmergencyContactSerializer(serializers.ModelSerializer):
+    """비상 연락처 시리얼라이저"""
+    
+    class Meta:
+        model = EmergencyContact
+        fields = [
+            'id', 'name', 'relation', 'phone_number', 'email',
+            'notify_by_email', 'is_primary', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+

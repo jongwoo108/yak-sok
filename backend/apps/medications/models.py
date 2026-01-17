@@ -27,6 +27,10 @@ class MedicationGroup(models.Model):
         default='mint',
         verbose_name='구분 색상'
     )
+    is_severe = models.BooleanField(
+        default=False,
+        verbose_name='중증 질환 여부'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -72,6 +76,17 @@ class Medication(models.Model):
         blank=True,
         verbose_name='복용량'
     )
+    # 처방 일수 및 시작일 (병원 방문일 계산용)
+    days_supply = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='처방 일수'
+    )
+    start_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='복용 시작일'
+    )
     # OCR 스캔 이미지 저장
     prescription_image = models.ImageField(
         upload_to='prescriptions/',
@@ -85,6 +100,14 @@ class Medication(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    @property
+    def end_date(self):
+        """처방 종료일 (= 다음 병원 방문일) 계산"""
+        if self.start_date and self.days_supply:
+            from datetime import timedelta
+            return self.start_date + timedelta(days=self.days_supply)
+        return None
     
     class Meta:
         verbose_name = '복용 약품'

@@ -12,6 +12,41 @@ export interface User {
     role: 'senior' | 'guardian';
     phone_number: string;
     emergency_contact: string;
+    emergency_relation?: string;
+    emergency_name?: string;
+}
+
+// 보호자 관계
+export interface GuardianRelation {
+    id: number;
+    senior: number;
+    guardian: number;
+    senior_name: string;
+    guardian_name: string;
+    is_primary: boolean;
+    created_at: string;
+}
+
+// 비상 연락처
+export interface EmergencyContact {
+    id: number;
+    name: string;
+    relation: string;
+    phone_number: string;
+    email: string;
+    notify_by_email: boolean;
+    is_primary: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+// 약품 그룹
+export interface MedicationGroup {
+    id: number;
+    name: string;
+    color: string;
+    is_severe: boolean;
+    medications_count: number;
 }
 
 // 복용 약품
@@ -22,9 +57,13 @@ export interface Medication {
     dosage: string;
     prescription_image?: string;
     is_active: boolean;
+    is_severe?: boolean; // 그룹의 중증도 정보를 포함할 수 있음
     schedules: MedicationSchedule[];
     group_id?: number | null;
     group_name?: string | null;
+    days_supply?: number | null;  // 처방 일수
+    start_date?: string | null;   // 복용 시작일 (YYYY-MM-DD)
+    end_date?: string | null;     // 처방 종료일 (= 다음 병원 방문일, 계산됨)
     created_at: string;
     updated_at: string;
 }
@@ -84,3 +123,28 @@ export interface ApiResponse<T> {
     results?: T[];
     data?: T;
 }
+
+// 캘린더 일별 요약
+export interface DailyMedicationSummary {
+    total: number;
+    taken: number;
+    missed: number;
+}
+
+// 병원 방문일 정보
+export interface HospitalVisit {
+    date: string;           // YYYY-MM-DD
+    medication_id: number;
+    medication_name: string;
+    days_supply: number;
+}
+
+// 캘린더 데이터 (날짜 -> 요약)
+export type CalendarDailySummary = Record<string, DailyMedicationSummary>;
+
+// 캘린더 API 응답
+export interface CalendarData {
+    daily_summary: CalendarDailySummary;
+    hospital_visits: HospitalVisit[];
+}
+

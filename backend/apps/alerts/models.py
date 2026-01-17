@@ -115,7 +115,7 @@ class EmergencyContact(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='emergency_contacts',
+        related_name='alert_emergency_contacts',
         verbose_name='사용자'
     )
     name = models.CharField(

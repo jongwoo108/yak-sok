@@ -82,16 +82,8 @@ def main():
     uploaded = 0
     
     for idx, med in enumerate(medications):
-        # 임베딩 텍스트 생성
-        text_parts = [med['name']]
-        if med.get('ingredient'):
-            text_parts.append(med['ingredient'])
-        if med.get('manufacturer'):
-            text_parts.append(med['manufacturer'])
-        if med.get('usage'):
-            text_parts.append(med['usage'][:100])
-        
-        text = ' '.join(text_parts)
+        # 임베딩 텍스트 생성 (약품명만 사용하여 OCR 매칭 정확도 향상)
+        text = med['name']
         
         try:
             embedding = get_embedding(openai_client, text)

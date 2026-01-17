@@ -41,6 +41,7 @@ export const colors = {
     warningDark: '#FFCC80',
 
     danger: '#FFCDD2',         // 파스텔 레드
+    dangerLight: '#FFEBEE',    // 레드 라이트
     dangerDark: '#EF9A9A',
 
     // Text Colors
