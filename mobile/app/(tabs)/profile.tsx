@@ -3,9 +3,10 @@
  * Neumorphism + Pastel Design
  */
 
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, ActivityIndicator } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, ActivityIndicator, TextInput, Share } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useMedicationStore } from '../../services/store';
 import { api } from '../../services/api';
@@ -66,40 +67,142 @@ export default function ProfileScreen() {
     const { user, logout, isAuthenticated } = useMedicationStore();
     
     // 연결된 사용자 목록
-    const [connectedUsers, setConnectedUsers] = useState<Array<{ id: number; name: string; role: string }>>([]);
+    const [connectedUsers, setConnectedUsers] = useState<Array<{ id: number; name: string; role: string; relationId: number }>>([]);
     const [loadingConnections, setLoadingConnections] = useState(false);
     
     // 알림 전송 모달
     const [alertModalVisible, setAlertModalVisible] = useState(false);
     const [selectedUser, setSelectedUser] = useState<{ id: number; name: string } | null>(null);
     const [sendingAlert, setSendingAlert] = useState(false);
+    
+    // 연결 관리 모달
+    const [connectModalVisible, setConnectModalVisible] = useState(false);
+    const [myInviteCode, setMyInviteCode] = useState<string | null>(null);
+    const [inputCode, setInputCode] = useState('');
+    const [generatingCode, setGeneratingCode] = useState(false);
+    const [acceptingCode, setAcceptingCode] = useState(false);
 
     // 연결된 사용자 목록 가져오기
-    useEffect(() => {
-        const fetchConnections = async () => {
-            if (!user) return;
-            setLoadingConnections(true);
-            try {
-                const res = await api.guardians.list();
-                const relations = res.data.results || res.data || [];
-                
-                // 현재 사용자 역할에 따라 연결된 사용자 추출
-                const users = relations.map((rel: GuardianRelation) => {
-                    if (user.role === 'senior') {
-                        return { id: rel.guardian, name: rel.guardian_name, role: 'guardian' };
-                    } else {
-                        return { id: rel.senior, name: rel.senior_name, role: 'senior' };
-                    }
-                });
-                setConnectedUsers(users);
-            } catch (error) {
-                console.error('Fetch connections error:', error);
-            } finally {
-                setLoadingConnections(false);
-            }
-        };
-        fetchConnections();
+    const fetchConnections = useCallback(async () => {
+        if (!user) return;
+        setLoadingConnections(true);
+        try {
+            const res = await api.guardians.list();
+            const relations = res.data.results || res.data || [];
+            
+            // 현재 사용자 역할에 따라 연결된 사용자 추출
+            const users = relations.map((rel: GuardianRelation) => {
+                if (user.role === 'senior') {
+                    return { id: rel.guardian, name: rel.guardian_name, role: 'guardian', relationId: rel.id };
+                } else {
+                    return { id: rel.senior, name: rel.senior_name, role: 'senior', relationId: rel.id };
+                }
+            });
+            setConnectedUsers(users);
+        } catch (error) {
+            console.error('Fetch connections error:', error);
+        } finally {
+            setLoadingConnections(false);
+        }
     }, [user]);
+
+    // 화면 포커스 시 연결 목록 새로고침
+    useFocusEffect(
+        useCallback(() => {
+            fetchConnections();
+        }, [fetchConnections])
+    );
+    
+    // 내 초대 코드 조회
+    const fetchMyInviteCode = async () => {
+        try {
+            const res = await api.invite.get();
+            setMyInviteCode(res.data.code);
+        } catch (error) {
+            console.error('Fetch invite code error:', error);
+        }
+    };
+    
+    // 초대 코드 생성
+    const handleGenerateCode = async () => {
+        setGeneratingCode(true);
+        try {
+            const res = await api.invite.generate();
+            if (res.data.success) {
+                setMyInviteCode(res.data.invite.code);
+                Alert.alert('성공', res.data.message);
+            }
+        } catch (error: any) {
+            Alert.alert('오류', error.response?.data?.error || '코드 생성에 실패했습니다.');
+        } finally {
+            setGeneratingCode(false);
+        }
+    };
+    
+    // 초대 코드 공유
+    const handleShareCode = async () => {
+        if (!myInviteCode) return;
+        try {
+            await Share.share({
+                message: `약속 앱에서 저와 연결해주세요! 초대 코드: ${myInviteCode}`,
+            });
+        } catch (error) {
+            console.error('Share error:', error);
+        }
+    };
+    
+    // 초대 코드 수락
+    const handleAcceptCode = async () => {
+        if (inputCode.length !== 6) {
+            Alert.alert('오류', '6자리 초대 코드를 입력해주세요.');
+            return;
+        }
+        
+        setAcceptingCode(true);
+        try {
+            const res = await api.invite.accept(inputCode);
+            if (res.data.success) {
+                Alert.alert('연결 완료', res.data.message);
+                setInputCode('');
+                setConnectModalVisible(false);
+                fetchConnections();  // 연결 목록 새로고침
+            }
+        } catch (error: any) {
+            Alert.alert('오류', error.response?.data?.error || '연결에 실패했습니다.');
+        } finally {
+            setAcceptingCode(false);
+        }
+    };
+    
+    // 연결 해제
+    const handleDisconnect = (relationId: number, userName: string) => {
+        Alert.alert(
+            '연결 해제',
+            `${userName}님과의 연결을 해제하시겠습니까?`,
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '해제',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await api.guardians.delete(relationId);
+                            fetchConnections();
+                            Alert.alert('완료', '연결이 해제되었습니다.');
+                        } catch (error) {
+                            Alert.alert('오류', '연결 해제에 실패했습니다.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+    
+    // 연결 관리 모달 열기
+    const openConnectModal = () => {
+        fetchMyInviteCode();
+        setConnectModalVisible(true);
+    };
 
     // 알림 전송
     const handleSendAlert = async (messageType: string) => {
@@ -188,31 +291,58 @@ export default function ProfileScreen() {
                     </View>
                 </NeumorphCard>
 
-                {/* 연결된 사용자 - 알림 보내기 */}
-                {connectedUsers.length > 0 && (
-                    <NeumorphCard style={styles.cardSpacing}>
-                        <Text style={styles.sectionTitle}>연결된 {user?.role === 'senior' ? '보호자' : '시니어'}</Text>
-                        {connectedUsers.map((connUser) => (
-                            <TouchableOpacity
-                                key={connUser.id}
-                                style={styles.connectedUserItem}
-                                onPress={() => openAlertModal(connUser)}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.connectedUserAvatar}>
-                                    <Text style={styles.connectedUserAvatarText}>
-                                        {connUser.name?.[0] || '?'}
-                                    </Text>
-                                </View>
-                                <View style={styles.connectedUserInfo}>
-                                    <Text style={styles.connectedUserName}>{connUser.name}</Text>
-                                    <Text style={styles.connectedUserHint}>탭하여 알림 보내기</Text>
-                                </View>
-                                <Ionicons name="send" size={20} color={colors.primary} />
-                            </TouchableOpacity>
-                        ))}
-                    </NeumorphCard>
-                )}
+                {/* 연결 관리 */}
+                <NeumorphCard style={styles.cardSpacing}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>연결 관리</Text>
+                        <TouchableOpacity onPress={openConnectModal} activeOpacity={0.7}>
+                            <View style={styles.addConnectionButton}>
+                                <Ionicons name="add" size={18} color={colors.white} />
+                                <Text style={styles.addConnectionText}>연결 추가</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                    
+                    {loadingConnections ? (
+                        <ActivityIndicator color={colors.primary} style={{ paddingVertical: spacing.lg }} />
+                    ) : connectedUsers.length === 0 ? (
+                        <View style={styles.emptyConnection}>
+                            <Ionicons name="people-outline" size={40} color={colors.textLight} />
+                            <Text style={styles.emptyConnectionText}>연결된 사용자가 없습니다</Text>
+                            <Text style={styles.emptyConnectionHint}>
+                                {user?.role === 'senior' ? '보호자와 연결하여 복약 관리를 받으세요' : '시니어와 연결하여 복약을 관리하세요'}
+                            </Text>
+                        </View>
+                    ) : (
+                        connectedUsers.map((connUser) => (
+                            <View key={connUser.id} style={styles.connectedUserItem}>
+                                <TouchableOpacity
+                                    style={styles.connectedUserMain}
+                                    onPress={() => openAlertModal(connUser)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.connectedUserAvatar}>
+                                        <Text style={styles.connectedUserAvatarText}>
+                                            {connUser.name?.[0] || '?'}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.connectedUserInfo}>
+                                        <Text style={styles.connectedUserName}>{connUser.name}</Text>
+                                        <Text style={styles.connectedUserHint}>탭하여 알림 보내기</Text>
+                                    </View>
+                                    <Ionicons name="send" size={20} color={colors.primary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.disconnectButton}
+                                    onPress={() => handleDisconnect(connUser.relationId, connUser.name)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="close-circle" size={22} color={colors.danger} />
+                                </TouchableOpacity>
+                            </View>
+                        ))
+                    )}
+                </NeumorphCard>
 
                 {/* 계정 메뉴 */}
                 <NeumorphCard style={styles.cardSpacing}>
@@ -335,6 +465,100 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                             style={styles.modalCloseButton}
                             onPress={() => setAlertModalVisible(false)}
+                        >
+                            <Text style={styles.modalCloseText}>닫기</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* 연결 관리 모달 */}
+            <Modal
+                visible={connectModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setConnectModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Ionicons name="people" size={24} color={colors.primary} />
+                            <Text style={styles.modalTitle}>사용자 연결</Text>
+                        </View>
+
+                        {/* 내 초대 코드 */}
+                        <View style={styles.inviteSection}>
+                            <Text style={styles.inviteSectionTitle}>내 초대 코드</Text>
+                            <Text style={styles.inviteSectionHint}>
+                                상대방에게 이 코드를 전달하세요
+                            </Text>
+                            
+                            {myInviteCode ? (
+                                <View style={styles.inviteCodeBox}>
+                                    <Text style={styles.inviteCodeText}>{myInviteCode}</Text>
+                                    <TouchableOpacity onPress={handleShareCode} style={styles.shareButton}>
+                                        <Ionicons name="share-outline" size={22} color={colors.primary} />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.generateButton}
+                                    onPress={handleGenerateCode}
+                                    disabled={generatingCode}
+                                >
+                                    {generatingCode ? (
+                                        <ActivityIndicator color={colors.white} size="small" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="add-circle" size={20} color={colors.white} />
+                                            <Text style={styles.generateButtonText}>코드 생성하기</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {/* 구분선 */}
+                        <View style={styles.divider}>
+                            <View style={styles.dividerLine} />
+                            <Text style={styles.dividerText}>또는</Text>
+                            <View style={styles.dividerLine} />
+                        </View>
+
+                        {/* 상대방 코드 입력 */}
+                        <View style={styles.inviteSection}>
+                            <Text style={styles.inviteSectionTitle}>초대 코드 입력</Text>
+                            <Text style={styles.inviteSectionHint}>
+                                상대방에게 받은 6자리 코드를 입력하세요
+                            </Text>
+                            
+                            <View style={styles.codeInputContainer}>
+                                <TextInput
+                                    style={styles.codeInput}
+                                    value={inputCode}
+                                    onChangeText={(text) => setInputCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
+                                    placeholder="000000"
+                                    placeholderTextColor={colors.textLight}
+                                    keyboardType="number-pad"
+                                    maxLength={6}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.acceptButton, inputCode.length !== 6 && styles.acceptButtonDisabled]}
+                                    onPress={handleAcceptCode}
+                                    disabled={inputCode.length !== 6 || acceptingCode}
+                                >
+                                    {acceptingCode ? (
+                                        <ActivityIndicator color={colors.white} size="small" />
+                                    ) : (
+                                        <Text style={styles.acceptButtonText}>연결</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.modalCloseButton}
+                            onPress={() => setConnectModalVisible(false)}
                         >
                             <Text style={styles.modalCloseText}>닫기</Text>
                         </TouchableOpacity>
@@ -470,6 +694,43 @@ const styles = StyleSheet.create({
         color: colors.textLight,
     },
 
+    // 연결 관리 섹션
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    addConnectionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primary,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.pill,
+        gap: spacing.xs,
+    },
+    addConnectionText: {
+        fontSize: fontSize.sm,
+        color: colors.white,
+        fontWeight: fontWeight.medium,
+    },
+    emptyConnection: {
+        alignItems: 'center',
+        paddingVertical: spacing.xl,
+    },
+    emptyConnectionText: {
+        fontSize: fontSize.base,
+        color: colors.textSecondary,
+        marginTop: spacing.md,
+    },
+    emptyConnectionHint: {
+        fontSize: fontSize.sm,
+        color: colors.textLight,
+        marginTop: spacing.xs,
+        textAlign: 'center',
+    },
+
     // 연결된 사용자
     connectedUserItem: {
         flexDirection: 'row',
@@ -477,6 +738,11 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(184, 196, 206, 0.2)',
+    },
+    connectedUserMain: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     connectedUserAvatar: {
         width: 44,
@@ -504,6 +770,103 @@ const styles = StyleSheet.create({
         fontSize: fontSize.xs,
         color: colors.textLight,
         marginTop: 2,
+    },
+    disconnectButton: {
+        padding: spacing.sm,
+        marginLeft: spacing.sm,
+    },
+
+    // 연결 관리 모달
+    inviteSection: {
+        marginBottom: spacing.lg,
+    },
+    inviteSectionTitle: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.semibold,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    inviteSectionHint: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        marginBottom: spacing.md,
+    },
+    inviteCodeBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.mintLight,
+        borderRadius: borderRadius.lg,
+        padding: spacing.lg,
+    },
+    inviteCodeText: {
+        fontSize: fontSize.xxxl,
+        fontWeight: fontWeight.bold,
+        color: colors.primaryDark,
+        letterSpacing: 8,
+    },
+    shareButton: {
+        padding: spacing.sm,
+    },
+    generateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.primary,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        gap: spacing.sm,
+    },
+    generateButtonText: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.semibold,
+        color: colors.white,
+    },
+    divider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: spacing.lg,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.textLight,
+        opacity: 0.3,
+    },
+    dividerText: {
+        marginHorizontal: spacing.lg,
+        fontSize: fontSize.sm,
+        color: colors.textLight,
+    },
+    codeInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+    },
+    codeInput: {
+        flex: 1,
+        fontSize: fontSize.xxl,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+        backgroundColor: colors.baseLight,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        textAlign: 'center',
+        letterSpacing: 6,
+    },
+    acceptButton: {
+        backgroundColor: colors.primary,
+        borderRadius: borderRadius.lg,
+        paddingHorizontal: spacing.xl,
+        paddingVertical: spacing.md,
+    },
+    acceptButtonDisabled: {
+        backgroundColor: colors.textLight,
+    },
+    acceptButtonText: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.bold,
+        color: colors.white,
     },
 
     // 알림 전송 모달

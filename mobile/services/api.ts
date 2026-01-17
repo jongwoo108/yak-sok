@@ -158,6 +158,23 @@ export const api = {
     // 보호자 관계
     guardians: {
         list: () => apiClient.get<ApiResponse<GuardianRelation>>('/users/guardians/'),
+        delete: (id: number) => apiClient.delete(`/users/guardians/${id}/`),
+    },
+
+    // 초대 코드
+    invite: {
+        get: () => apiClient.get<{ code: string | null; expires_at?: string }>('/users/invite/'),
+        generate: () => apiClient.post<{ 
+            success: boolean; 
+            invite: { code: string; expires_at: string }; 
+            message: string 
+        }>('/users/invite/'),
+        accept: (code: string) => apiClient.post<{
+            success: boolean;
+            message: string;
+            relation?: any;
+            error?: string;
+        }>('/users/invite/accept/', { code }),
     },
 
     // 비상 연락처

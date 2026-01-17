@@ -89,8 +89,15 @@ class MedicationSerializer(serializers.ModelSerializer):
         
         medication = super().create(validated_data)
         
-        # 스케줄 생성 + 오늘의 로그 자동 생성
+        # 스케줄 생성 + 처방 기간 동안의 로그 자동 생성
+        from datetime import timedelta
+        
+        start_date = medication.start_date or timezone.localdate()
+        # end_date 계산 (days_supply가 있으면 사용, 없으면 30일 기본)
+        days_supply = medication.days_supply or 30
+        end_date = start_date + timedelta(days=days_supply)
         today = timezone.localdate()
+        
         for schedule_data in schedules_data:
             schedule = MedicationSchedule.objects.create(
                 medication=medication,
@@ -98,22 +105,27 @@ class MedicationSerializer(serializers.ModelSerializer):
                 scheduled_time=schedule_data['scheduled_time']
             )
             
-            # 오늘 날짜의 MedicationLog 자동 생성
-            scheduled_datetime = timezone.make_aware(
-                datetime.combine(today, schedule_data['scheduled_time'])
-            )
-            log = MedicationLog.objects.create(
-                schedule=schedule,
-                scheduled_datetime=scheduled_datetime,
-                status=MedicationLog.Status.PENDING
-            )
-            
-            # 비상 알림 스케줄링 (.delay() 사용)
-            try:
-                from apps.alerts.tasks import schedule_medication_alert
-                schedule_medication_alert.delay(log.id)
-            except Exception as e:
-                print(f"알림 스케줄링 실패: {e}")
+            # start_date부터 end_date까지 모든 날짜의 MedicationLog 생성
+            current_date = start_date
+            while current_date < end_date:
+                scheduled_datetime = timezone.make_aware(
+                    datetime.combine(current_date, schedule_data['scheduled_time'])
+                )
+                log = MedicationLog.objects.create(
+                    schedule=schedule,
+                    scheduled_datetime=scheduled_datetime,
+                    status=MedicationLog.Status.PENDING
+                )
+                
+                # 오늘 날짜의 로그만 비상 알림 스케줄링
+                if current_date == today:
+                    try:
+                        from apps.alerts.tasks import schedule_medication_alert
+                        schedule_medication_alert.delay(log.id)
+                    except Exception as e:
+                        print(f"알림 스케줄링 실패: {e}")
+                
+                current_date += timedelta(days=1)
         
         return medication
 

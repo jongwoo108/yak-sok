@@ -163,6 +163,9 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# 개발 환경: Celery 없이 태스크 동기 실행 (Redis/Celery worker 불필요)
+CELERY_TASK_ALWAYS_EAGER = DEBUG  # DEBUG=True일 때만 동기 실행
+
 
 
 

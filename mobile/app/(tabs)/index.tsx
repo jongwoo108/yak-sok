@@ -3,7 +3,7 @@
  * Neumorphism + Pastel Design
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,7 @@ import {
     Switch,
     Platform,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useMedicationStore } from '../../services/store';
 import type { MedicationLog } from '../../services/types';
@@ -39,9 +40,12 @@ export default function HomeScreen() {
     const [takingGroup, setTakingGroup] = useState<string | null>(null);
     const [notificationEnabled, setNotificationEnabled] = useState(false);
 
-    useEffect(() => {
-        fetchTodayLogs();
-    }, []);
+    // 화면이 포커스될 때마다 데이터 새로고침
+    useFocusEffect(
+        useCallback(() => {
+            fetchTodayLogs();
+        }, [])
+    );
 
     const onRefresh = async () => {
         setRefreshing(true);

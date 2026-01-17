@@ -15,6 +15,7 @@ import {
     Modal,
     TextInput,
     Alert,
+    KeyboardAvoidingView,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -404,94 +405,104 @@ export default function CalendarScreen() {
                 animationType="fade"
                 onRequestClose={() => setEditModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <MaterialCommunityIcons name="hospital-building" size={24} color="#2196F3" />
-                            <Text style={styles.modalTitle}>병원 방문일 수정</Text>
-                        </View>
-
-                        {editingVisits.length > 0 && (
-                            <>
-                                {/* 수정 대상 약 목록 */}
-                                <View style={styles.modalMedList}>
-                                    {editingVisits.map((visit, index) => (
-                                        <Text key={visit.medication_id} style={styles.modalMedName}>
-                                            {visit.medication_name}
-                                            {index < editingVisits.length - 1 ? ', ' : ''}
-                                        </Text>
-                                    ))}
-                                </View>
-                                {editingVisits.length > 1 && (
-                                    <Text style={styles.modalBatchNote}>
-                                        {editingVisits.length}개 약의 처방 일수를 동시에 수정합니다
-                                    </Text>
-                                )}
-
-                                {/* 시작일 표시 */}
-                                <View style={styles.modalField}>
-                                    <Text style={styles.modalLabel}>복용 시작일</Text>
-                                    <View style={styles.modalDateDisplay}>
-                                        <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                                        <Text style={styles.modalDateText}>
-                                            {new Date(editStartDate).toLocaleDateString('ko-KR', {
-                                                year: 'numeric', month: 'long', day: 'numeric'
-                                            })}
-                                        </Text>
-                                    </View>
+                <KeyboardAvoidingView 
+                    style={styles.modalKeyboardView}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <ScrollView 
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                <View style={styles.modalHeader}>
+                                    <MaterialCommunityIcons name="hospital-building" size={24} color="#2196F3" />
+                                    <Text style={styles.modalTitle}>병원 방문일 수정</Text>
                                 </View>
 
-                                {/* 처방 일수 입력 */}
-                                <View style={styles.modalField}>
-                                    <Text style={styles.modalLabel}>처방 일수</Text>
-                                    <View style={styles.modalInputRow}>
-                                        <TextInput
-                                            style={styles.modalInput}
-                                            value={editDaysSupply}
-                                            onChangeText={(text) => setEditDaysSupply(text.replace(/[^0-9]/g, ''))}
-                                            keyboardType="number-pad"
-                                            maxLength={3}
-                                        />
-                                        <Text style={styles.modalInputUnit}>일</Text>
-                                    </View>
-                                </View>
-
-                                {/* 새 종료일 미리보기 */}
-                                {calculateNewEndDate() && (
-                                    <View style={styles.modalPreview}>
-                                        <Ionicons name="arrow-forward" size={16} color="#2196F3" />
-                                        <Text style={styles.modalPreviewText}>
-                                            새 병원 방문일: {calculateNewEndDate()}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {/* 버튼들 */}
-                                <View style={styles.modalButtons}>
-                                    <TouchableOpacity
-                                        style={styles.modalCancelButton}
-                                        onPress={() => setEditModalVisible(false)}
-                                    >
-                                        <Text style={styles.modalCancelText}>취소</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.modalSaveButton, isSaving && styles.modalButtonDisabled]}
-                                        onPress={handleSaveVisit}
-                                        disabled={isSaving}
-                                    >
-                                        {isSaving ? (
-                                            <ActivityIndicator color={colors.white} size="small" />
-                                        ) : (
-                                            <Text style={styles.modalSaveText}>
-                                                {editingVisits.length > 1 ? '일괄 저장' : '저장'}
+                                {editingVisits.length > 0 && (
+                                    <>
+                                        {/* 수정 대상 약 목록 */}
+                                        <View style={styles.modalMedList}>
+                                            {editingVisits.map((visit, index) => (
+                                                <Text key={visit.medication_id} style={styles.modalMedName}>
+                                                    {visit.medication_name}
+                                                    {index < editingVisits.length - 1 ? ', ' : ''}
+                                                </Text>
+                                            ))}
+                                        </View>
+                                        {editingVisits.length > 1 && (
+                                            <Text style={styles.modalBatchNote}>
+                                                {editingVisits.length}개 약의 처방 일수를 동시에 수정합니다
                                             </Text>
                                         )}
-                                    </TouchableOpacity>
-                                </View>
-                            </>
-                        )}
+
+                                        {/* 시작일 표시 */}
+                                        <View style={styles.modalField}>
+                                            <Text style={styles.modalLabel}>복용 시작일</Text>
+                                            <View style={styles.modalDateDisplay}>
+                                                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                                                <Text style={styles.modalDateText}>
+                                                    {new Date(editStartDate).toLocaleDateString('ko-KR', {
+                                                        year: 'numeric', month: 'long', day: 'numeric'
+                                                    })}
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        {/* 처방 일수 입력 */}
+                                        <View style={styles.modalField}>
+                                            <Text style={styles.modalLabel}>처방 일수</Text>
+                                            <View style={styles.modalInputRow}>
+                                                <TextInput
+                                                    style={styles.modalInput}
+                                                    value={editDaysSupply}
+                                                    onChangeText={(text) => setEditDaysSupply(text.replace(/[^0-9]/g, ''))}
+                                                    keyboardType="number-pad"
+                                                    maxLength={3}
+                                                />
+                                                <Text style={styles.modalInputUnit}>일</Text>
+                                            </View>
+                                        </View>
+
+                                        {/* 새 종료일 미리보기 */}
+                                        {calculateNewEndDate() && (
+                                            <View style={styles.modalPreview}>
+                                                <Ionicons name="arrow-forward" size={16} color="#2196F3" />
+                                                <Text style={styles.modalPreviewText}>
+                                                    새 병원 방문일: {calculateNewEndDate()}
+                                                </Text>
+                                            </View>
+                                        )}
+
+                                        {/* 버튼들 */}
+                                        <View style={styles.modalButtons}>
+                                            <TouchableOpacity
+                                                style={styles.modalCancelButton}
+                                                onPress={() => setEditModalVisible(false)}
+                                            >
+                                                <Text style={styles.modalCancelText}>취소</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.modalSaveButton, isSaving && styles.modalButtonDisabled]}
+                                                onPress={handleSaveVisit}
+                                                disabled={isSaving}
+                                            >
+                                                {isSaving ? (
+                                                    <ActivityIndicator color={colors.white} size="small" />
+                                                ) : (
+                                                    <Text style={styles.modalSaveText}>
+                                                        {editingVisits.length > 1 ? '일괄 저장' : '저장'}
+                                                    </Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
+                            </ScrollView>
+                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </GradientBackground>
     );
@@ -709,6 +720,9 @@ const styles = StyleSheet.create({
     },
 
     // 수정 모달
+    modalKeyboardView: {
+        flex: 1,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -722,6 +736,7 @@ const styles = StyleSheet.create({
         padding: spacing.xl,
         width: '100%',
         maxWidth: 400,
+        maxHeight: '80%',
         ...shadows.dark,
     },
     modalHeader: {

@@ -54,34 +54,50 @@ class FCMService:
         # Expo Push Token 처리 (Expo Go 또는 EAS Build)
         if token.startswith('ExponentPushToken'):
             try:
-                from exponent_server_sdk import PushClient, PushMessage
-                from exponent_server_sdk import PushServerError, PushTicketError
+                import json
+                import urllib.request
+                import ssl
                 
                 print(f"[Expo] Expo Push Token 감지: {token[:20]}...")
                 
-                response = PushClient().publish(
-                    PushMessage(
-                        to=token,
-                        title=title,
-                        body=body,
-                        data=data or {},
-                        sound='default',
-                    )
-                )
+                # Expo Push API 직접 호출 (Windows SSL 문제 우회)
+                url = "https://exp.host/--/api/v2/push/send"
+                payload = {
+                    "to": token,
+                    "title": title,
+                    "body": body,
+                    "data": data or {},
+                    "sound": "default",
+                }
                 
-                try:
-                    response.validate_response()
-                    print(f"[Expo] 알림 발송 성공: {response.id}")
-                    return True
-                except PushTicketError as exc:
-                    print(f"[Expo] 알림 발송 실패 (TicketError): {exc.push_response._asdict()}")
-                    return False
-                except PushServerError as exc:
-                    print(f"[Expo] 알림 발송 실패 (ServerError): {exc.errors}")
-                    return False
+                headers = {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                }
+                
+                request_data = json.dumps(payload).encode('utf-8')
+                req = urllib.request.Request(url, data=request_data, headers=headers, method='POST')
+                
+                # SSL 컨텍스트 생성 (검증 비활성화 - 개발 환경용)
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                with urllib.request.urlopen(req, context=ssl_context, timeout=10) as response:
+                    result = json.loads(response.read().decode('utf-8'))
                     
-            except ImportError:
-                print("[Expo] exponent_server_sdk가 설치되지 않았습니다. pip install exponent_server_sdk")
+                    if result.get('data') and result['data'].get('status') == 'ok':
+                        print(f"[Expo] 알림 발송 성공: {result['data'].get('id', 'N/A')}")
+                        return True
+                    elif result.get('data') and result['data'].get('status') == 'error':
+                        print(f"[Expo] 알림 발송 실패: {result['data'].get('message', 'Unknown error')}")
+                        return False
+                    else:
+                        print(f"[Expo] 알림 발송 응답: {result}")
+                        return True
+                    
+            except urllib.error.HTTPError as e:
+                print(f"[Expo] HTTP 에러: {e.code} - {e.read().decode('utf-8')}")
                 return False
             except Exception as e:
                 print(f"[Expo] 알림 발송 중 예외 발생: {e}")

@@ -93,6 +93,57 @@ class GuardianRelation(models.Model):
         return f"{self.senior.username} ← {self.guardian.username}"
 
 
+class InviteCode(models.Model):
+    """
+    사용자 연결 초대 코드
+    시니어 또는 보호자가 코드를 생성하고, 상대방이 입력하여 연결
+    """
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='invite_codes',
+        verbose_name='생성자'
+    )
+    code = models.CharField(
+        max_length=6,
+        unique=True,
+        verbose_name='초대 코드'
+    )
+    is_used = models.BooleanField(
+        default=False,
+        verbose_name='사용 여부'
+    )
+    used_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='used_invites',
+        verbose_name='사용자'
+    )
+    expires_at = models.DateTimeField(
+        verbose_name='만료 시간'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = '초대 코드'
+        verbose_name_plural = '초대 코드 목록'
+    
+    def __str__(self):
+        return f"{self.user.username}의 코드: {self.code}"
+    
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+    
+    @property
+    def is_valid(self):
+        return not self.is_used and not self.is_expired
+
+
 class EmergencyContact(models.Model):
     """
     비상 연락처 모델

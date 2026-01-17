@@ -10,18 +10,21 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils import timezone
 
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 
-from .models import GuardianRelation, EmergencyContact
+from .models import GuardianRelation, EmergencyContact, InviteCode
 from .serializers import (
     UserSerializer,
     UserCreateSerializer,
     GuardianRelationSerializer,
     LoginSerializer,
     GoogleLoginSerializer,
-    EmergencyContactSerializer
+    EmergencyContactSerializer,
+    InviteCodeSerializer,
+    AcceptInviteSerializer,
 )
 
 User = get_user_model()
@@ -217,6 +220,139 @@ class GuardianRelationViewSet(viewsets.ModelViewSet):
         elif user.role == User.Role.GUARDIAN:
             return GuardianRelation.objects.filter(guardian=user)
         return GuardianRelation.objects.none()
+
+
+class InviteCodeView(APIView):
+    """초대 코드 생성/조회 API"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """내 활성 초대 코드 조회"""
+        invite = InviteCode.objects.filter(
+            user=request.user,
+            is_used=False,
+            expires_at__gt=timezone.now()
+        ).first()
+        
+        if invite:
+            serializer = InviteCodeSerializer(invite)
+            return Response(serializer.data)
+        return Response({'code': None, 'message': '활성 초대 코드가 없습니다.'})
+    
+    def post(self, request):
+        """새 초대 코드 생성 (기존 코드 무효화)"""
+        import random
+        import string
+        
+        # 기존 미사용 코드 무효화 (만료 처리)
+        InviteCode.objects.filter(
+            user=request.user,
+            is_used=False
+        ).update(expires_at=timezone.now())
+        
+        # 새 6자리 코드 생성
+        while True:
+            code = ''.join(random.choices(string.digits, k=6))
+            if not InviteCode.objects.filter(code=code).exists():
+                break
+        
+        # 24시간 후 만료
+        expires_at = timezone.now() + timezone.timedelta(hours=24)
+        
+        invite = InviteCode.objects.create(
+            user=request.user,
+            code=code,
+            expires_at=expires_at
+        )
+        
+        serializer = InviteCodeSerializer(invite)
+        return Response({
+            'success': True,
+            'invite': serializer.data,
+            'message': f'초대 코드가 생성되었습니다. 24시간 내에 사용해주세요.'
+        }, status=status.HTTP_201_CREATED)
+
+
+class AcceptInviteView(APIView):
+    """초대 코드 수락 API"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        serializer = AcceptInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        code = serializer.validated_data['code']
+        
+        # 초대 코드 조회
+        try:
+            invite = InviteCode.objects.get(code=code)
+        except InviteCode.DoesNotExist:
+            return Response(
+                {'error': '유효하지 않은 초대 코드입니다.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 유효성 검사
+        if invite.is_used:
+            return Response(
+                {'error': '이미 사용된 초대 코드입니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if invite.is_expired:
+            return Response(
+                {'error': '만료된 초대 코드입니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 자기 자신의 코드인지 확인
+        if invite.user == request.user:
+            return Response(
+                {'error': '자신의 초대 코드는 사용할 수 없습니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 역할에 따라 연결 생성
+        inviter = invite.user
+        accepter = request.user
+        
+        # 시니어-보호자 매칭
+        if inviter.role == User.Role.SENIOR and accepter.role == User.Role.GUARDIAN:
+            senior, guardian = inviter, accepter
+        elif inviter.role == User.Role.GUARDIAN and accepter.role == User.Role.SENIOR:
+            senior, guardian = accepter, inviter
+        else:
+            return Response(
+                {'error': '시니어와 보호자만 연결할 수 있습니다. (같은 역할끼리는 연결 불가)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 이미 연결되어 있는지 확인
+        if GuardianRelation.objects.filter(senior=senior, guardian=guardian).exists():
+            return Response(
+                {'error': '이미 연결된 사용자입니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 연결 생성
+        relation = GuardianRelation.objects.create(
+            senior=senior,
+            guardian=guardian,
+            is_primary=not GuardianRelation.objects.filter(senior=senior).exists()
+        )
+        
+        # 초대 코드 사용 처리
+        invite.is_used = True
+        invite.used_by = accepter
+        invite.save()
+        
+        return Response({
+            'success': True,
+            'message': f'{inviter.first_name or inviter.username}님과 연결되었습니다.',
+            'relation': GuardianRelationSerializer(relation).data
+        })
 
 
 class EmergencyContactViewSet(viewsets.ModelViewSet):

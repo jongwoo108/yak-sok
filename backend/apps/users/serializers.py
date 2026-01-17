@@ -4,7 +4,7 @@ Users Serializers
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
-from .models import GuardianRelation, EmergencyContact
+from .models import GuardianRelation, EmergencyContact, InviteCode
 
 User = get_user_model()
 
@@ -125,4 +125,23 @@ class EmergencyContactSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class InviteCodeSerializer(serializers.ModelSerializer):
+    """초대 코드 시리얼라이저"""
+    
+    user_name = serializers.CharField(source='user.first_name', read_only=True)
+    user_role = serializers.CharField(source='user.role', read_only=True)
+    is_valid = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = InviteCode
+        fields = ['id', 'code', 'user_name', 'user_role', 'is_used', 'is_valid', 'expires_at', 'created_at']
+        read_only_fields = ['id', 'code', 'is_used', 'expires_at', 'created_at']
+
+
+class AcceptInviteSerializer(serializers.Serializer):
+    """초대 코드 수락 시리얼라이저"""
+    
+    code = serializers.CharField(max_length=6, help_text='6자리 초대 코드')
 

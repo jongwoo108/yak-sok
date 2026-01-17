@@ -10,7 +10,9 @@ from .views import (
     EmergencyContactViewSet,
     RegisterView, 
     LoginView, 
-    GoogleLoginView
+    GoogleLoginView,
+    InviteCodeView,
+    AcceptInviteView,
 )
 
 router = DefaultRouter()
@@ -22,6 +24,8 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('login/google/', GoogleLoginView.as_view(), name='google-login'),
+    path('invite/', InviteCodeView.as_view(), name='invite-code'),
+    path('invite/accept/', AcceptInviteView.as_view(), name='accept-invite'),
     path('', include(router.urls)),
 ]
 
