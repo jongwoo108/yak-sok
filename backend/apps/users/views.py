@@ -47,8 +47,11 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserCreateSerializer
     
     def create(self, request, *args, **kwargs):
+        print(f"[Register] Request data: {request.data}")  # 디버그 로그
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            print(f"[Register] Validation errors: {serializer.errors}")  # 에러 로그
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.save()
         
         # 가입 즉시 로그인 처리 (토큰 발급)

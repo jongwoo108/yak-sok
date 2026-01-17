@@ -73,8 +73,25 @@ export default function RegisterScreen() {
                 { text: '시작하기', onPress: () => router.replace('/(tabs)') }
             ]);
         } catch (error: any) {
-            console.error(error);
-            const message = error.response?.data?.error || '회원가입에 실패했습니다. 다시 시도해주세요.';
+            console.error('Register error:', error.response?.data);
+            // DRF validation error는 필드별로 에러를 반환
+            const errorData = error.response?.data;
+            let message = '회원가입에 실패했습니다. 다시 시도해주세요.';
+            
+            if (errorData) {
+                if (errorData.email) {
+                    message = errorData.email[0];
+                } else if (errorData.password) {
+                    message = errorData.password[0];
+                } else if (errorData.first_name) {
+                    message = errorData.first_name[0];
+                } else if (errorData.non_field_errors) {
+                    message = errorData.non_field_errors[0];
+                } else if (typeof errorData === 'string') {
+                    message = errorData;
+                }
+            }
+            
             Alert.alert('회원가입 실패', message);
         }
     };
