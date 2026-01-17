@@ -10,6 +10,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Sentry Error Tracking (Production)
+import sentry_sdk
+
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if SENTRY_DSN and not os.environ.get('DJANGO_DEBUG', 'True') == 'True':
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        environment="production",
+        send_default_pii=False,
+    )
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
