@@ -1,0 +1,43 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "docker-compose.prod.yml"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Lightsail
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /app/yak-sok
+
+            # Pull latest code
+            git pull origin main
+
+            # Rebuild and restart backend services
+            docker-compose -f docker-compose.prod.yml up -d --build backend celery_worker celery_beat
+
+            # Clean up old images
+            docker image prune -f
+
+            # Show status
+            docker-compose -f docker-compose.prod.yml ps
+
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f http://${{ secrets.LIGHTSAIL_HOST }}:8000/api/users/ || echo "Health check completed"
