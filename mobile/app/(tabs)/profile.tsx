@@ -362,20 +362,6 @@ export default function ProfileScreen() {
                         onPress={() => router.push('/profile/notifications')}
                     />
                     <MenuItem
-                        icon="paper-plane"
-                        iconColor={colors.blueDark}
-                        title="푸시 알림 테스트"
-                        onPress={async () => {
-                            try {
-                                Alert.alert('발송 중...', '테스트 알림을 요청하고 있습니다.');
-                                await api.users.testPush();
-                                Alert.alert('성공', '알림이 발송되었습니다. 잠시 후 확인해주세요.');
-                            } catch (e: any) {
-                                Alert.alert('실패', e.response?.data?.error || '알림 요청에 실패했습니다.');
-                            }
-                        }}
-                    />
-                    <MenuItem
                         icon="call"
                         iconColor={colors.blueDark}
                         title="비상 연락처"
