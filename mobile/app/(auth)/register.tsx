@@ -27,7 +27,7 @@ export default function RegisterScreen() {
         password: '',
         confirmPassword: '',
         firstName: '',
-        role: '' as 'senior' | 'guardian' | '',
+        role: '' as 'patient' | 'senior' | 'guardian' | '',
         phoneNumber: '',
     });
 
@@ -207,6 +207,38 @@ export default function RegisterScreen() {
                                                 <TouchableOpacity
                                                     style={[
                                                         styles.roleButton,
+                                                        formData.role === 'patient' && styles.roleButtonActive,
+                                                    ]}
+                                                    onPress={() =>
+                                                        setFormData({ ...formData, role: 'patient' })
+                                                    }
+                                                >
+                                                    <View style={[
+                                                        styles.roleIconCircle,
+                                                        formData.role === 'patient' && styles.roleIconCircleActive
+                                                    ]}>
+                                                        <FontAwesome5
+                                                            name="pills"
+                                                            size={22}
+                                                            color={formData.role === 'patient' ? colors.primary : colors.textLight}
+                                                        />
+                                                    </View>
+                                                    <Text
+                                                        style={[
+                                                            styles.roleText,
+                                                            formData.role === 'patient' && styles.roleTextActive,
+                                                        ]}
+                                                    >
+                                                        복약자
+                                                    </Text>
+                                                    <Text style={styles.roleDescription}>
+                                                        나의 약 관리
+                                                    </Text>
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.roleButton,
                                                         formData.role === 'senior' && styles.roleButtonActive,
                                                     ]}
                                                     onPress={() =>
@@ -219,7 +251,7 @@ export default function RegisterScreen() {
                                                     ]}>
                                                         <FontAwesome5
                                                             name="user-alt"
-                                                            size={24}
+                                                            size={22}
                                                             color={formData.role === 'senior' ? colors.primary : colors.textLight}
                                                         />
                                                     </View>
@@ -232,7 +264,7 @@ export default function RegisterScreen() {
                                                         시니어
                                                     </Text>
                                                     <Text style={styles.roleDescription}>
-                                                        복약 관리를 받습니다
+                                                        보호자 연결
                                                     </Text>
                                                 </TouchableOpacity>
 
@@ -251,7 +283,7 @@ export default function RegisterScreen() {
                                                     ]}>
                                                         <FontAwesome5
                                                             name="user-friends"
-                                                            size={24}
+                                                            size={20}
                                                             color={formData.role === 'guardian' ? colors.primary : colors.textLight}
                                                         />
                                                     </View>
@@ -264,7 +296,7 @@ export default function RegisterScreen() {
                                                         보호자
                                                     </Text>
                                                     <Text style={styles.roleDescription}>
-                                                        시니어를 관리합니다
+                                                        시니어 관리
                                                     </Text>
                                                 </TouchableOpacity>
                                             </View>
@@ -388,13 +420,13 @@ const styles = StyleSheet.create({
 
     roleContainer: {
         flexDirection: 'row',
-        gap: spacing.md,
+        gap: spacing.sm,
     },
     roleButton: {
         flex: 1,
         backgroundColor: colors.background,
-        borderRadius: borderRadius.xl,
-        padding: spacing.lg,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
         alignItems: 'center',
         borderWidth: 2,
         borderColor: 'transparent',
@@ -404,13 +436,13 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(45, 139, 114, 0.05)',
     },
     roleIconCircle: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         backgroundColor: colors.base,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
         // Small neumorphism for these circles
         shadowColor: '#B8C4CE',
         shadowOffset: { width: 3, height: 3 },
@@ -422,10 +454,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.mintLight,
     },
     roleText: {
-        fontSize: fontSize.base,
+        fontSize: fontSize.sm,
         fontWeight: fontWeight.bold,
         color: colors.text,
-        marginBottom: spacing.xs,
+        marginBottom: spacing.xxs,
     },
     roleTextActive: {
         color: colors.primary,

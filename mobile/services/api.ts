@@ -209,6 +209,44 @@ export const api = {
         }) => apiClient.post<{ success: boolean; message: string; alert_id: number }>('/alerts/send/', data),
     },
 
+    // 시니어 모니터링 (보호자용)
+    seniors: {
+        // 시니어의 오늘 복약 현황
+        getToday: (seniorId: number) => 
+            apiClient.get<{
+                senior_id: number;
+                senior_name: string;
+                date: string;
+                summary: { total: number; taken: number; pending: number };
+                logs: MedicationLog[];
+            }>(`/medications/senior/${seniorId}/today/`),
+        
+        // 시니어의 약 목록
+        getMedications: (seniorId: number) => 
+            apiClient.get<{
+                senior_id: number;
+                senior_name: string;
+                count: number;
+                medications: Medication[];
+            }>(`/medications/senior/${seniorId}/medications/`),
+        
+        // 시니어의 캘린더 데이터
+        getCalendar: (seniorId: number, year: number, month: number) => 
+            apiClient.get<{
+                senior_id: number;
+                senior_name: string;
+                year: number;
+                month: number;
+                daily_summary: Record<string, { total: number; taken: number; missed: number }>;
+                hospital_visits: Array<{
+                    date: string;
+                    medication_id: number;
+                    medication_name: string;
+                    days_supply: number;
+                }>;
+            }>(`/medications/senior/${seniorId}/calendar/?year=${year}&month=${month}`),
+    },
+
     // 사용자
     users: {
         // 정보 수정

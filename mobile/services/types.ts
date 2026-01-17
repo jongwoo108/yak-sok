@@ -9,7 +9,7 @@ export interface User {
     email: string;
     first_name: string;
     last_name: string;
-    role: 'senior' | 'guardian';
+    role: 'patient' | 'senior' | 'guardian';
     phone_number: string;
     emergency_contact: string;
     emergency_relation?: string;

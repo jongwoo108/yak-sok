@@ -1,15 +1,19 @@
 /**
  * CustomTabBar - 커스텀 탭 바 컴포넌트
  * 레퍼런스 디자인처럼 좁고 중앙에 위치한 탭 바
+ * 
+ * 역할별 탭 구성:
+ * - 복약자/시니어: 홈, 내 약, 캘린더, 설정 (4탭)
+ * - 보호자: 시니어 관리, 설정 (2탭)
  */
 
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from './theme';
+import { useMedicationStore } from '../services/store';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_BAR_WIDTH = SCREEN_WIDTH * 0.70; // 화면 너비의 70% (4탭 적용)
 
 interface CustomTabBarProps {
     state: any;
@@ -20,16 +24,48 @@ interface CustomTabBarProps {
 const icons: Record<string, string> = {
     index: 'home',
     calendar: 'calendar',
+    'senior-calendar': 'calendar',
     medications: 'add-circle',
+    seniors: 'people',
     profile: 'person',
 };
 
+// 보호자 전용 탭: 시니어 관리, 시니어 캘린더, 설정 (3탭)
+const GUARDIAN_TABS = ['seniors', 'senior-calendar', 'profile'];
+// 복약자/시니어 탭: 홈, 내 약, 캘린더, 설정 (4탭)
+const PATIENT_SENIOR_TABS = ['index', 'medications', 'calendar', 'profile'];
+
 export function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
+    // 사용자 role 직접 확인
+    const user = useMedicationStore((state) => state.user);
+    const isGuardian = user?.role === 'guardian';
+    
+    // 역할에 따라 표시할 탭 결정
+    const allowedTabs = isGuardian ? GUARDIAN_TABS : PATIENT_SENIOR_TABS;
+    
+    // 허용된 탭만 필터링
+    const visibleRoutes = state.routes.filter((route: any) => {
+        return allowedTabs.includes(route.name);
+    });
+    
+    // 탭 개수에 따라 너비 조정
+    const tabBarWidth = visibleRoutes.length <= 2 
+        ? SCREEN_WIDTH * 0.45  // 2탭
+        : visibleRoutes.length === 3
+        ? SCREEN_WIDTH * 0.55  // 3탭 (보호자)
+        : SCREEN_WIDTH * 0.70; // 4탭
+
     return (
         <View style={styles.container}>
-            <View style={styles.tabBar}>
+            <View style={[styles.tabBar, { width: tabBarWidth }]}>
                 {state.routes.map((route: any, index: number) => {
                     const { options } = descriptors[route.key];
+                    
+                    // 허용된 탭이 아니면 숨김
+                    if (!allowedTabs.includes(route.name)) {
+                        return null;
+                    }
+                    
                     const isFocused = state.index === index;
 
                     const onPress = () => {
@@ -81,7 +117,7 @@ const styles = StyleSheet.create({
     },
     tabBar: {
         flexDirection: 'row',
-        width: TAB_BAR_WIDTH,
+        // width는 동적으로 설정됨
         height: 52,
         backgroundColor: colors.base,
         borderRadius: 26,

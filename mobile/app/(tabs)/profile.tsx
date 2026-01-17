@@ -278,71 +278,73 @@ export default function ProfileScreen() {
                             <Text style={styles.profileEmail}>{user?.email || '-'}</Text>
                             <View style={styles.roleBadge}>
                                 <Ionicons
-                                    name={user?.role === 'senior' ? 'person' : 'people'}
+                                    name={user?.role === 'guardian' ? 'people' : user?.role === 'senior' ? 'person' : 'medical'}
                                     size={12}
                                     color={colors.primaryDark}
                                     style={{ marginRight: 4 }}
                                 />
                                 <Text style={styles.roleText}>
-                                    {user?.role === 'senior' ? '시니어' : '보호자'}
+                                    {user?.role === 'patient' ? '복약자' : user?.role === 'senior' ? '시니어' : '보호자'}
                                 </Text>
                             </View>
                         </View>
                     </View>
                 </NeumorphCard>
 
-                {/* 연결 관리 */}
-                <NeumorphCard style={styles.cardSpacing}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>연결 관리</Text>
-                        <TouchableOpacity onPress={openConnectModal} activeOpacity={0.7}>
-                            <View style={styles.addConnectionButton}>
-                                <Ionicons name="add" size={18} color={colors.white} />
-                                <Text style={styles.addConnectionText}>연결 추가</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                    
-                    {loadingConnections ? (
-                        <ActivityIndicator color={colors.primary} style={{ paddingVertical: spacing.lg }} />
-                    ) : connectedUsers.length === 0 ? (
-                        <View style={styles.emptyConnection}>
-                            <Ionicons name="people-outline" size={40} color={colors.textLight} />
-                            <Text style={styles.emptyConnectionText}>연결된 사용자가 없습니다</Text>
-                            <Text style={styles.emptyConnectionHint}>
-                                {user?.role === 'senior' ? '보호자와 연결하여 복약 관리를 받으세요' : '시니어와 연결하여 복약을 관리하세요'}
-                            </Text>
+                {/* 연결 관리 - 모든 역할 표시 (복약자/시니어는 보호자와, 보호자는 시니어와 연결) */}
+                {(
+                    <NeumorphCard style={styles.cardSpacing}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>연결 관리</Text>
+                            <TouchableOpacity onPress={openConnectModal} activeOpacity={0.7}>
+                                <View style={styles.addConnectionButton}>
+                                    <Ionicons name="add" size={18} color={colors.white} />
+                                    <Text style={styles.addConnectionText}>연결 추가</Text>
+                                </View>
+                            </TouchableOpacity>
                         </View>
-                    ) : (
-                        connectedUsers.map((connUser) => (
-                            <View key={connUser.id} style={styles.connectedUserItem}>
-                                <TouchableOpacity
-                                    style={styles.connectedUserMain}
-                                    onPress={() => openAlertModal(connUser)}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={styles.connectedUserAvatar}>
-                                        <Text style={styles.connectedUserAvatarText}>
-                                            {connUser.name?.[0] || '?'}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.connectedUserInfo}>
-                                        <Text style={styles.connectedUserName}>{connUser.name}</Text>
-                                        <Text style={styles.connectedUserHint}>탭하여 알림 보내기</Text>
-                                    </View>
-                                    <Ionicons name="send" size={20} color={colors.primary} />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.disconnectButton}
-                                    onPress={() => handleDisconnect(connUser.relationId, connUser.name)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Ionicons name="close-circle" size={22} color={colors.danger} />
-                                </TouchableOpacity>
+                        
+                        {loadingConnections ? (
+                            <ActivityIndicator color={colors.primary} style={{ paddingVertical: spacing.lg }} />
+                        ) : connectedUsers.length === 0 ? (
+                            <View style={styles.emptyConnection}>
+                                <Ionicons name="people-outline" size={40} color={colors.textLight} />
+                                <Text style={styles.emptyConnectionText}>연결된 사용자가 없습니다</Text>
+                                <Text style={styles.emptyConnectionHint}>
+                                    {user?.role === 'guardian' ? '시니어/복약자와 연결하여 복약을 관리하세요' : '보호자와 연결하여 복약 관리를 받으세요'}
+                                </Text>
                             </View>
-                        ))
-                    )}
-                </NeumorphCard>
+                        ) : (
+                            connectedUsers.map((connUser) => (
+                                <View key={connUser.id} style={styles.connectedUserItem}>
+                                    <TouchableOpacity
+                                        style={styles.connectedUserMain}
+                                        onPress={() => openAlertModal(connUser)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.connectedUserAvatar}>
+                                            <Text style={styles.connectedUserAvatarText}>
+                                                {connUser.name?.[0] || '?'}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.connectedUserInfo}>
+                                            <Text style={styles.connectedUserName}>{connUser.name}</Text>
+                                            <Text style={styles.connectedUserHint}>탭하여 알림 보내기</Text>
+                                        </View>
+                                        <Ionicons name="send" size={20} color={colors.primary} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.disconnectButton}
+                                        onPress={() => handleDisconnect(connUser.relationId, connUser.name)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="close-circle" size={22} color={colors.danger} />
+                                    </TouchableOpacity>
+                                </View>
+                            ))
+                        )}
+                    </NeumorphCard>
+                )}
 
                 {/* 계정 메뉴 */}
                 <NeumorphCard style={styles.cardSpacing}>
