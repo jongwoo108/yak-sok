@@ -100,10 +100,6 @@ export default function LoginScreen() {
         promptAsync();
     };
 
-    const handleDemoLogin = async () => {
-        // 개발용 데모 진입
-        router.replace('/(tabs)');
-    };
 
     return (
         <GradientBackground variant="ocean" style={styles.container}>
@@ -190,13 +186,7 @@ export default function LoginScreen() {
                         <Text style={styles.googleButtonText}>Google로 로그인</Text>
                     </TouchableOpacity>
 
-                    {/* 개발용 데모 버튼 */}
-                    <TouchableOpacity
-                        style={styles.demoButton}
-                        onPress={handleDemoLogin}
-                    >
-                        <Text style={styles.demoButtonText}>🔓 데모 모드로 둘러보기</Text>
-                    </TouchableOpacity>
+
 
                     {/* 회원가입 링크 */}
                     <TouchableOpacity
@@ -370,14 +360,7 @@ const styles = StyleSheet.create({
         fontWeight: fontWeight.semibold,
         color: colors.text,
     },
-    demoButton: {
-        paddingVertical: spacing.lg,
-        alignItems: 'center',
-    },
-    demoButtonText: {
-        fontSize: fontSize.sm,
-        color: colors.textSecondary,
-    },
+
     registerLink: {
         alignItems: 'center',
         marginTop: spacing.md,

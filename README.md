@@ -265,17 +265,22 @@ npx expo start
 
 ## 문서
 
-자세한 개발 문서는 `docs/` 폴더를 참조하세요.
+자세한 개발 및 배포 문서는 `docs/` 폴더를 참조하세요.
 
-| 문서 | 설명 |
-|------|------|
-| [01_project_structure.md](docs/01_project_structure.md) | 프로젝트 구조 |
-| [02_backend_development.md](docs/02_backend_development.md) | 백엔드 개발 |
-| [04_api_specification.md](docs/04_api_specification.md) | API 명세 |
-| [06_ui_design_system.md](docs/06_ui_design_system.md) | UI 디자인 시스템 |
-| [08_calendar_feature.md](docs/08_calendar_feature.md) | 캘린더 기능 |
-| [09_notification_system.md](docs/09_notification_system.md) | 알림 시스템 |
-| [10_role_structure.md](docs/10_role_structure.md) | 역할 구조 |
+### 🚀 배포 문서
+- [배포 가이드 전체](docs/deployment/README.md)
+- [AWS Lightsail 설정](docs/deployment/01_aws_lightsail_setup.md)
+- [CI/CD (GitHub Actions)](docs/deployment/02_cicd_pipeline.md)
+- [모니터링 (Sentry)](docs/deployment/03_monitoring_setup.md)
+
+### 📖 개발 문서
+- [01_project_structure.md](docs/development/01_project_structure.md)
+- [02_backend_development.md](docs/development/02_backend_development.md)
+- [04_api_specification.md](docs/development/04_api_specification.md)
+- [06_ui_design_system.md](docs/development/06_ui_design_system.md)
+- [08_calendar_feature.md](docs/development/08_calendar_feature.md)
+- [09_notification_system.md](docs/development/09_notification_system.md)
+- [10_role_structure.md](docs/development/10_role_structure.md)
 
 ---
 

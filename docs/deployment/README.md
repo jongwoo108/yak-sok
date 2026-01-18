@@ -9,6 +9,8 @@
 | [01_aws_lightsail_setup.md](./01_aws_lightsail_setup.md) | 서버 설정 및 배포 명령어 |
 | [02_cicd_pipeline.md](./02_cicd_pipeline.md) | GitHub Actions 자동 배포 |
 | [03_monitoring_setup.md](./03_monitoring_setup.md) | Sentry 에러 트래킹 |
+| [04_deployment_status.md](./04_deployment_status.md) | 📊 배포 진행 현황 |
+
 
 ---
 

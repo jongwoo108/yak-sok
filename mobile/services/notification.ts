@@ -41,31 +41,24 @@ export class NotificationService {
                 return;
             }
 
-            // Expo Push Token 대신 Device Push Token(FCM)을 사용하려면 getDevicePushTokenAsync 사용
-            // 여기서는 백엔드가 FCM을 직접 사용하므로 DevicePushToken이 필요할 수 있음
-            // 하지만 Expo 개발 편의성을 위해 Expo Push Token을 먼저 시도하거나,
-            // 프로젝트 설정에 따라 FCM 토큰을 명시적으로 가져와야 함.
-
-            // NOTE: 실제 배포 시에는 FCM 직접 연동이 권장되나, 현재는 Expo Config에 의존.
-            // 일단 Expo Token을 가져오고 백엔드 호환성을 확인.
-            // 만약 백엔드가 Raw FCM 토큰만 받는다면 아래 로직을 수정해야 함.
+            // 백엔드가 Firebase Admin SDK를 사용하므로 네이티브 FCM 토큰 필요
+            // getDevicePushTokenAsync()는 Android에서 FCM 토큰, iOS에서 APNs 토큰 반환
             try {
-                // projectId는 app.json에서 가져옴
-                const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.manifest?.extra?.eas?.projectId;
-                if (!projectId) {
-                    throw new Error('Project ID not found in app.json');
-                }
-
-                const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+                const tokenData = await Notifications.getDevicePushTokenAsync();
                 token = tokenData.data;
-                console.log('Expo Push Token:', token);
+                console.log('Native Push Token (FCM/APNs):', token);
             } catch (e: any) {
                 console.error('토큰 발급 실패:', e);
-                // 사용자에게 에러 알림
-                Alert.alert('알림 설정 오류', `푸시 토큰을 가져올 수 없습니다: ${e.message}`);
-
-                if (e.message.includes('Project ID')) {
-                    console.log('EAS Project ID가 설정되지 않았습니다.');
+                // Fallback: Expo Push Token 시도 (개발 환경용)
+                try {
+                    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.manifest?.extra?.eas?.projectId;
+                    if (projectId) {
+                        const expoTokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+                        token = expoTokenData.data;
+                        console.log('Expo Push Token (fallback):', token);
+                    }
+                } catch (expoError) {
+                    console.error('Expo 토큰도 발급 실패:', expoError);
                 }
             }
         } else {
