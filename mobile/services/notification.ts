@@ -6,13 +6,18 @@ import Constants from 'expo-constants';
 import { api } from './api';
 
 // 알림 핸들러 설정 (앱이 포그라운드에 있을 때 알림 처리 방식)
-Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-    }),
-});
+// iOS에서 TurboModules 충돌 방지를 위해 try-catch 적용
+try {
+    Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+        }),
+    });
+} catch (e) {
+    console.warn('Notification handler setup failed:', e);
+}
 
 export class NotificationService {
     static async registerForPushNotificationsAsync() {

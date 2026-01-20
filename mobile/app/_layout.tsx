@@ -33,11 +33,16 @@ export default function RootLayout() {
                     // 스토어에 사용자 정보 저장 (중요: 앱 재시작 시 상태 복원)
                     setUser(response.data);
 
-                    // 알림 토큰 업데이트 (비동기)
-                    console.log('Attempting to update notification token...');
-                    // NotificationService는 내부적으로 import 해야 순환 참조 방지 가능성 낮춤
-                    const { NotificationService } = require('../services/notification');
-                    NotificationService.updateServerToken().then(() => console.log('Token update function called')).catch((e: any) => console.error('Token update error:', e));
+                    // 알림 토큰 업데이트 (비동기, 실패해도 앱은 계속 작동)
+                    try {
+                        console.log('Attempting to update notification token...');
+                        const { NotificationService } = require('../services/notification');
+                        NotificationService.updateServerToken()
+                            .then(() => console.log('Token update function called'))
+                            .catch((e: any) => console.warn('Token update error:', e));
+                    } catch (notifError) {
+                        console.warn('Notification service initialization failed:', notifError);
+                    }
 
                     // 성공하면 메인으로 (만약 로그인 화면에 있다면)
                     if (inAuthGroup) {

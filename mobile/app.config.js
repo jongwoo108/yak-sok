@@ -9,7 +9,7 @@ export default {
         icon: "./assets/icon.png",
         scheme: "yaksok",
         userInterfaceStyle: "light",
-        newArchEnabled: true,
+        newArchEnabled: false,
         splash: {
             image: "./assets/splash-icon.png",
             resizeMode: "contain",
@@ -17,7 +17,10 @@ export default {
         },
         ios: {
             supportsTablet: true,
-            bundleIdentifier: "com.jongwoo.yaksok"
+            bundleIdentifier: "com.jongwoo.yaksok",
+            infoPlist: {
+                ITSAppUsesNonExemptEncryption: false
+            }
         },
         android: {
             adaptiveIcon: {
