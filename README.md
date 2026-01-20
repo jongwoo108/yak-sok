@@ -21,12 +21,8 @@
 **Neumorphism** 디자인을 적용하여 시니어 사용자에게 높은 시인성과 편안한 인터페이스를 제공합니다.
 
 ---
-<img width="621" height="1344" alt="KakaoTalk_20260120_183759737_08" src="https://github.com/user-attachments/assets/d0607652-0c41-4963-b1b8-881d54ab1083" />
-<img width="621" height="1344" alt="KakaoTalk_20260120_183759737_07" src="https://github.com/user-attachments/assets/95540a77-3d1b-4ce6-8a12-58964c27aeb7" />
-<img width="621" height="1344" alt="KakaoTalk_20260120_183759737_03" src="https://github.com/user-attachments/assets/05fbef7a-1f52-4eb1-8ad6-4ee9670732f3" />
-<img width="621" height="1344" alt="KakaoTalk_20260120_183759737_02" src="https://github.com/user-attachments/assets/3efadfa0-4379-4a8d-8e43-7958f4d5565a" />
-<img width="621" height="1344" alt="KakaoTalk_20260120_183759737" src="https://github.com/user-attachments/assets/5a92770c-a744-4e39-88b9-e5b5aff8b31b" />
 
+<img width="2083" height="730" alt="제목 없는 디자인" src="https://github.com/user-attachments/assets/30dcbcfd-aec8-46d5-8292-4994d0abafcd" />
 
 ---
 
