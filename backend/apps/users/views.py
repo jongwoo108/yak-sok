@@ -77,7 +77,6 @@ class LoginView(APIView):
         # 디버그 로깅
         print(f"[Login] Content-Type: {request.content_type}")
         print(f"[Login] Request data: {request.data}")
-        print(f"[Login] Request body: {request.body}")
 
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
