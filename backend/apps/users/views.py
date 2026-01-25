@@ -72,14 +72,21 @@ class LoginView(APIView):
     이메일 로그인 View
     """
     permission_classes = [permissions.AllowAny]
-    
+
     def post(self, request):
+        # 디버그 로깅
+        print(f"[Login] Content-Type: {request.content_type}")
+        print(f"[Login] Request data: {request.data}")
+        print(f"[Login] Request body: {request.body}")
+
         serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            print(f"[Login] Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
         user = serializer.validated_data['user']
-        
         tokens = get_tokens_for_user(user)
-        
+
         return Response({
             'user': UserSerializer(user).data,
             'tokens': tokens
