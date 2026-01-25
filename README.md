@@ -21,6 +21,14 @@
 **Neumorphism** 디자인을 적용하여 시니어 사용자에게 높은 시인성과 편안한 인터페이스를 제공합니다.
 
 ---
+<img width="1266" height="892" alt="제목 없는 디자인 (1)" src="https://github.com/user-attachments/assets/f8070677-81f9-42e5-94e9-1ccef695827e" />
+<br>
+<br>
+<img width="1266" height="892" alt="제목 없는 디자인 (2)" src="https://github.com/user-attachments/assets/0ed8b777-74c1-4da8-978f-34e72704b976" />
+
+
+
+---
 
 ## 주요 기능
 
