@@ -368,11 +368,19 @@ class EmergencyContactViewSet(viewsets.ModelViewSet):
 
 
 class TermsView(TemplateView):
-    """이용약관 페이지"""
+    """이용약관 페이지 (인증 불필요)"""
     template_name = 'terms.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # DRF 인증 우회
+        return super().dispatch(request, *args, **kwargs)
 
 
 class PrivacyView(TemplateView):
-    """개인정보 처리방침 페이지"""
+    """개인정보 처리방침 페이지 (인증 불필요)"""
     template_name = 'privacy.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # DRF 인증 우회
+        return super().dispatch(request, *args, **kwargs)
 
