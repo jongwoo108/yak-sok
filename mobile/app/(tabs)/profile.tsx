@@ -382,7 +382,7 @@ export default function ProfileScreen() {
                         iconColor={colors.textSecondary}
                         title="이용약관"
                         onPress={() => {
-                            const url = 'https://yaksok-care.com/api/users/terms/';
+                            const url = 'https://yaksok-care.com/terms/';
                             if (Platform.OS === 'web') {
                                 window.open(url, '_blank');
                             } else {
@@ -395,7 +395,7 @@ export default function ProfileScreen() {
                         iconColor={colors.textSecondary}
                         title="개인정보 처리방침"
                         onPress={() => {
-                            const url = 'https://yaksok-care.com/api/users/privacy/';
+                            const url = 'https://yaksok-care.com/privacy/';
                             if (Platform.OS === 'web') {
                                 window.open(url, '_blank');
                             } else {

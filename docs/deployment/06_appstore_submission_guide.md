@@ -34,8 +34,8 @@ git pull origin main
 docker-compose -f docker-compose.prod.yml restart backend
 
 # 배포 확인
-curl https://yaksok-care.com/api/users/terms/
-curl https://yaksok-care.com/api/users/privacy/
+curl https://yaksok-care.com/terms/
+curl https://yaksok-care.com/privacy/
 ```
 
 **예상 결과**: HTML 페이지가 정상적으로 표시됨
@@ -166,8 +166,8 @@ npx eas submit --platform ios --latest
 ```
 
 **URL**:
-- 개인정보 처리방침 URL: `https://yaksok-care.com/api/users/privacy/`
-- 이용약관 URL: `https://yaksok-care.com/api/users/terms/`
+- 개인정보 처리방침 URL: `https://yaksok-care.com/privacy/`
+- 이용약관 URL: `https://yaksok-care.com/terms/`
 - 지원 URL: `https://yaksok-care.com`
 - 마케팅 URL (선택): `https://yaksok-care.com`
 
@@ -328,8 +328,8 @@ Get-Item mobile\assets\icon.png | Select-Object Name, Length
 ### 제출 전 필수 확인사항
 
 - [ ] 백엔드 서버에 법적 문서 배포 완료
-  - [ ] https://yaksok-care.com/api/users/terms/ 접속 확인
-  - [ ] https://yaksok-care.com/api/users/privacy/ 접속 확인
+  - [ ] https://yaksok-care.com/terms/ 접속 확인
+  - [ ] https://yaksok-care.com/privacy/ 접속 확인
 - [ ] Production 빌드 완료
   - [ ] Provisioning Profile 생성 완료 (yes 선택)
   - [ ] 빌드 성공 확인

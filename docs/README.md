@@ -181,8 +181,9 @@ python manage.py runserver
 - [deployment/02_cicd_pipeline.md](./deployment/02_cicd_pipeline.md) - CI/CD (GitHub Actions)
 - [deployment/03_monitoring_setup.md](./deployment/03_monitoring_setup.md) - 모니터링 (Sentry)
 - [deployment/04_deployment_status.md](./deployment/04_deployment_status.md) - 배포 진행 현황
-- [deployment/05_appstore_metadata.md](./deployment/05_appstore_metadata.md) - **앱스토어 메타데이터** 📱 NEW (2026-01-25)
-- [deployment/06_appstore_submission_guide.md](./deployment/06_appstore_submission_guide.md) - **앱스토어 제출 가이드** 📋 NEW (2026-01-25)
+- [deployment/05_appstore_metadata.md](./deployment/05_appstore_metadata.md) - **앱스토어 메타데이터** 📱 (2026-01-25)
+- [deployment/06_appstore_submission_guide.md](./deployment/06_appstore_submission_guide.md) - **앱스토어 제출 가이드** 📋 (2026-01-25)
+- [deployment/07_appstore_progress.md](./deployment/07_appstore_progress.md) - **앱스토어 제출 진행 상황** ⭐ NEW (2026-01-25)
 
 ---
 
@@ -200,20 +201,27 @@ python manage.py runserver
 
 ## 다음 단계
 
-### 앱스토어 제출 (2026-01-25 준비 완료)
+### 앱스토어 제출 (2026-01-25 진행 중)
 
+#### ✅ 완료된 작업
 - [x] 이용약관 및 개인정보 처리방침 작성
 - [x] 법적 문서 웹 호스팅 (yaksok-care.com)
 - [x] 앱 내 링크 연결
 - [x] 앱스토어 메타데이터 준비
+- [x] Git 커밋 및 푸시
+
+#### 🔄 진행 중
+- [ ] 서버 배포 및 확인
 - [ ] Production 빌드 실행
 - [ ] App Store Connect 제출
 
-**빠른 시작 가이드**: [APPSTORE_QUICK_START.md](../APPSTORE_QUICK_START.md)  
+**진행 상황**: [07_appstore_progress.md](./deployment/07_appstore_progress.md) ⭐ NEW  
+**빠른 시작**: [APPSTORE_QUICK_START.md](../APPSTORE_QUICK_START.md)  
 **상세 가이드**: [06_appstore_submission_guide.md](./deployment/06_appstore_submission_guide.md)
 
 ### 향후 계획
-1. **테스트 코드 작성**: 유닛/통합 테스트
-2. **성능 최적화**: API 응답 속도 개선
-3. **기능 확장**: 사용자 피드백 반영
+1. **App Store 심사**: 제출 후 1-3일 대기
+2. **테스트 코드 작성**: 유닛/통합 테스트
+3. **성능 최적화**: API 응답 속도 개선
+4. **기능 확장**: 사용자 피드백 반영
 

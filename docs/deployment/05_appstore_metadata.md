@@ -186,12 +186,12 @@ npx expo run:ios
 
 ### 프라이버시 정책 URL
 ```
-https://yaksok-care.com/api/users/privacy/
+https://yaksok-care.com/privacy/
 ```
 
 ### 이용약관 URL
 ```
-https://yaksok-care.com/api/users/terms/
+https://yaksok-care.com/terms/
 ```
 
 ### 지원 URL (Support URL)
