@@ -50,8 +50,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         
         # Email duplication check
         email = attrs.get('email')
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError({'email': '이미 가입된 이메일입니다.'})
+        if email:
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError({'email': '이미 가입된 이메일입니다.'})
+
+            # username을 email로 저장하므로 username 중복도 동일하게 처리
+            if User.objects.filter(username=email).exists():
+                raise serializers.ValidationError({'email': '이미 가입된 이메일입니다.'})
             
         return attrs
     
@@ -144,4 +149,3 @@ class AcceptInviteSerializer(serializers.Serializer):
     """초대 코드 수락 시리얼라이저"""
     
     code = serializers.CharField(max_length=6, help_text='6자리 초대 코드')
-

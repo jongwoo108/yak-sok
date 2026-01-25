@@ -11,6 +11,10 @@ import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelat
 // 프로덕션 서버 URL (AWS Lightsail + SSL)
 const PRODUCTION_API_URL = 'https://yaksok-care.com/api';
 
+// 로그아웃 상태 플래그 (토큰 갱신 방지용)
+let isLoggingOut = false;
+export const setLoggingOut = (value: boolean) => { isLoggingOut = value; };
+
 // 개발 시 로컬 IP로 변경, 프로덕션은 위 URL 사용
 const API_BASE_URL =
     PRODUCTION_API_URL ||
@@ -51,16 +55,16 @@ apiClient.interceptors.response.use(
         // 로그인/회원가입 등 공개 엔드포인트는 토큰 갱신 시도하지 않음
         const isPublicEndpoint = PUBLIC_ENDPOINTS.some(endpoint => requestUrl.includes(endpoint));
 
-        // 401 에러이고 아직 재시도하지 않은 경우 (공개 엔드포인트 제외)
-        if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint) {
+        // 401 에러이고 아직 재시도하지 않은 경우 (공개 엔드포인트 및 로그아웃 중 제외)
+        if (error.response?.status === 401 && !originalRequest._retry && !isPublicEndpoint && !isLoggingOut) {
             originalRequest._retry = true;
             console.log('[API] 401 Unauthorized 감지 - 토큰 갱신 시도');
 
             try {
                 const refreshToken = await SecureStore.getItemAsync('refresh_token');
                 if (!refreshToken) {
-                    console.log('[API] 리프레시 토큰이 없습니다. 로그아웃 처리 유도.');
-                    throw new Error('No refresh token');
+                    // 로그아웃 후 정상 상태 - 조용히 reject
+                    return Promise.reject(error);
                 }
 
                 // SimpleJWT 토큰 갱신 요청
@@ -85,10 +89,9 @@ apiClient.interceptors.response.use(
 
                 return apiClient(originalRequest);
             } catch (refreshError) {
-                console.error('[API] 토큰 갱신 실패:', refreshError);
+                // 토큰 갱신 실패 시 조용히 처리 (로그아웃 상태일 수 있음)
                 await SecureStore.deleteItemAsync('access_token');
                 await SecureStore.deleteItemAsync('refresh_token');
-                // 여기서 rejection을 던지면 호출한 곳(scan.tsx 등)의 catch 블록으로 이동
             }
         }
 

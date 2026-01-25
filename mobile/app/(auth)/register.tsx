@@ -20,7 +20,7 @@ import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '..
 
 export default function RegisterScreen() {
     const router = useRouter();
-    const { setUser } = useMedicationStore();
+    const { setUser, resetStore } = useMedicationStore();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         email: '',
@@ -67,6 +67,7 @@ export default function RegisterScreen() {
             await SecureStore.setItemAsync('access_token', tokens.access);
             await SecureStore.setItemAsync('refresh_token', tokens.refresh);
 
+            resetStore(); // 이전 사용자 데이터 초기화
             setUser(user);
 
             Alert.alert('가입 완료', `${user.first_name}님 환영합니다!`, [
@@ -81,6 +82,8 @@ export default function RegisterScreen() {
             if (errorData) {
                 if (errorData.email) {
                     message = errorData.email[0];
+                } else if (errorData.username) {
+                    message = errorData.username[0];
                 } else if (errorData.password) {
                     message = errorData.password[0];
                 } else if (errorData.first_name) {

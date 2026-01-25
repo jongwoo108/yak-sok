@@ -20,6 +20,7 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { api } from '../../services/api';
+import { useMedicationStore } from '../../services/store';
 import type { CalendarData, CalendarDailySummary, MedicationLog, HospitalVisit } from '../../services/types';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
@@ -35,6 +36,7 @@ interface MarkedDates {
 }
 
 export default function CalendarScreen() {
+    const isAuthenticated = useMedicationStore((state) => state.isAuthenticated);
     const [dailySummary, setDailySummary] = useState<CalendarDailySummary>({});
     const [hospitalVisits, setHospitalVisits] = useState<HospitalVisit[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(
@@ -57,31 +59,39 @@ export default function CalendarScreen() {
 
     // 월별 캘린더 데이터 가져오기
     const fetchCalendarData = useCallback(async (year: number, month: number) => {
+        if (!isAuthenticated) return;
         setLoading(true);
         try {
             const res = await api.logs.calendar(year, month);
             setDailySummary(res.data.daily_summary || {});
             setHospitalVisits(res.data.hospital_visits || []);
-        } catch (error) {
-            console.error('Fetch calendar data error:', error);
+        } catch (error: any) {
+            // 401 에러는 로그아웃 상태이므로 무시
+            if (error?.response?.status !== 401) {
+                console.error('Fetch calendar data error:', error);
+            }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     // 특정 날짜의 복약 기록 가져오기
     const fetchDateLogs = useCallback(async (date: string) => {
+        if (!isAuthenticated) return;
         setLoadingLogs(true);
         try {
             const res = await api.logs.byDate(date);
             setSelectedDateLogs(res.data);
-        } catch (error) {
-            console.error('Fetch date logs error:', error);
+        } catch (error: any) {
+            // 401 에러는 로그아웃 상태이므로 무시
+            if (error?.response?.status !== 401) {
+                console.error('Fetch date logs error:', error);
+            }
             setSelectedDateLogs([]);
         } finally {
             setLoadingLogs(false);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         fetchCalendarData(currentMonth.year, currentMonth.month);

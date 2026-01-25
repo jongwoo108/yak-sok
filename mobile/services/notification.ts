@@ -1,26 +1,31 @@
-import { Platform, Alert } from 'react-native';
+﻿import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { api } from './api';
 
-// 알림 핸들러 설정 (앱이 포그라운드에 있을 때 알림 처리 방식)
-// iOS에서 TurboModules 충돌 방지를 위해 try-catch 적용
-try {
-    Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-            shouldShowAlert: true,
-            shouldPlaySound: true,
-            shouldSetBadge: false,
-        }),
-    });
-} catch (e) {
-    console.warn('Notification handler setup failed:', e);
-}
-
 export class NotificationService {
+    private static initialized = false;
+
+    static initialize() {
+        if (this.initialized) {
+            return;
+        }
+
+        // 알림 수신 시 동작 설정 (지연 초기화)
+        Notifications.setNotificationHandler({
+            handleNotification: async () => ({
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: false,
+            }),
+        });
+
+        this.initialized = true;
+    }
+
     static async registerForPushNotificationsAsync() {
+        this.initialize();
         let token;
 
         if (Platform.OS === 'android') {
@@ -42,32 +47,24 @@ export class NotificationService {
             }
 
             if (finalStatus !== 'granted') {
-                console.log('알림 권한이 허용되지 않았습니다.');
+                console.log('Failed to get push token for push notification!');
                 return;
             }
 
-            // 백엔드가 Firebase Admin SDK를 사용하므로 네이티브 FCM 토큰 필요
-            // getDevicePushTokenAsync()는 Android에서 FCM 토큰, iOS에서 APNs 토큰 반환
             try {
-                const tokenData = await Notifications.getDevicePushTokenAsync();
-                token = tokenData.data;
-                console.log('Native Push Token (FCM/APNs):', token);
-            } catch (e: any) {
-                console.error('토큰 발급 실패:', e);
-                // Fallback: Expo Push Token 시도 (개발 환경용)
-                try {
-                    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.manifest?.extra?.eas?.projectId;
-                    if (projectId) {
-                        const expoTokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-                        token = expoTokenData.data;
-                        console.log('Expo Push Token (fallback):', token);
-                    }
-                } catch (expoError) {
-                    console.error('Expo 토큰도 발급 실패:', expoError);
-                }
+                const projectId =
+                    Constants.easConfig?.projectId ||
+                    Constants.expoConfig?.extra?.eas?.projectId;
+
+                token = projectId
+                    ? (await Notifications.getExpoPushTokenAsync({ projectId })).data
+                    : (await Notifications.getExpoPushTokenAsync()).data;
+                console.log('Expo Push Token:', token);
+            } catch (error) {
+                console.error('Error getting push token:', error);
             }
         } else {
-            console.log('물리 기기에서만 푸시 알림을 사용할 수 있습니다.');
+            console.log('Must use physical device for Push Notifications');
         }
 
         return token;
@@ -77,12 +74,12 @@ export class NotificationService {
         try {
             const token = await this.registerForPushNotificationsAsync();
             if (token) {
-                // 서버에 토큰 전송
+                console.log('Updating server with FCM token...');
                 await api.users.updateFcmToken(token);
-                console.log('FCM 토큰 서버 업데이트 성공');
+                console.log('FCM token updated successfully');
             }
         } catch (error) {
-            console.error('FCM 토큰 업데이트 실패:', error);
+            console.error('Failed to update FCM token:', error);
         }
     }
 
@@ -91,12 +88,12 @@ export class NotificationService {
         onNotificationReceived: (notification: Notifications.Notification) => void,
         onNotificationResponse: (response: Notifications.NotificationResponse) => void
     ) {
-        const receivedSubscription = Notifications.addNotificationReceivedListener(onNotificationReceived);
-        const responseSubscription = Notifications.addNotificationResponseReceivedListener(onNotificationResponse);
+        const notificationListener = Notifications.addNotificationReceivedListener(onNotificationReceived);
+        const responseListener = Notifications.addNotificationResponseReceivedListener(onNotificationResponse);
 
         return () => {
-            receivedSubscription.remove();
-            responseSubscription.remove();
+            Notifications.removeNotificationSubscription(notificationListener);
+            Notifications.removeNotificationSubscription(responseListener);
         };
     }
 }

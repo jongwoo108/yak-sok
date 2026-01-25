@@ -60,9 +60,9 @@ yak-sok/
 
     ## 개발 단계
 
-    > **현재 진행률**: Phase 1, 2, 3 완료 + Phase 2.6 진행 중 (약 95%)
+    > **현재 진행률**: Phase 1, 2, 3 완료 + Phase 4 진행 중 (약 90% - iOS 크래시 이슈)
     > 
-    > 📅 **마지막 업데이트**: 2026-01-11
+    > 📅 **마지막 업데이트**: 2026-01-20
 
     | 상태 | 의미 |
     |:---:|------|
@@ -120,13 +120,34 @@ yak-sok/
 - [x] ✅ 하이브리드 푸시 서버 구축 (Firebase + Expo 지원)
 - [x] ✅ 푸시 알림 발송 테스트 및 검증 완료
 
-### Phase 4: 배포 ⬜
+### Phase 4: 배포 🔄
 
-- [ ] ⬜ EAS Build 설정 (`eas.json`)
+> 📅 **마지막 업데이트**: 2026-01-21
+
+- [x] ✅ EAS Build 설정 (`eas.json`)
+- [x] ✅ Android APK 빌드 완료 (preview 프로필)
+- [x] ✅ Apple Developer 계정 활성화 및 결제
+- [x] ✅ App Store Connect 앱 등록 (약-속)
+- [x] ✅ iOS Bundle ID 등록 (`com.jongwoo.yaksok`)
+- [x] ✅ Push Notifications capability 설정
+- [x] ✅ iOS Distribution Certificate 생성
+- [x] ✅ iOS Provisioning Profile 생성 (Ad Hoc)
+- [x] ✅ iOS 빌드 완료 (preview 프로필)
+- [/] 🔄 **iOS 앱 크래시 이슈 해결 진행 중**
+  - TurboModules 충돌: `ObjCTurboModule::performVoidMethodInvocation`
+  - 시도 1: `newArchEnabled: false` (app.json) → 미해결
+  - 시도 2: try-catch 래핑 (notification.ts) → 미해결
+  - 시도 3 (2026-01-21):
+    - `expo-build-properties` 플러그인 추가 (iOS/Android newArchEnabled: false)
+    - `expo-device` 7.0.3 → 8.0.10 업그레이드
+    - `expo-notifications` 0.29.14 → 0.32.16 업그레이드
+    - `expo-router` 6.0.21 → 6.0.22 업그레이드
+    - `eas-cli` devDependencies에서 제거
+    - node_modules 클린 재설치
+  - **다음 단계**: `npx expo prebuild --clean && eas build --platform ios --profile preview --clear-cache`
 - [ ] ⬜ 앱 아이콘, 스플래시 스크린 디자인
-- [ ] ⬜ App Store Connect 계정 준비 (iOS)
-- [ ] ⬜ Google Play Console 계정 준비 (Android)
-- [ ] ⬜ TestFlight / 내부 테스트 배포
+- [ ] ⬜ TestFlight 배포 (iOS 크래시 해결 후)
+- [ ] ⬜ Google Play Console 내부 테스트 배포
 - [ ] ⬜ Production 출시
 
 ---

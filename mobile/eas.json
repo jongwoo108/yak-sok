@@ -7,7 +7,7 @@
             "developmentClient": true,
             "distribution": "internal",
             "ios": {
-                "simulator": true
+                "simulator": false
             },
             "android": {
                 "buildType": "apk"
@@ -35,8 +35,8 @@
     "submit": {
         "production": {
             "ios": {
-                "appleId": "your-apple-id@example.com",
-                "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID"
+                "appleId": "jongwoo1008@naver.com",
+                "ascAppId": "6758040367"
             },
             "android": {
                 "serviceAccountKeyPath": "./google-service-account.json",

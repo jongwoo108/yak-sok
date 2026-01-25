@@ -33,24 +33,44 @@ const googleClientIds = {
     webClientId: Constants.expoConfig?.extra?.googleWebClientId,
 };
 
-export default function LoginScreen() {
-    const router = useRouter();
-    const { setUser } = useMedicationStore();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
+const hasGoogleClientId =
+    !!googleClientIds.iosClientId ||
+    !!googleClientIds.androidClientId ||
+    !!googleClientIds.webClientId;
 
+function GoogleLoginButton({ onSuccess, disabled }: { onSuccess: (idToken: string) => void; disabled: boolean }) {
     const [request, response, promptAsync] = Google.useAuthRequest({
         ...googleClientIds,
-        redirectUri: 'https://auth.expo.io/@jongwoo108/yak-sok' // 구글 콘솔에 등록한 리디렉션 URI와 일치시킴
+        redirectUri: 'https://auth.expo.io/@jongwoo108/yak-sok'
     });
 
     useEffect(() => {
         if (response?.type === 'success') {
             const { id_token } = response.params;
-            handleGoogleLoginSuccess(id_token);
+            if (id_token) {
+                onSuccess(id_token);
+            }
         }
-    }, [response]);
+    }, [response, onSuccess]);
+
+    return (
+        <TouchableOpacity
+            style={styles.googleButton}
+            onPress={() => promptAsync()}
+            disabled={disabled || !request}
+        >
+            <Ionicons name="logo-google" size={20} color={colors.text} style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Google로 로그인</Text>
+        </TouchableOpacity>
+    );
+}
+
+export default function LoginScreen() {
+    const router = useRouter();
+    const { setUser, resetStore } = useMedicationStore();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleGoogleLoginSuccess = async (idToken: string) => {
         setLoading(true);
@@ -61,6 +81,7 @@ export default function LoginScreen() {
             await SecureStore.setItemAsync('access_token', tokens.access);
             await SecureStore.setItemAsync('refresh_token', tokens.refresh);
 
+            resetStore(); // 이전 사용자 데이터 초기화
             setUser(user);
             router.replace('/(tabs)');
         } catch (error: any) {
@@ -97,11 +118,6 @@ export default function LoginScreen() {
             setLoading(false);
         }
     };
-
-    const handleGoogleLogin = () => {
-        promptAsync();
-    };
-
 
     return (
         <GradientBackground variant="ocean" style={styles.container}>
@@ -180,14 +196,14 @@ export default function LoginScreen() {
                             <View style={styles.dividerLine} />
                         </View>
 
-                        <TouchableOpacity
-                            style={styles.googleButton}
-                            onPress={handleGoogleLogin}
-                            disabled={loading}
-                        >
-                            <Ionicons name="logo-google" size={20} color={colors.text} style={styles.googleIcon} />
-                            <Text style={styles.googleButtonText}>Google로 로그인</Text>
-                        </TouchableOpacity>
+                        {hasGoogleClientId ? (
+                            <GoogleLoginButton
+                                onSuccess={handleGoogleLoginSuccess}
+                                disabled={loading}
+                            />
+                        ) : (
+                            <Text style={styles.googleDisabledText}>Google 로그인은 현재 비활성화되어 있습니다.</Text>
+                        )}
 
 
 
@@ -364,6 +380,11 @@ const styles = StyleSheet.create({
         fontSize: fontSize.base,
         fontWeight: fontWeight.semibold,
         color: colors.text,
+    },
+    googleDisabledText: {
+        textAlign: 'center',
+        fontSize: fontSize.sm,
+        color: colors.textLight,
     },
 
     registerLink: {

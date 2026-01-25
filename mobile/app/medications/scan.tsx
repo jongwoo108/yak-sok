@@ -126,7 +126,7 @@ export default function ScanScreen() {
         }
 
         const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
+            mediaTypes: ['images'] as any,
             quality: 0.8,
         });
 
@@ -157,7 +157,7 @@ export default function ScanScreen() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
+            mediaTypes: ['images'] as any,
             quality: 0.8,
             allowsMultipleSelection: true,
             selectionLimit: 10,

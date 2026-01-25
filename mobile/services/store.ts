@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { api } from './api';
+import { api, setLoggingOut } from './api';
 import type { User, Medication, MedicationLog, Alert } from './types';
 
 interface AppState {
@@ -27,6 +27,7 @@ interface AppState {
     setUser: (user: User | null) => void;
     fetchUser: () => Promise<void>;
     logout: () => Promise<void>;
+    resetStore: () => void;
 
     fetchMedications: () => Promise<void>;
     createMedication: (data: any) => Promise<void>;
@@ -54,6 +55,14 @@ export const useMedicationStore = create<AppState>((set, get) => ({
     // 사용자 액션
     setUser: (user) => set({ user, isAuthenticated: !!user }),
 
+    // 스토어 초기화 (로그인/회원가입 시 이전 데이터 제거)
+    resetStore: () => set({
+        medications: [],
+        todayLogs: [],
+        alerts: [],
+        error: null,
+    }),
+
     fetchUser: async () => {
         try {
             set({ isLoading: true, error: null });
@@ -67,9 +76,12 @@ export const useMedicationStore = create<AppState>((set, get) => ({
     },
 
     logout: async () => {
+        setLoggingOut(true);
         await SecureStore.deleteItemAsync('access_token');
         await SecureStore.deleteItemAsync('refresh_token');
         set({ user: null, isAuthenticated: false });
+        // 약간의 딜레이 후 플래그 해제 (리다이렉트 완료 후)
+        setTimeout(() => setLoggingOut(false), 1000);
     },
 
     // 복약 액션
