@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils import timezone
+from django.views.generic import TemplateView
 
 import firebase_admin
 from firebase_admin import auth as firebase_auth
@@ -364,4 +365,14 @@ class EmergencyContactViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         return EmergencyContact.objects.filter(user=self.request.user)
+
+
+class TermsView(TemplateView):
+    """이용약관 페이지"""
+    template_name = 'terms.html'
+
+
+class PrivacyView(TemplateView):
+    """개인정보 처리방침 페이지"""
+    template_name = 'privacy.html'
 

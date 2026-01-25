@@ -13,6 +13,8 @@ from .views import (
     GoogleLoginView,
     InviteCodeView,
     AcceptInviteView,
+    TermsView,
+    PrivacyView,
 )
 
 router = DefaultRouter()
@@ -26,6 +28,8 @@ urlpatterns = [
     path('login/google/', GoogleLoginView.as_view(), name='google-login'),
     path('invite/', InviteCodeView.as_view(), name='invite-code'),
     path('invite/accept/', AcceptInviteView.as_view(), name='accept-invite'),
+    path('terms/', TermsView.as_view(), name='terms'),
+    path('privacy/', PrivacyView.as_view(), name='privacy'),
     path('', include(router.urls)),
 ]
 

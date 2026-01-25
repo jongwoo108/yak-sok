@@ -1,6 +1,6 @@
 # 📋 개발 진행 현황
 
-> 최종 업데이트: 2026-01-17
+> 최종 업데이트: 2026-01-25
 
 ## 진행 상태 요약
 
@@ -19,7 +19,8 @@
 | 11. 사용자 간 알림 전송 | ✅ 완료 | 2026-01-17 |
 | 12. 역할 구조 개편 | ✅ 완료 | 2026-01-17 |
 | 13. 테스트 및 QA | 🔄 진행중 | - |
-| 14. 배포 | 🔲 예정 | - |
+| 14. 배포 | 🔄 진행중 | - |
+| 15. iOS SDK 53 업그레이드 | ✅ 완료 | 2026-01-25 |
 
 ---
 
@@ -157,22 +158,62 @@ python manage.py runserver
 
 ## 문서 목록
 
-- [01_project_structure.md](./01_project_structure.md) - 프로젝트 구조 및 아키텍처
-- [02_backend_development.md](./02_backend_development.md) - 백엔드 개발 상세
-- [03_frontend_development.md](./03_frontend_development.md) - 프론트엔드 개발 상세
-- [04_api_specification.md](./04_api_specification.md) - API 명세
-- [05_deployment_guide.md](./05_deployment_guide.md) - 배포 가이드
-- [06_ui_design_system.md](./06_ui_design_system.md) - UI/UX 디자인 시스템
-- [08_calendar_feature.md](./08_calendar_feature.md) - 복약 캘린더 기능
-- [09_notification_system.md](./09_notification_system.md) - 사용자 연결 및 알림 시스템
-- [10_role_structure.md](./10_role_structure.md) - **역할 구조** ⭐ NEW
+### 개발 문서
+- [01_project_structure.md](./development/01_project_structure.md) - 프로젝트 구조 및 아키텍처
+- [02_backend_development.md](./development/02_backend_development.md) - 백엔드 개발 상세
+- [03_frontend_development.md](./development/03_frontend_development.md) - 프론트엔드 개발 상세
+- [04_api_specification.md](./development/04_api_specification.md) - API 명세
+- [05_react_native_implementation.md](./development/05_react_native_implementation.md) - React Native 앱 구현
+- [06_ui_design_system.md](./development/06_ui_design_system.md) - UI/UX 디자인 시스템
+- [08_calendar_feature.md](./development/08_calendar_feature.md) - 복약 캘린더 기능
+- [09_notification_system.md](./development/09_notification_system.md) - 사용자 연결 및 알림 시스템
+- [10_role_structure.md](./development/10_role_structure.md) - 역할 구조
+
+### iOS 빌드 문제 해결
+- [11_ios_crash_resolution.md](./development/11_ios_crash_resolution.md) - iOS 크래시 해결 (SDK 51)
+- [12_ios_functional_issue_resolution.md](./development/12_ios_functional_issue_resolution.md) - iOS 기능 오류 해결
+- [13_ios_sdk53_troubleshooting.md](./development/13_ios_sdk53_troubleshooting.md) - iOS SDK 53 트러블슈팅
+- [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md) - **iOS SDK 53 문제 해결** ✅ 완료 (2026-01-25)
+
+### 배포 문서
+- [deployment/README.md](./deployment/README.md) - 배포 가이드 전체
+- [deployment/01_aws_lightsail_setup.md](./deployment/01_aws_lightsail_setup.md) - AWS Lightsail 설정
+- [deployment/02_cicd_pipeline.md](./deployment/02_cicd_pipeline.md) - CI/CD (GitHub Actions)
+- [deployment/03_monitoring_setup.md](./deployment/03_monitoring_setup.md) - 모니터링 (Sentry)
+- [deployment/04_deployment_status.md](./deployment/04_deployment_status.md) - 배포 진행 현황
+- [deployment/05_appstore_metadata.md](./deployment/05_appstore_metadata.md) - **앱스토어 메타데이터** 📱 NEW (2026-01-25)
+- [deployment/06_appstore_submission_guide.md](./deployment/06_appstore_submission_guide.md) - **앱스토어 제출 가이드** 📋 NEW (2026-01-25)
+
+---
+
+## ✅ 해결된 이슈 (2026-01-25)
+
+### iOS SDK 53 업그레이드 완료
+- **크래시 문제**: React Navigation v7 정렬 + 엔트리 포인트 통일로 해결
+- **로그아웃 문제**: 토큰 갱신 로직 개선 + 직접 라우팅으로 해결
+- **회원가입 후 에러**: store 초기화 함수 추가로 해결
+- **EAS 계정 변경**: `jongwoo1008` 계정으로 전환 완료
+
+**상세 내용**: [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md)
 
 ---
 
 ## 다음 단계
 
+### 앱스토어 제출 (2026-01-25 준비 완료)
+
+- [x] 이용약관 및 개인정보 처리방침 작성
+- [x] 법적 문서 웹 호스팅 (yaksok-care.com)
+- [x] 앱 내 링크 연결
+- [x] 앱스토어 메타데이터 준비
+- [ ] Production 빌드 실행
+- [ ] App Store Connect 제출
+
+**빠른 시작 가이드**: [APPSTORE_QUICK_START.md](../APPSTORE_QUICK_START.md)  
+**상세 가이드**: [06_appstore_submission_guide.md](./deployment/06_appstore_submission_guide.md)
+
+### 향후 계획
 1. **테스트 코드 작성**: 유닛/통합 테스트
 2. **성능 최적화**: API 응답 속도 개선
-3. **배포 준비**: Docker 이미지 최적화, CI/CD 파이프라인 구축
-4. **앱 스토어 배포**: iOS/Android 앱 빌드 및 배포
+3. **기능 확장**: 사용자 피드백 반영
 

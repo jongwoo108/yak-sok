@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, ActivityIndicator, TextInput, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, ActivityIndicator, TextInput, Share, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -240,8 +240,13 @@ export default function ProfileScreen() {
                     text: '로그아웃',
                     style: 'destructive',
                     onPress: async () => {
-                        await logout();
-                        router.replace('/(auth)/login');
+                        try {
+                            await logout();
+                            // 직접 로그인 페이지로 이동
+                            router.replace('/(auth)/login');
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                        }
                     },
                 },
             ]
@@ -376,11 +381,27 @@ export default function ProfileScreen() {
                         icon="document-text"
                         iconColor={colors.textSecondary}
                         title="이용약관"
+                        onPress={() => {
+                            const url = 'https://yaksok-care.com/api/users/terms/';
+                            if (Platform.OS === 'web') {
+                                window.open(url, '_blank');
+                            } else {
+                                Linking.openURL(url);
+                            }
+                        }}
                     />
                     <MenuItem
                         icon="shield-checkmark"
                         iconColor={colors.textSecondary}
                         title="개인정보 처리방침"
+                        onPress={() => {
+                            const url = 'https://yaksok-care.com/api/users/privacy/';
+                            if (Platform.OS === 'web') {
+                                window.open(url, '_blank');
+                            } else {
+                                Linking.openURL(url);
+                            }
+                        }}
                     />
                     <MenuItem
                         icon="phone-portrait"
