@@ -79,8 +79,8 @@ git push origin main
 ### 3단계: 서버 배포
 
 ```bash
-# 서버 SSH 접속
-ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
+# 서버 SSH 접속 (실제 정보는 docs/SENSITIVE_INFO.md 참고)
+ssh -i <SSH 키 경로> ubuntu@<서버 IP>
 
 cd /app/yak-sok
 git fetch origin

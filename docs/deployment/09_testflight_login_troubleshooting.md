@@ -127,8 +127,8 @@ class GoogleLoginView(APIView):
 ### 3단계: 서버 배포
 
 ```bash
-# 서버 SSH 접속
-ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
+# 서버 SSH 접속 (실제 정보는 docs/SENSITIVE_INFO.md 참고)
+ssh -i <SSH 키 경로> ubuntu@<서버 IP>
 
 # 코드 업데이트
 cd /app/yak-sok
@@ -172,7 +172,7 @@ sudo tail -f /var/log/nginx/access.log
 ```bash
 curl -X POST https://yaksok-care.com/api/users/login/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"senior@test.com","password":"test1234"}'
+  -d '{"email":"senior@test.com","password":"<테스트 비밀번호>"}'
 ```
 
 ---
@@ -204,12 +204,14 @@ docker-compose -f docker-compose.prod.yml up -d backend
 ```
 시니어 계정:
 - 이메일: senior@test.com
-- 비밀번호: test1234
+- 비밀번호: <테스트 비밀번호>
 
 보호자 계정:
 - 이메일: guardian@test.com
-- 비밀번호: test1234
+- 비밀번호: <테스트 비밀번호>
 ```
+
+> 실제 비밀번호는 `docs/SENSITIVE_INFO.md` 참고
 
 ### 테스트 계정 생성 방법
 
@@ -225,7 +227,7 @@ User = get_user_model()
 User.objects.create_user(
     username='senior@test.com',
     email='senior@test.com',
-    password='test1234',
+    password='<테스트 비밀번호>',
     first_name='테스트시니어',
     role='senior'
 )
@@ -234,7 +236,7 @@ User.objects.create_user(
 User.objects.create_user(
     username='guardian@test.com',
     email='guardian@test.com',
-    password='test1234',
+    password='<테스트 비밀번호>',
     first_name='테스트보호자',
     role='guardian'
 )

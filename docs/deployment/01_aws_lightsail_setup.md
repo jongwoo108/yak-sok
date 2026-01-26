@@ -10,7 +10,7 @@
 | API URL | `https://yaksok-care.com/api/` |
 | 서버 | AWS Lightsail (2GB RAM, $12/월) |
 | 리전 | Seoul (ap-northeast-2) |
-| 고정 IP | 3.39.142.149 |
+| 고정 IP | `<서버 IP>` (docs/SENSITIVE_INFO.md 참고) |
 
 ---
 
@@ -36,7 +36,8 @@
 ## 🔐 SSH 접속
 
 ```bash
-ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
+# 실제 정보는 docs/SENSITIVE_INFO.md 참고
+ssh -i <SSH 키 경로> ubuntu@<서버 IP>
 ```
 
 ---

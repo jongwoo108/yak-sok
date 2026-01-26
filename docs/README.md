@@ -1,6 +1,6 @@
 # 📋 개발 진행 현황
 
-> 최종 업데이트: 2026-01-25
+> 최종 업데이트: 2026-01-26
 
 ## 진행 상태 요약
 
@@ -18,9 +18,10 @@
 | 10. 복약 캘린더 기능 | ✅ 완료 | 2026-01-17 |
 | 11. 사용자 간 알림 전송 | ✅ 완료 | 2026-01-17 |
 | 12. 역할 구조 개편 | ✅ 완료 | 2026-01-17 |
-| 13. 테스트 및 QA | 🔄 진행중 | - |
-| 14. 배포 | 🔄 진행중 | - |
-| 15. iOS SDK 53 업그레이드 | ✅ 완료 | 2026-01-25 |
+| 13. iOS SDK 53 업그레이드 | ✅ 완료 | 2026-01-25 |
+| 14. TestFlight 테스트 | ✅ 완료 | 2026-01-26 |
+| 15. **App Store 심사 제출** | ✅ 완료 | 2026-01-26 |
+| 16. App Store 심사 | ⏳ 대기중 | - |
 
 ---
 
@@ -199,29 +200,34 @@ python manage.py runserver
 
 ---
 
-## 다음 단계
+## 🎉 App Store 심사 제출 완료 (2026-01-26)
 
-### 앱스토어 제출 (2026-01-25 진행 중)
-
-#### ✅ 완료된 작업
+### ✅ 완료된 작업
 - [x] 이용약관 및 개인정보 처리방침 작성
 - [x] 법적 문서 웹 호스팅 (yaksok-care.com)
 - [x] 앱 내 링크 연결
 - [x] 앱스토어 메타데이터 준비
-- [x] Git 커밋 및 푸시
+- [x] 서버 배포 및 TestFlight 테스트
+- [x] TestFlight 로그인 문제 해결
+- [x] Production 빌드 실행
+- [x] App Store Connect 메타데이터 입력
+- [x] **App Store 심사 제출 완료!**
 
-#### 🔄 진행 중
-- [ ] 서버 배포 및 확인
-- [ ] Production 빌드 실행
-- [ ] App Store Connect 제출
+**진행 상황**: [07_appstore_progress.md](./deployment/07_appstore_progress.md)
+**트러블슈팅**: [09_testflight_login_troubleshooting.md](./deployment/09_testflight_login_troubleshooting.md)
 
-**진행 상황**: [07_appstore_progress.md](./deployment/07_appstore_progress.md) ⭐ NEW  
-**빠른 시작**: [APPSTORE_QUICK_START.md](../APPSTORE_QUICK_START.md)  
-**상세 가이드**: [06_appstore_submission_guide.md](./deployment/06_appstore_submission_guide.md)
+---
+
+## 다음 단계
+
+### ⏳ App Store 심사 대기 중
+- 예상 심사 기간: 1-3일
+- 심사 승인 후 App Store에서 "약속" 검색 가능
 
 ### 향후 계획
-1. **App Store 심사**: 제출 후 1-3일 대기
-2. **테스트 코드 작성**: 유닛/통합 테스트
-3. **성능 최적화**: API 응답 속도 개선
-4. **기능 확장**: 사용자 피드백 반영
+1. **App Store 심사 승인 후**: 정식 출시 및 홍보
+2. **사용자 피드백 수집**: 앱 개선사항 파악
+3. **버전 업데이트**: 기능 추가 및 버그 수정
+4. **테스트 코드 작성**: 유닛/통합 테스트
+5. **성능 최적화**: API 응답 속도 개선
 

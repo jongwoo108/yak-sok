@@ -206,7 +206,7 @@ https://yaksok-care.com
 
 ### 연락처 이메일
 ```
-jongwoo1008@naver.com
+<개발자 이메일> (docs/SENSITIVE_INFO.md 참고)
 ```
 
 ---
@@ -247,11 +247,11 @@ jongwoo1008@naver.com
 
 역할 1: 시니어
 이메일: senior@test.com
-비밀번호: test1234
+비밀번호: <테스트 비밀번호> (docs/SENSITIVE_INFO.md 참고)
 
 역할 2: 보호자
 이메일: guardian@test.com
-비밀번호: test1234
+비밀번호: <테스트 비밀번호> (docs/SENSITIVE_INFO.md 참고)
 
 연결 방법:
 1. 시니어 계정으로 로그인

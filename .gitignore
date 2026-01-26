@@ -76,3 +76,6 @@ firebase-credentials.json
 
 # 테스트
 test_fcm.py
+
+# 민감한 정보 문서
+docs/SENSITIVE_INFO.md

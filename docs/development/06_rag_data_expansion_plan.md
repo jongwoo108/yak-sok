@@ -25,8 +25,9 @@ OCR 인식률 향상을 위해 현재 100개 수준인 `medications.json` 데이
 ### 1단계: 환경변수 설정
 `backend/.env` 파일에 API 키 추가:
 ```
-DATA_GO_KR_API_KEY=7lOczRlpdOmXWEVBrallbmUsNKVkIWfOCcjIgIgafASm6Eos5NGvO6BUAQxVTZnHopJcZlM2yDfcK2MqENU1w==
+DATA_GO_KR_API_KEY=<공공데이터포털에서 발급받은 API 키>
 ```
+> 실제 키는 `docs/SENSITIVE_INFO.md` 참고 (비공개 파일)
 
 ### 2단계: 데이터 수집 실행
 ```bash

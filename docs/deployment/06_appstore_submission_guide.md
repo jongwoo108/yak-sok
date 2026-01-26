@@ -21,8 +21,8 @@
 ### 1단계: 백엔드 서버에 법적 문서 배포
 
 ```bash
-# 서버 SSH 접속
-ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
+# 서버 SSH 접속 (실제 정보는 docs/SENSITIVE_INFO.md 참고)
+ssh -i <SSH 키 경로> ubuntu@<서버 IP>
 
 # 프로젝트 디렉토리로 이동
 cd /app/yak-sok
@@ -79,7 +79,7 @@ npx eas build --platform ios --profile production
 
 ```
 ✔ Do you want to log in to your Apple account? ... yes
-✔ Apple ID: ... jongwoo1008@naver.com
+✔ Apple ID: ... <Apple 개발자 계정 이메일>
 [비밀번호 입력]
 
 ✔ Reuse this distribution certificate? ... yes
@@ -247,11 +247,11 @@ Get-Item mobile\assets\icon.png | Select-Object Name, Length
 
 시니어 계정:
 이메일: senior@test.com
-비밀번호: test1234
+비밀번호: <테스트 비밀번호>
 
 보호자 계정:
 이메일: guardian@test.com
-비밀번호: test1234
+비밀번호: <테스트 비밀번호>
 
 테스트 방법:
 1. 시니어 계정으로 로그인
@@ -268,9 +268,9 @@ Get-Item mobile\assets\icon.png | Select-Object Name, Length
 ```
 
 **연락처 정보**:
-- 이름: 신종우
+- 이름: <개발자 이름>
 - 전화번호: (선택 사항)
-- 이메일: jongwoo1008@naver.com
+- 이메일: <개발자 이메일> (docs/SENSITIVE_INFO.md 참고)
 
 ---
 
@@ -384,7 +384,7 @@ npx eas build --platform ios --profile production --clear-cache
 
 ```bash
 # 백엔드 서버에서 계정 생성
-ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
+ssh -i <SSH 키 경로> ubuntu@<서버 IP>
 docker exec -it yaksok-backend python manage.py shell
 
 # Django shell에서
@@ -395,7 +395,7 @@ User = get_user_model()
 senior = User.objects.create_user(
     username='senior@test.com',
     email='senior@test.com',
-    password='test1234',
+    password='<테스트 비밀번호>',
     first_name='테스트시니어',
     role='senior'
 )
@@ -404,11 +404,12 @@ senior = User.objects.create_user(
 guardian = User.objects.create_user(
     username='guardian@test.com',
     email='guardian@test.com',
-    password='test1234',
+    password='<테스트 비밀번호>',
     first_name='테스트보호자',
     role='guardian'
 )
 ```
+> 실제 서버 정보와 비밀번호는 `docs/SENSITIVE_INFO.md` 참고
 
 ---
 

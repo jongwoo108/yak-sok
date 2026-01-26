@@ -22,7 +22,7 @@ Repository → Settings → Secrets and variables → Actions
 
 | Secret | 값 |
 |--------|-----|
-| `LIGHTSAIL_HOST` | `3.39.142.149` |
+| `LIGHTSAIL_HOST` | `<서버 IP>` (docs/SENSITIVE_INFO.md 참고) |
 | `SSH_PRIVATE_KEY` | SSH 키 전체 내용 |
 
 ---

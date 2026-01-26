@@ -1,6 +1,13 @@
 # 앱스토어 제출 진행 상황
 
-> 최종 업데이트: 2026-01-25
+> 최종 업데이트: 2026-01-26
+
+---
+
+## 🎉 App Store 심사 제출 완료!
+
+**제출일**: 2026-01-26
+**상태**: 심사 대기 중 (Waiting for Review)
 
 ---
 
@@ -27,331 +34,178 @@
 
 ---
 
-### 2. 앱스토어 제출 문서 작성 ✅
+### 2. TestFlight 로그인 문제 해결 ✅
 
-#### 메타데이터 문서
-- ✅ `docs/deployment/05_appstore_metadata.md`
-  - 앱 설명 (한글/영문)
-  - 키워드
-  - 카테고리 및 연령 등급
-  - 스크린샷 가이드
-  - 앱 아이콘 사양
-  - 프라이버시 설정 가이드
-  - 심사 노트 템플릿
+**문제**: TestFlight 앱에서 로그인/회원가입 실패 (401 Unauthorized)
 
-#### 제출 가이드
-- ✅ `docs/deployment/06_appstore_submission_guide.md`
-  - 단계별 상세 실행 가이드
-  - 빌드 명령어 및 질문 응답
-  - App Store Connect 설정 방법
-  - 메타데이터 입력 가이드
-  - 문제 해결 방법
+**원인**:
+1. Docker `expose` vs `ports` 설정 문제
+2. JWT 인증이 공개 엔드포인트에서도 실행됨
 
-#### 빠른 시작 가이드
-- ✅ `APPSTORE_QUICK_START.md` (루트 폴더)
-  - 4단계 빠른 실행 가이드
-  - 복사-붙여넣기 가능한 명령어
-  - 체크리스트
+**해결**:
+1. `docker-compose.prod.yml`에서 `expose` → `ports` 변경
+2. `backend/apps/users/views.py`에서 `authentication_classes = []` 추가
+
+**상세 문서**: [09_testflight_login_troubleshooting.md](./09_testflight_login_troubleshooting.md)
 
 ---
 
-### 3. Git 버전 관리 ✅
+### 3. Production 빌드 ✅
 
-#### 커밋 내역
-```bash
-git add .
-git commit -m "Add App Store submission files and iOS SDK 53 updates
-
-- Add terms.html and privacy.html for legal documents
-- Update profile.tsx with legal document links
-- Add iOS SDK 53 resolution documentation
-- Add App Store metadata and submission guides
-- Update mobile app configuration and dependencies"
-```
-
-#### 푸시 완료
-- ✅ GitHub 원격 저장소에 푸시 완료
-- ✅ 원격 변경사항 병합 완료
-
----
-
-### 4. 문서 업데이트 ✅
-
-- ✅ `docs/README.md` 업데이트
-  - 앱스토어 제출 섹션 추가
-  - 새 문서 링크 추가
-  - 다음 단계 명시
-
----
-
-## 🔄 진행 중 작업
-
-### 현재 단계: 서버 배포
-
-#### 실행 명령어
-```bash
-# 1. 서버 접속
-ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
-
-# 2. 최신 코드 가져오기
-cd /app/yak-sok
-git pull origin main
-
-# 3. 백엔드 재시작
-docker-compose -f docker-compose.prod.yml restart backend
-
-# 4. 확인
-curl https://yaksok-care.com/terms/
-curl https://yaksok-care.com/privacy/
-```
-
-#### 예상 결과
-- HTML 페이지가 정상적으로 표시되어야 함
-- 브라우저에서 접속 시 이용약관/개인정보 처리방침 페이지 확인 가능
-
----
-
-## 📋 다음 단계
-
-### Step 1: 서버 배포 확인 ⏳
-
-**작업 내용**:
-- 서버에 SSH 접속
-- Git pull로 최신 코드 받기
-- Docker 컨테이너 재시작
-- 법적 문서 URL 접속 확인
-
-**예상 소요 시간**: 5분
-
-**확인 사항**:
-- [ ] https://yaksok-care.com/terms/ 정상 접속
-- [ ] https://yaksok-care.com/privacy/ 정상 접속
-- [ ] HTML이 깔끔하게 표시됨
-- [ ] 모바일 앱에서 링크 클릭 시 브라우저로 열림
-
----
-
-### Step 2: Production 빌드 실행 ⏳
-
-**작업 내용**:
 ```bash
 cd mobile
 npx eas build --platform ios --profile production
 ```
 
-**빌드 중 질문 응답**:
-- Log in to Apple account? → **yes**
-- Apple ID: **jongwoo1008@naver.com**
-- Reuse certificate? → **yes**
-- Generate new Provisioning Profile? → **YES** ⚠️ 중요!
-
-**예상 소요 시간**: 15-20분
-
-**확인 사항**:
-- [ ] 빌드 시작 확인
-- [ ] 빌드 진행 상황 모니터링
-- [ ] 빌드 완료 메시지 확인
-- [ ] 빌드 URL 저장
-
----
-
-### Step 3: TestFlight 업로드 (선택 사항) ⏸️
-
-**작업 내용**:
-```bash
-npx eas submit --platform ios --latest
-```
-
-**목적**: Production 빌드로 최종 테스트
-
-**예상 소요 시간**: 10분 (빌드 처리) + 테스트 시간
-
-**확인 사항**:
-- [ ] TestFlight에서 앱 실행
-- [ ] 모든 기능 정상 작동 확인
-- [ ] 법적 문서 링크 작동 확인
-- [ ] 로그아웃/회원가입 정상 작동
-
----
-
-### Step 4: App Store Connect 메타데이터 입력 ⏸️
-
-**작업 위치**: https://appstoreconnect.apple.com
-
-**입력 항목**:
-
-#### 4.1 새 버전 생성
-- [ ] 내 앱 → 약-속 선택
-- [ ] App Store 탭
-- [ ] + 버전 추가: 1.0.0
-
-#### 4.2 기본 정보
-- [ ] 이름: 약속 (Yak-Sok)
-- [ ] 부제목: 시니어 복약 관리 및 보호자 연결
-- [ ] 카테고리: 건강 및 피트니스
-- [ ] 연령 등급: 4+
-
-#### 4.3 설명 입력
-- [ ] 앱 설명 (한글) - `05_appstore_metadata.md` 참고
-- [ ] 키워드: 복약,약,시니어,건강,알림,처방전,OCR,보호자,건강관리,의료
-
-#### 4.4 URL 입력
-- [ ] 개인정보 처리방침: https://yaksok-care.com/privacy/
-- [ ] 이용약관: https://yaksok-care.com/terms/
-- [ ] 지원 URL: https://yaksok-care.com
-- [ ] 연락처: jongwoo1008@naver.com
-
-#### 4.5 스크린샷 업로드
-- [ ] 6.7인치: 1290 x 2796 (최소 1장)
-- [ ] 6.5인치: 1242 x 2688 (최소 1장)
-- [ ] 5.5인치: 1242 x 2208 (최소 1장)
-
-**촬영 화면**:
-1. 로그인/회원가입 (역할 선택)
-2. 홈 화면 (오늘의 복약)
-3. 약 목록
-4. 처방전 스캔 또는 약 추가
-5. 복약 캘린더
-6. 보호자 연결 또는 설정
-
-#### 4.6 앱 프라이버시 설정
-- [ ] 수집 데이터: 개인정보, 건강 데이터, 식별자
-- [ ] 사용 목적: 앱 기능, 분석
-- [ ] 제3자 데이터: OpenAI, Firebase
-
-#### 4.7 심사 노트
-- [ ] 테스트 계정 정보 입력
-  - 시니어: senior@test.com / test1234
-  - 보호자: guardian@test.com / test1234
-- [ ] 테스트 방법 설명
-- [ ] 참고사항 명시
-
-**예상 소요 시간**: 30-40분
-
----
-
-### Step 5: 빌드 선택 및 최종 제출 ⏸️
-
-#### 5.1 빌드 선택
-- [ ] 빌드 섹션에서 최신 빌드 선택
-- [ ] 버전 1.0.0 (빌드 6 또는 최신)
-
-#### 5.2 수출 규정
-- [ ] 암호화 사용? → 예
-- [ ] 표준 암호화만? → 예 (HTTPS)
-- [ ] 규정 준수 코드? → 아니오
-
-#### 5.3 최종 제출
-- [ ] 모든 항목 녹색 체크 확인
-- [ ] "심사를 위해 제출" 버튼 클릭
-- [ ] 확인 팝업에서 제출
-
-**예상 소요 시간**: 5-10분
-
----
-
-## 📊 전체 타임라인
-
-```
-✅ 완료 (1월 25일)
-├── 법적 문서 작성
-├── 앱스토어 문서 작성
-└── Git 커밋 및 푸시
-
-⏳ 진행 중
-└── 서버 배포 (5분)
-
-⏸️ 대기 중
-├── Production 빌드 (20분)
-├── TestFlight 테스트 (선택, 30분)
-├── 메타데이터 입력 (40분)
-└── 최종 제출 (10분)
-
-📅 예상 완료
-└── 심사 대기 (1-3일)
-    └── 승인 후 App Store 게시
-```
-
----
-
-## 🎯 성공 기준
-
-### 서버 배포 성공
-- ✅ 법적 문서 URL 정상 접속
-- ✅ HTML 페이지 정상 표시
-- ✅ 모바일 앱에서 링크 작동
-
-### Production 빌드 성공
 - ✅ EAS Build 완료
-- ✅ 빌드 URL 생성
-- ✅ Provisioning Profile 생성 완료
-
-### App Store 제출 성공
-- ✅ 메타데이터 모두 입력
-- ✅ 스크린샷 업로드 완료
-- ✅ 빌드 선택 완료
-- ✅ "제출됨" 상태 확인
-
-### 최종 승인
-- ✅ Apple 심사 통과
-- ✅ App Store에 게시
-- ✅ "약속" 앱 검색 가능
+- ✅ Provisioning Profile 생성
+- ✅ App Store Connect에 빌드 업로드
 
 ---
 
-## 🚨 주의사항
+### 4. App Store Connect 설정 완료 ✅
 
-### 법적 문서
-- ⚠️ URL은 반드시 HTTPS여야 함
-- ⚠️ 페이지가 정상적으로 표시되어야 함
-- ⚠️ 모바일에서도 접속 가능해야 함
+#### 4.1 기본 정보
+- ✅ 앱 이름: 약속 (Yak-Sok)
+- ✅ 부제목: 시니어 복약 관리 및 보호자 연결
+- ✅ 카테고리: 건강 및 피트니스
+- ✅ 연령 등급: 4+
 
-### Provisioning Profile
-- ⚠️ 반드시 "yes"를 선택해야 함 (이전에 no 선택했음)
-- ⚠️ Apple Developer 계정 로그인 필요
-- ⚠️ Distribution Certificate 재사용
+#### 4.2 URL
+- ✅ 개인정보 처리방침: https://yaksok-care.com/privacy/
+- ✅ 이용약관: https://yaksok-care.com/terms/
 
-### 테스트 계정
-- ⚠️ 실제로 로그인 가능해야 함
-- ⚠️ 모든 주요 기능 테스트 가능해야 함
-- ⚠️ 비밀번호는 간단하게 (test1234)
+#### 4.3 스크린샷
+- ✅ iPhone 6.7인치 스크린샷 업로드
+- ✅ iPhone 6.5인치 스크린샷 업로드
+- ✅ iPhone 5.5인치 스크린샷 업로드
+- ✅ iPad Pro 12.9인치 스크린샷 업로드
 
-### 스크린샷
-- ⚠️ 실제 앱 화면이어야 함
-- ⚠️ 최소 3가지 사이즈 각 1장씩
-- ⚠️ 고해상도 (흐릿하면 거부)
+#### 4.4 App Privacy (데이터 수집 공개)
 
----
+| 데이터 유형 | 사용 목적 | 사용자 연결 | 추적 사용 |
+|------------|----------|------------|----------|
+| 이름 | 앱 기능 | 예 | 아니요 |
+| 이메일 주소 | 앱 기능 | 예 | 아니요 |
+| 건강 | 앱 기능 | 예 | 아니요 |
+| 사진/비디오 | 앱 기능 | 예 | 아니요 |
+| 사용자 ID | 앱 기능 | 예 | 아니요 |
+| 기기 ID | 앱 기능 | 예 | 아니요 |
+| 충돌 데이터 | 앱 기능 | 아니요 | 아니요 |
 
-## 📞 문제 발생 시
+#### 4.5 심사 정보
+- ✅ 테스트 계정 정보 입력
+  - 시니어: senior@test.com / <테스트 비밀번호>
+  - 보호자: guardian@test.com / <테스트 비밀번호>
+- ✅ 심사 노트 작성
 
-### 서버 배포 실패
-- 문서: `06_appstore_submission_guide.md` > 문제 해결 > 1번
-- 해결: Docker 재시작, 로그 확인
-
-### 빌드 실패
-- 문서: `06_appstore_submission_guide.md` > 문제 해결 > 2번
-- 해결: 캐시 클리어 후 재시도
-
-### Provisioning Profile 오류
-- 문서: `06_appstore_submission_guide.md` > 문제 해결 > 3번
-- 해결: Apple Developer Portal에서 삭제 후 재생성
-
-### 테스트 계정 오류
-- 문서: `06_appstore_submission_guide.md` > 문제 해결 > 4번
-- 해결: Django shell에서 계정 생성
+> 실제 비밀번호는 `docs/SENSITIVE_INFO.md` 참고
 
 ---
 
-## 📚 참고 문서
+## 📋 심사 진행 상황
 
-- **빠른 시작**: `APPSTORE_QUICK_START.md`
-- **상세 가이드**: `docs/deployment/06_appstore_submission_guide.md`
-- **메타데이터**: `docs/deployment/05_appstore_metadata.md`
-- **배포 현황**: `docs/deployment/04_deployment_status.md`
+### 예상 일정
+
+```
+2026-01-26 ✅ 심사 제출
+    ↓
+2026-01-26 ~ 01-28 ⏳ 심사 대기 (Waiting for Review)
+    ↓
+2026-01-28 ~ 01-30 ⏳ 심사 중 (In Review)
+    ↓
+2026-01-30 ~ 02-01 🎯 승인 예상 (Ready for Sale)
+```
+
+**참고**: Apple 심사는 보통 1-3일 소요됩니다. 첫 제출이거나 건강 데이터를 다루는 앱은 더 오래 걸릴 수 있습니다.
 
 ---
 
-**작성일**: 2026-01-25  
-**작성자**: AI Assistant  
-**상태**: 서버 배포 진행 중
+## 🚨 트러블슈팅 기록
+
+### 1. TestFlight 로그인 실패 (2026-01-26)
+
+**증상**:
+- curl 테스트 성공, 앱에서만 401 에러
+- 로그에 요청 도달하지 않음
+
+**원인**:
+- `authentication_classes`가 전역 설정되어 로그인/회원가입에서도 JWT 검증
+- 앱에 저장된 만료된 토큰이 모든 요청에 첨부됨
+
+**해결**:
+```python
+# backend/apps/users/views.py
+class LoginView(APIView):
+    authentication_classes = []  # JWT 인증 비활성화
+    permission_classes = [permissions.AllowAny]
+```
+
+**핵심 교훈**:
+- `permission_classes = [AllowAny]`만으로는 불충분
+- `authentication_classes = []`를 명시적으로 추가해야 함
+
+---
+
+### 2. Docker ContainerConfig 오류 (2026-01-26)
+
+**증상**:
+```
+ERROR: for backend  'ContainerConfig'
+KeyError: 'ContainerConfig'
+```
+
+**원인**: docker-compose 1.29.2 버전 버그
+
+**해결**:
+```bash
+docker rm -f $(docker ps -a | grep backend | awk '{print $1}') 2>/dev/null || true
+docker-compose -f docker-compose.prod.yml up -d backend
+```
+
+---
+
+## 📚 관련 문서
+
+| 문서 | 설명 |
+|------|------|
+| [05_appstore_metadata.md](./05_appstore_metadata.md) | 앱스토어 메타데이터 템플릿 |
+| [06_appstore_submission_guide.md](./06_appstore_submission_guide.md) | 제출 상세 가이드 |
+| [08_terms_privacy_troubleshooting.md](./08_terms_privacy_troubleshooting.md) | 법적 문서 트러블슈팅 |
+| [09_testflight_login_troubleshooting.md](./09_testflight_login_troubleshooting.md) | 로그인 문제 트러블슈팅 |
+
+---
+
+## 🔧 수정된 파일 목록
+
+### 백엔드
+- `backend/apps/users/views.py` - `authentication_classes = []` 추가
+- `docker-compose.prod.yml` - `expose` → `ports` 변경
+
+### 문서
+- `docs/deployment/09_testflight_login_troubleshooting.md` - 신규 생성
+
+---
+
+## ⏭️ 다음 단계
+
+### 심사 승인 시
+1. App Store에서 "약속" 검색 가능 확인
+2. 실제 기기에서 다운로드 및 테스트
+3. 사용자 피드백 수집
+
+### 심사 거부 시
+1. 거부 사유 확인
+2. 문제 해결
+3. 재제출
+
+### 업데이트 배포 시
+1. 버전 번호 증가 (1.0.1, 1.1.0 등)
+2. 새 빌드 업로드
+3. 변경사항 작성 후 재제출
+
+---
+
+**작성일**: 2026-01-25
+**최종 수정**: 2026-01-26
+**상태**: ✅ App Store 심사 제출 완료
