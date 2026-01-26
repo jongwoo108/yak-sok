@@ -47,6 +47,7 @@ class RegisterView(generics.CreateAPIView):
     회원가입 View
     """
     queryset = User.objects.all()
+    authentication_classes = []  # JWT 인증 비활성화
     permission_classes = [permissions.AllowAny]
     serializer_class = UserCreateSerializer
     
@@ -71,6 +72,7 @@ class LoginView(APIView):
     """
     이메일 로그인 View
     """
+    authentication_classes = []  # JWT 인증 비활성화
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
@@ -96,6 +98,7 @@ class GoogleLoginView(APIView):
     """
     Google 로그인 (Firebase ID Token 검증)
     """
+    authentication_classes = []  # JWT 인증 비활성화
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
