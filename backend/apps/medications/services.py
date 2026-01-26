@@ -1,5 +1,5 @@
 """
-Medications Services - OCR 및 STT 처리
+Medications Services - OCR 처리
 """
 
 import json
