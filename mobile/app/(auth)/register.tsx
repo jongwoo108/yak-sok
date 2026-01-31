@@ -15,6 +15,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { useMedicationStore } from '../../services/store';
+import { NotificationService } from '../../services/notification';
 import { GradientBackground } from '../../components/GradientBackground';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 
@@ -69,6 +70,7 @@ export default function RegisterScreen() {
 
             resetStore(); // 이전 사용자 데이터 초기화
             setUser(user);
+            await NotificationService.updateServerToken(); // FCM 토큰 서버에 전송
 
             Alert.alert('가입 완료', `${user.first_name}님 환영합니다!`, [
                 { text: '시작하기', onPress: () => router.replace('/(tabs)') }
@@ -78,7 +80,7 @@ export default function RegisterScreen() {
             // DRF validation error는 필드별로 에러를 반환
             const errorData = error.response?.data;
             let message = '회원가입에 실패했습니다. 다시 시도해주세요.';
-            
+
             if (errorData) {
                 if (errorData.email) {
                     message = errorData.email[0];
@@ -94,7 +96,7 @@ export default function RegisterScreen() {
                     message = errorData;
                 }
             }
-            
+
             Alert.alert('회원가입 실패', message);
         }
     };

@@ -18,6 +18,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { api } from '../../services/api';
 import { useMedicationStore } from '../../services/store';
+import { NotificationService } from '../../services/notification';
 import { GradientBackground } from '../../components/GradientBackground';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 
@@ -83,6 +84,7 @@ export default function LoginScreen() {
 
             resetStore(); // 이전 사용자 데이터 초기화
             setUser(user);
+            await NotificationService.updateServerToken(); // FCM 토큰 서버에 전송
             router.replace('/(tabs)');
         } catch (error: any) {
             Alert.alert('로그인 실패', 'Google 로그인 중 오류가 발생했습니다.');
@@ -109,6 +111,7 @@ export default function LoginScreen() {
 
             // 상태 업데이트 및 이동
             setUser(user);
+            await NotificationService.updateServerToken(); // FCM 토큰 서버에 전송
             router.replace('/(tabs)');
         } catch (error: any) {
             console.error(error);

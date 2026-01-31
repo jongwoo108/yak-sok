@@ -38,7 +38,7 @@ export default function HomeScreen() {
     const { todayLogs, fetchTodayLogs, batchTakeMedications, isLoading } = useMedicationStore();
     const [refreshing, setRefreshing] = useState(false);
     const [takingGroup, setTakingGroup] = useState<string | null>(null);
-    const [notificationEnabled, setNotificationEnabled] = useState(false);
+    const [notificationEnabled, setNotificationEnabled] = useState(true);
 
     // 화면이 포커스될 때마다 데이터 새로고침
     useFocusEffect(

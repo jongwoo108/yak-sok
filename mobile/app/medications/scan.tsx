@@ -363,6 +363,24 @@ export default function ScanScreen() {
         });
     };
 
+    // 약 이름 수정
+    const updateMedicationName = (index: number, name: string) => {
+        setMedicationsToEdit(prev => {
+            const updated = [...prev];
+            updated[index].name = name;
+            return updated;
+        });
+    };
+
+    // 용량 수정
+    const updateMedicationDosage = (index: number, dosage: string) => {
+        setMedicationsToEdit(prev => {
+            const updated = [...prev];
+            updated[index].dosage = dosage;
+            return updated;
+        });
+    };
+
     // 등록 확정
     const handleConfirm = async () => {
         console.log('[handleConfirm] 시작');
@@ -672,8 +690,22 @@ export default function ScanScreen() {
                                 >
                                     <View style={styles.medicationHeader}>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.medicationName}>{med.name}</Text>
-                                            <Text style={styles.medicationDosage}>{med.dosage}</Text>
+                                            <TextInput
+                                                style={styles.medicationNameInput}
+                                                value={med.name}
+                                                onChangeText={(text) => updateMedicationName(medIndex, text)}
+                                                placeholder="약 이름"
+                                                placeholderTextColor={colors.textLight}
+                                                editable={!med.isDuplicate}
+                                            />
+                                            <TextInput
+                                                style={styles.medicationDosageInput}
+                                                value={med.dosage}
+                                                onChangeText={(text) => updateMedicationDosage(medIndex, text)}
+                                                placeholder="용량 (예: 1정)"
+                                                placeholderTextColor={colors.textLight}
+                                                editable={!med.isDuplicate}
+                                            />
                                         </View>
                                         {med.isDuplicate && (
                                             <View style={styles.duplicateBadge}>
@@ -1125,9 +1157,31 @@ const styles = StyleSheet.create({
         fontWeight: fontWeight.semibold,
         color: colors.text,
     },
+    medicationNameInput: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.semibold,
+        color: colors.text,
+        backgroundColor: colors.base,
+        borderRadius: borderRadius.md,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        marginBottom: spacing.xs,
+        borderWidth: 1,
+        borderColor: 'rgba(184, 196, 206, 0.3)',
+    },
     medicationDosage: {
         fontSize: fontSize.sm,
         color: colors.textSecondary,
+    },
+    medicationDosageInput: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        backgroundColor: colors.base,
+        borderRadius: borderRadius.md,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderWidth: 1,
+        borderColor: 'rgba(184, 196, 206, 0.2)',
     },
     duplicateBadge: {
         backgroundColor: colors.danger,
