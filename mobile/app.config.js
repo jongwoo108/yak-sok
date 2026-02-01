@@ -4,7 +4,7 @@ export default {
     expo: {
         name: "약속",
         slug: "yak-sok",
-        version: "1.0.1",
+        version: "1.0.2",
         orientation: "portrait",
         // React Native New Architecture (TurboModules/Fabric) 비활성화
         newArchEnabled: false,
@@ -21,7 +21,7 @@ export default {
             bundleIdentifier: "com.jongwoo.yaksok",
             // Expo가 생성하는 타겟 이름을 명시적으로 지정 (slug 기반)
             // 하이픈이 있으면 Xcode에서 문제가 될 수 있어서 언더스코어로 변환
-            buildNumber: "9",
+            buildNumber: "10",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false,
                 NSCameraUsageDescription: "처방전을 촬영하기 위해 카메라 접근이 필요합니다.",

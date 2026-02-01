@@ -15,6 +15,7 @@ from .views import (
     AcceptInviteView,
     TermsView,
     PrivacyView,
+    CheckEmailView,
 )
 
 router = DefaultRouter()
@@ -23,6 +24,7 @@ router.register('emergency-contacts', EmergencyContactViewSet, basename='emergen
 router.register('', UserViewSet, basename='user')
 
 urlpatterns = [
+    path('check-email/', CheckEmailView.as_view(), name='check-email'),
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('login/google/', GoogleLoginView.as_view(), name='google-login'),

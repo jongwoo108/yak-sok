@@ -42,14 +42,27 @@ interface MedicationLog {
     medication_name: string;
     time_of_day: string;
     time_of_day_display: string;
-    status: 'pending' | 'taken' | 'missed';
+    status: 'pending' | 'taken' | 'missed' | 'skipped';
+    group_id: number | null;
+    group_name: string | null;
+}
+
+interface GroupedLogs {
+    key: string;
+    group_id: number | null;
+    group_name: string | null;
+    time_of_day: string;
+    time_of_day_display: string;
+    logs: MedicationLog[];
+    allTaken: boolean;
+    takenCount: number;
 }
 
 interface SeniorMedication {
     id: number;
     name: string;
     dosage: string;
-    group_name?: string;
+    group_name?: string | null;
 }
 
 export default function SeniorsScreen() {
@@ -67,8 +80,9 @@ export default function SeniorsScreen() {
     const fetchSeniors = async () => {
         try {
             const response = await api.guardians.list();
-            const relations = response.data.results || response.data || [];
-            
+            const data = response.data as any;
+            const relations: any[] = Array.isArray(data) ? data : (data.results || []);
+
             // 보호자 입장에서 연결된 시니어 목록 추출
             const seniorList: Senior[] = relations
                 .filter((rel: any) => rel.senior !== user?.id)
@@ -78,9 +92,9 @@ export default function SeniorsScreen() {
                     role: 'senior',
                     relationId: rel.id,
                 }));
-            
+
             setSeniors(seniorList);
-            
+
             // 첫 번째 시니어 자동 선택
             if (seniorList.length > 0 && !selectedSenior) {
                 setSelectedSenior(seniorList[0]);
@@ -150,9 +164,9 @@ export default function SeniorsScreen() {
     };
 
     // 알림 보내기
-    const handleSendAlert = async (messageType: string) => {
+    const handleSendAlert = async (messageType: 'check_in' | 'reminder' | 'im_ok' | 'need_help' | 'custom') => {
         if (!selectedSenior) return;
-        
+
         setSendingAlert(true);
         try {
             await api.alerts.send({
@@ -171,6 +185,42 @@ export default function SeniorsScreen() {
     const progress = todayData?.summary
         ? (todayData.summary.taken / Math.max(todayData.summary.total, 1)) * 100
         : 0;
+
+    // 복약 로그 그룹화 (시간대 + 그룹별)
+    const groupedLogs: GroupedLogs[] = [];
+    const groupMap = new Map<string, GroupedLogs>();
+
+    (todayData?.logs || []).forEach((log: MedicationLog) => {
+        const key = log.group_id
+            ? `group_${log.group_id}_${log.time_of_day}`
+            : `single_${log.id}`;
+
+        if (!groupMap.has(key)) {
+            groupMap.set(key, {
+                key,
+                group_id: log.group_id,
+                group_name: log.group_name,
+                time_of_day: log.time_of_day,
+                time_of_day_display: log.time_of_day_display,
+                logs: [],
+                allTaken: true,
+                takenCount: 0,
+            });
+        }
+        const group = groupMap.get(key)!;
+        group.logs.push(log);
+        if (log.status === 'taken') {
+            group.takenCount++;
+        } else {
+            group.allTaken = false;
+        }
+    });
+    groupMap.forEach((group) => groupedLogs.push(group));
+
+    // 시간대 순서로 정렬
+    const timeOrder: Record<string, number> = { morning: 1, noon: 2, evening: 3, night: 4 };
+    groupedLogs.sort((a, b) => (timeOrder[a.time_of_day] || 5) - (timeOrder[b.time_of_day] || 5));
+
 
     return (
         <GradientBackground variant="ocean" style={styles.container}>
@@ -259,7 +309,7 @@ export default function SeniorsScreen() {
                             </NeumorphCard>
                         ) : selectedSenior && (
                             <>
-                                {/* 오늘의 복약 현황 */}
+                                {/* 오늘의 복약 현황 - 요약 */}
                                 <NeumorphCard style={styles.cardSpacing}>
                                     <View style={styles.sectionHeader}>
                                         <View style={styles.row}>
@@ -279,33 +329,110 @@ export default function SeniorsScreen() {
                                     <View style={styles.progressBarBg}>
                                         <View style={[styles.progressFill, { width: `${progress}%` }]} />
                                     </View>
+                                </NeumorphCard>
 
-                                    {/* 복약 로그 목록 */}
-                                    {todayData?.logs && todayData.logs.length > 0 ? (
-                                        <View style={styles.logList}>
-                                            {todayData.logs.map((log) => (
-                                                <View key={log.id} style={styles.logItem}>
+                                {/* 그룹화된 복약 로그 목록 */}
+                                {groupedLogs.length === 0 ? (
+                                    <NeumorphCard style={styles.cardSpacing}>
+                                        <Text style={styles.noDataText}>오늘 복용할 약이 없습니다</Text>
+                                    </NeumorphCard>
+                                ) : (
+                                    groupedLogs.map((group) => (
+                                        <NeumorphCard
+                                            key={group.key}
+                                            style={[styles.cardSpacing, group.allTaken && styles.opacity60]}
+                                        >
+                                            {/* 그룹 헤더 */}
+                                            <View style={[styles.sectionHeader, { marginBottom: spacing.md }]}>
+                                                <View style={styles.row}>
                                                     <View style={[
-                                                        styles.statusDot,
-                                                        log.status === 'taken' && styles.statusDotTaken,
-                                                        log.status === 'missed' && styles.statusDotMissed,
-                                                    ]} />
-                                                    <Text style={[
-                                                        styles.logMedName,
-                                                        log.status === 'taken' && styles.logMedNameTaken,
+                                                        styles.insetIconCircle,
+                                                        { backgroundColor: group.allTaken ? colors.mintLight : colors.peachLight }
                                                     ]}>
-                                                        {log.medication_name}
-                                                    </Text>
-                                                    <View style={styles.timeBadge}>
-                                                        <Text style={styles.timeBadgeText}>{log.time_of_day_display}</Text>
+                                                        <MaterialCommunityIcons
+                                                            name={group.allTaken ? "check-circle" : "pill"}
+                                                            size={18}
+                                                            color={group.allTaken ? colors.primary : colors.peachDark}
+                                                        />
+                                                    </View>
+                                                    <View>
+                                                        <Text style={styles.groupTitle}>
+                                                            {group.group_name || group.logs[0]?.medication_name}
+                                                        </Text>
+                                                        <Text style={styles.groupSubtitle}>
+                                                            {group.takenCount}/{group.logs.length} 복용 완료
+                                                        </Text>
                                                     </View>
                                                 </View>
-                                            ))}
-                                        </View>
-                                    ) : (
-                                        <Text style={styles.noDataText}>오늘 복용할 약이 없습니다</Text>
-                                    )}
-                                </NeumorphCard>
+                                                <View style={[
+                                                    styles.timeBadge,
+                                                    group.allTaken && styles.timeBadgeTaken
+                                                ]}>
+                                                    <Text style={[
+                                                        styles.timeBadgeText,
+                                                        group.allTaken && styles.timeBadgeTextTaken
+                                                    ]}>
+                                                        {group.time_of_day_display}
+                                                    </Text>
+                                                </View>
+                                            </View>
+
+                                            {/* 약 목록 */}
+                                            <View style={styles.groupMedList}>
+                                                {group.logs.map((log) => (
+                                                    <View key={log.id} style={styles.groupMedItem}>
+                                                        <View style={[
+                                                            styles.checkbox,
+                                                            log.status === 'taken' && styles.checkboxChecked,
+                                                            log.status === 'missed' && styles.checkboxMissed,
+                                                        ]}>
+                                                            {log.status === 'taken' && (
+                                                                <Ionicons name="checkmark" size={14} color={colors.white} />
+                                                            )}
+                                                            {log.status === 'missed' && (
+                                                                <Ionicons name="close" size={14} color={colors.white} />
+                                                            )}
+                                                        </View>
+                                                        <Text style={[
+                                                            styles.groupMedName,
+                                                            log.status === 'taken' && styles.groupMedNameTaken,
+                                                            log.status === 'missed' && styles.groupMedNameMissed,
+                                                        ]}>
+                                                            {log.medication_name}
+                                                        </Text>
+                                                        {log.status === 'taken' && (
+                                                            <Text style={styles.statusLabel}>복용완료</Text>
+                                                        )}
+                                                        {log.status === 'missed' && (
+                                                            <Text style={styles.statusLabelMissed}>미복용</Text>
+                                                        )}
+                                                        {log.status === 'pending' && (
+                                                            <Text style={styles.statusLabelPending}>대기중</Text>
+                                                        )}
+                                                    </View>
+                                                ))}
+                                            </View>
+
+                                            {/* 그룹 상태 표시 */}
+                                            <View style={[
+                                                styles.groupStatus,
+                                                group.allTaken ? styles.groupStatusDone : styles.groupStatusPending
+                                            ]}>
+                                                <Ionicons
+                                                    name={group.allTaken ? "checkmark-circle" : "time-outline"}
+                                                    size={16}
+                                                    color={group.allTaken ? colors.primary : colors.peachDark}
+                                                />
+                                                <Text style={[
+                                                    styles.groupStatusText,
+                                                    group.allTaken ? styles.groupStatusTextDone : styles.groupStatusTextPending
+                                                ]}>
+                                                    {group.allTaken ? '모두 복용 완료' : '복용 대기 중'}
+                                                </Text>
+                                            </View>
+                                        </NeumorphCard>
+                                    ))
+                                )}
 
                                 {/* 복용 중인 약 */}
                                 <NeumorphCard style={styles.cardSpacing}>
@@ -618,7 +745,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.mint,
     },
     statusDotMissed: {
-        backgroundColor: colors.error,
+        backgroundColor: colors.peachDark,
     },
     logMedName: {
         flex: 1,
@@ -632,7 +759,7 @@ const styles = StyleSheet.create({
     },
     timeBadge: {
         paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xxs,
+        paddingVertical: 4,
         borderRadius: borderRadius.sm,
         backgroundColor: colors.blueLight,
     },
@@ -749,4 +876,132 @@ const styles = StyleSheet.create({
         fontWeight: fontWeight.medium,
     },
 
+    // 투명도
+    opacity60: {
+        opacity: 0.6,
+    },
+
+    // 그룹 헤더
+    groupTitle: {
+        fontSize: fontSize.lg,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+    },
+    groupSubtitle: {
+        fontSize: fontSize.xs,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+
+    // 시간 배지 변형
+    timeBadgeTaken: {
+        backgroundColor: colors.mintLight,
+    },
+    timeBadgeTextTaken: {
+        color: colors.primary,
+    },
+
+    // 그룹 약 목록
+    groupMedList: {
+        marginBottom: spacing.md,
+    },
+    groupMedItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.baseDark,
+    },
+
+    // 체크박스
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: colors.textLight,
+        backgroundColor: colors.base,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.md,
+    },
+    checkboxChecked: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    checkboxMissed: {
+        backgroundColor: colors.peachDark,
+        borderColor: colors.peachDark,
+    },
+
+    // 그룹 약 이름
+    groupMedName: {
+        flex: 1,
+        fontSize: fontSize.base,
+        color: colors.text,
+        fontWeight: fontWeight.medium,
+    },
+    groupMedNameTaken: {
+        color: colors.textLight,
+        textDecorationLine: 'line-through',
+    },
+    groupMedNameMissed: {
+        color: colors.peachDark,
+    },
+
+    // 상태 라벨
+    statusLabel: {
+        fontSize: fontSize.xs,
+        color: colors.primary,
+        fontWeight: fontWeight.medium,
+        backgroundColor: colors.mintLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: borderRadius.sm,
+    },
+    statusLabelMissed: {
+        fontSize: fontSize.xs,
+        color: colors.peachDark,
+        fontWeight: fontWeight.medium,
+        backgroundColor: colors.peachLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: borderRadius.sm,
+    },
+    statusLabelPending: {
+        fontSize: fontSize.xs,
+        color: colors.textSecondary,
+        fontWeight: fontWeight.medium,
+        backgroundColor: colors.baseDark,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: borderRadius.sm,
+    },
+
+    // 그룹 상태
+    groupStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: spacing.md,
+        borderRadius: borderRadius.lg,
+        gap: spacing.sm,
+    },
+    groupStatusDone: {
+        backgroundColor: colors.mintLight,
+    },
+    groupStatusPending: {
+        backgroundColor: colors.peachLight,
+    },
+    groupStatusText: {
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.medium,
+    },
+    groupStatusTextDone: {
+        color: colors.primary,
+    },
+    groupStatusTextPending: {
+        color: colors.peachDark,
+    },
 });
+

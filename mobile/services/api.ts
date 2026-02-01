@@ -126,6 +126,13 @@ export const api = {
                 '/users/login/google/',
                 { id_token: idToken }
             ),
+
+        // 이메일 중복 확인
+        checkEmail: (email: string) =>
+            apiClient.post<{ available: boolean; error?: string; message?: string }>(
+                '/users/check-email/',
+                { email }
+            ),
     },
 
     // 복약

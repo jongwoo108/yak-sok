@@ -9,6 +9,7 @@ import {
     Platform,
     Alert,
     ScrollView,
+    ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
@@ -32,7 +33,9 @@ export default function RegisterScreen() {
         phoneNumber: '',
     });
 
-    const handleNext = () => {
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+    const handleNext = async () => {
         if (step === 1) {
             if (!formData.email || !formData.password || !formData.confirmPassword) {
                 Alert.alert('입력 오류', '모든 필드를 입력해주세요.');
@@ -42,7 +45,26 @@ export default function RegisterScreen() {
                 Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
                 return;
             }
-            setStep(2);
+            if (formData.password.length < 8) {
+                Alert.alert('입력 오류', '비밀번호는 8자 이상이어야 합니다.');
+                return;
+            }
+
+            // 이메일 중복 확인
+            setIsCheckingEmail(true);
+            try {
+                const response = await api.auth.checkEmail(formData.email);
+                if (!response.data.available) {
+                    Alert.alert('이메일 오류', response.data.error || '이미 가입된 이메일입니다.');
+                    return;
+                }
+                setStep(2);
+            } catch (error: any) {
+                const errorData = error.response?.data;
+                Alert.alert('이메일 오류', errorData?.error || '이메일 확인에 실패했습니다.');
+            } finally {
+                setIsCheckingEmail(false);
+            }
         } else if (step === 2) {
             if (!formData.firstName || !formData.role) {
                 Alert.alert('입력 오류', '이름과 역할을 선택해주세요.');
@@ -309,10 +331,18 @@ export default function RegisterScreen() {
                                     </>
                                 )}
 
-                                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                                    <Text style={styles.nextButtonText}>
-                                        {step === 1 ? '다음' : '가입 완료'}
-                                    </Text>
+                                <TouchableOpacity
+                                    style={[styles.nextButton, isCheckingEmail && styles.nextButtonDisabled]}
+                                    onPress={handleNext}
+                                    disabled={isCheckingEmail}
+                                >
+                                    {isCheckingEmail ? (
+                                        <ActivityIndicator color={colors.white} size="small" />
+                                    ) : (
+                                        <Text style={styles.nextButtonText}>
+                                            {step === 1 ? '다음' : '가입 완료'}
+                                        </Text>
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -462,7 +492,7 @@ const styles = StyleSheet.create({
         fontSize: fontSize.sm,
         fontWeight: fontWeight.bold,
         color: colors.text,
-        marginBottom: spacing.xxs,
+        marginBottom: spacing.xs,
     },
     roleTextActive: {
         color: colors.primary,
@@ -484,5 +514,8 @@ const styles = StyleSheet.create({
         fontSize: fontSize.lg,
         fontWeight: fontWeight.bold,
         color: colors.white,
+    },
+    nextButtonDisabled: {
+        opacity: 0.7,
     },
 });

@@ -260,7 +260,8 @@ class SeniorMonitoringMixin:
         보호자가 해당 시니어에 대한 접근 권한이 있는지 확인
         권한이 없으면 403, 시니어가 없으면 404 반환
         """
-        senior = get_object_or_404(User, id=senior_id, role=User.Role.SENIOR)
+        # PATIENT와 SENIOR 모두 보호자가 모니터링 가능
+        senior = get_object_or_404(User, id=senior_id, role__in=[User.Role.SENIOR, User.Role.PATIENT])
         
         # 보호자-시니어 연결 관계 확인
         if request.user.role != User.Role.GUARDIAN:

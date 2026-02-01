@@ -42,6 +42,47 @@ def get_tokens_for_user(user):
     }
 
 
+class CheckEmailView(APIView):
+    """
+    이메일 중복 확인 API (회원가입 전 사전 체크용)
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        
+        if not email:
+            return Response(
+                {'error': '이메일을 입력해주세요.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 이메일 형식 간단 검증
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return Response(
+                {'available': False, 'error': '올바른 이메일 형식이 아닙니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 중복 확인 (email 또는 username으로 검색)
+        exists = User.objects.filter(email__iexact=email).exists() or \
+                 User.objects.filter(username__iexact=email).exists()
+        
+        if exists:
+            return Response({
+                'available': False,
+                'error': '이미 가입된 이메일입니다.'
+            })
+        
+        return Response({
+            'available': True,
+            'message': '사용 가능한 이메일입니다.'
+        })
+
+
 class RegisterView(generics.CreateAPIView):
     """
     회원가입 View
