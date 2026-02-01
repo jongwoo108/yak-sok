@@ -133,8 +133,8 @@ services:
 #       - backend
 #     command: npm run dev
 
-# volumes:
-#   postgres_data:
-#   redis_data:
-#   static_volume:
-#   media_volume:
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
