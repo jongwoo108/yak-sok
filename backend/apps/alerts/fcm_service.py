@@ -154,7 +154,7 @@ class FCMService:
         
         return cls.send_notification(
             token=token,
-            title="💊 복약 시간이에요!",
+            title="복약 알림",
             body=f"{time_label} 약을 복용할 시간입니다: {medication_name}",
             data={
                 'type': 'medication_reminder',
@@ -175,7 +175,7 @@ class FCMService:
         """
         return cls.send_notification(
             token=token,
-            title="⚠️ 복약 미확인 알림",
+            title="복약 미확인 알림",
             body=f"{user_name}님이 {medication_name}을(를) 아직 복용하지 않았습니다.",
             data={
                 'type': 'guardian_alert',

@@ -252,7 +252,7 @@ class UserViewSet(viewsets.ModelViewSet):
             
         success = FCMService.send_notification(
             token=user.fcm_token,
-            title="🔔 테스트 알림",
+            title="테스트 알림",
             body="알림이 정상적으로 수신되었습니다!",
             data={"type": "test"}
         )

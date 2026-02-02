@@ -9,6 +9,31 @@ from django.utils import timezone
 from django.conf import settings
 
 
+# 시간대별 알림 메시지 정의 (이모지 없음)
+TIME_SLOT_MESSAGES = {
+    'morning': {
+        'title': '복약 알림',
+        'body': '좋은 아침이에요! 아침약 드실 시간이에요.'
+    },
+    'noon': {
+        'title': '복약 알림',
+        'body': '점심약 드실 시간이에요.'
+    },
+    'evening': {
+        'title': '복약 알림',
+        'body': '저녁약 드실 시간이에요.'
+    },
+    'night': {
+        'title': '복약 알림',
+        'body': '주무시기 전 약 드셨나요?'
+    },
+    'custom': {
+        'title': '복약 알림',
+        'body': '약 드실 시간이에요.'
+    }
+}
+
+
 @shared_task(bind=True, max_retries=3)
 def schedule_medication_alert(self, medication_log_id):
     """
@@ -77,35 +102,63 @@ def schedule_medication_alert(self, medication_log_id):
 @shared_task
 def send_scheduled_reminder(medication_log_id):
     """
-    정시 복약 리마인더 발송
+    정시 복약 리마인더 발송 (시간대별 그룹 알림)
+    - 같은 사용자, 같은 시간에는 알림 1개만 발송
+    - 시간대(time_of_day)에 따라 메시지 변경
     """
     from apps.medications.models import MedicationLog
     from apps.alerts.fcm_service import FCMService
+    from django.core.cache import cache
     
     try:
-        log = MedicationLog.objects.select_related('schedule', 'schedule__medication', 'schedule__medication__user').get(id=medication_log_id)
+        log = MedicationLog.objects.select_related(
+            'schedule', 
+            'schedule__medication', 
+            'schedule__medication__user'
+        ).get(id=medication_log_id)
         
-        # 이미 복용했으면 리마인더 안 보냄
-        if log.status == 'taken':
-            return {'status': 'skipped', 'reason': 'already_taken'}
-            
         user = log.schedule.medication.user
+        time_of_day = log.schedule.time_of_day
+        scheduled_time = log.scheduled_datetime
+        
+        # 중복 발송 방지: 같은 사용자, 같은 시간에 이미 알림이 발송되었는지 확인
+        # 캐시 키: user_id + 날짜 + 시간
+        cache_key = f"reminder_sent:{user.id}:{scheduled_time.strftime('%Y-%m-%d-%H-%M')}"
+        
+        if cache.get(cache_key):
+            print(f"[Reminder] 이미 발송된 시간대 알림 (user={user.id}, time={scheduled_time})")
+            return {'status': 'skipped', 'reason': 'already_sent_for_time_slot'}
+        
+        # 같은 시간대에 미복용 약이 있는지 확인
+        pending_logs = MedicationLog.objects.filter(
+            schedule__medication__user=user,
+            scheduled_datetime=scheduled_time,
+            status='pending'
+        ).count()
+        
+        if pending_logs == 0:
+            return {'status': 'skipped', 'reason': 'all_taken'}
+            
         if not user.fcm_token:
             return {'status': 'skipped', 'reason': 'no_token'}
-            
-        med_name = log.schedule.medication.name
-        time_display = log.get_time_of_day_display()
+        
+        # 시간대별 메시지 가져오기
+        message_config = TIME_SLOT_MESSAGES.get(time_of_day, TIME_SLOT_MESSAGES['custom'])
         
         success = FCMService.send_notification(
             token=user.fcm_token,
-            title="💊 복약 시간이에요!",
-            body=f"{time_display} 약을 복용할 시간입니다: {med_name}",
+            title=message_config['title'],
+            body=message_config['body'],
             data={
                 'type': 'medication_reminder',
-                'log_id': str(medication_log_id),
-                'medication_name': med_name
+                'time_of_day': time_of_day,
+                'scheduled_time': scheduled_time.isoformat()
             }
         )
+        
+        if success:
+            # 알림 발송 성공 시 캐시에 기록 (1시간 유효)
+            cache.set(cache_key, True, 3600)
         
         return {'status': 'sent' if success else 'failed'}
     except Exception as e:
