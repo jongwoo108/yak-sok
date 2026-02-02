@@ -42,7 +42,7 @@ const hasGoogleClientId =
 function GoogleLoginButton({ onSuccess, disabled }: { onSuccess: (idToken: string) => void; disabled: boolean }) {
     const [request, response, promptAsync] = Google.useAuthRequest({
         ...googleClientIds,
-        redirectUri: 'https://auth.expo.io/@jongwoo1008/yak-sok'
+        // redirectUri는 Expo가 자동 생성
     });
 
     useEffect(() => {
