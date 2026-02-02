@@ -121,10 +121,10 @@ export const api = {
             ),
 
         // 구글 로그인
-        googleLogin: (idToken: string) =>
+        googleLogin: (accessToken: string, userInfo: { email: string; name: string; id: string }) =>
             apiClient.post<{ user: User; tokens: { access: string; refresh: string } }>(
                 '/users/login/google/',
-                { id_token: idToken }
+                { access_token: accessToken, user_info: userInfo }
             ),
 
         // 이메일 중복 확인

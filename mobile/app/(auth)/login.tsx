@@ -39,18 +39,22 @@ const hasGoogleClientId =
     !!googleClientIds.androidClientId ||
     !!googleClientIds.webClientId;
 
-function GoogleLoginButton({ onSuccess, disabled }: { onSuccess: (idToken: string) => void; disabled: boolean }) {
+function GoogleLoginButton({ onSuccess, disabled }: { onSuccess: (accessToken: string) => void; disabled: boolean }) {
     const [request, response, promptAsync] = Google.useAuthRequest({
         ...googleClientIds,
-        // redirectUri는 Expo가 자동 생성
+        scopes: ['openid', 'profile', 'email'],
     });
 
     useEffect(() => {
         if (response?.type === 'success') {
-            const { id_token } = response.params;
-            if (id_token) {
-                onSuccess(id_token);
+            const { authentication } = response;
+            if (authentication?.accessToken) {
+                onSuccess(authentication.accessToken);
+            } else {
+                Alert.alert('로그인 실패', 'Google 인증 토큰을 받지 못했습니다.');
             }
+        } else if (response?.type === 'error') {
+            Alert.alert('로그인 실패', response.error?.message || 'Google 로그인 중 오류가 발생했습니다.');
         }
     }, [response, onSuccess]);
 
@@ -73,10 +77,17 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleGoogleLoginSuccess = async (idToken: string) => {
+    const handleGoogleLoginSuccess = async (accessToken: string) => {
         setLoading(true);
         try {
-            const res = await api.auth.googleLogin(idToken);
+            // accessToken으로 Google 사용자 정보 가져오기
+            const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const userInfo = await userInfoResponse.json();
+
+            // 백엔드에 Google 사용자 정보 전달
+            const res = await api.auth.googleLogin(accessToken, userInfo);
             const { user, tokens } = res.data;
 
             await SecureStore.setItemAsync('access_token', tokens.access);
@@ -87,11 +98,13 @@ export default function LoginScreen() {
             await NotificationService.updateServerToken(); // FCM 토큰 서버에 전송
             router.replace('/(tabs)');
         } catch (error: any) {
+            console.error('Google login error:', error);
             Alert.alert('로그인 실패', 'Google 로그인 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleLogin = async () => {
         if (!email || !password) {

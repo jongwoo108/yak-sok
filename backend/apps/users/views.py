@@ -137,23 +137,38 @@ class LoginView(APIView):
 
 class GoogleLoginView(APIView):
     """
-    Google 로그인 (Firebase ID Token 검증)
+    Google 로그인 (Access Token + User Info 검증)
     """
     authentication_classes = []  # JWT 인증 비활성화
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
-        serializer = GoogleLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        id_token = serializer.validated_data['id_token']
+        access_token = request.data.get('access_token')
+        user_info = request.data.get('user_info')
+        
+        if not access_token or not user_info:
+            return Response(
+                {'error': 'access_token과 user_info가 필요합니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
-            # 1. Firebase Admin SDK로 ID Token 검증 (clock_skew_seconds로 시간 오차 허용)
-            decoded_token = firebase_auth.verify_id_token(id_token, clock_skew_seconds=60)
-            uid = decoded_token['uid']
-            email = decoded_token.get('email')
-            name = decoded_token.get('name', '')
-            picture = decoded_token.get('picture', '')
+            # Google API로 토큰 검증
+            import requests
+            verify_response = requests.get(
+                'https://www.googleapis.com/oauth2/v3/tokeninfo',
+                params={'access_token': access_token}
+            )
+            
+            if verify_response.status_code != 200:
+                return Response(
+                    {'error': '유효하지 않은 Access Token입니다.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            token_info = verify_response.json()
+            email = user_info.get('email') or token_info.get('email')
+            name = user_info.get('name', '')
             
             if not email:
                 return Response(
@@ -161,21 +176,21 @@ class GoogleLoginView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # 2. 사용자 조회 또는 생성
+            # 사용자 조회 또는 생성
             user, created = User.objects.get_or_create(
                 email=email,
                 defaults={
-                    'username': email, # 이메일을 username으로 사용
+                    'username': email,
                     'first_name': name,
                     'is_active': True
                 }
             )
             
             if created:
-                user.set_unusable_password() # 소셜 로그인 유저는 비밀번호 없음
+                user.set_unusable_password()
                 user.save()
             
-            # 3. 토큰 발급
+            # 토큰 발급
             tokens = get_tokens_for_user(user)
             
             return Response({
@@ -184,21 +199,10 @@ class GoogleLoginView(APIView):
                 'created': created
             })
             
-        except ValueError as e:
-            print(f"!!! Google Login ValueError: {e}")
-            return Response(
-                {'error': '유효하지 않은 토큰입니다.', 'details': str(e)},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except firebase_auth.InvalidIdTokenError as e:
-            print(f"!!! Google Login InvalidIdTokenError: {e}")
-            return Response(
-                {'error': '만료되거나 잘못된 ID Token입니다.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
         except Exception as e:
+            print(f"!!! Google Login Error: {e}")
             return Response(
-                {'error': '로그인 처리 중 오류가 발생했습니다.', 'details': str(e)},
+                {'error': 'Google 로그인 처리 중 오류가 발생했습니다.', 'details': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
