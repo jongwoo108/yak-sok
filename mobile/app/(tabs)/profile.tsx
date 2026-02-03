@@ -91,11 +91,13 @@ export default function ProfileScreen() {
             const relations = res.data.results || res.data || [];
             
             // 현재 사용자 역할에 따라 연결된 사용자 추출
+            // 복약자(patient)/시니어(senior)는 보호자를, 보호자(guardian)는 복약자/시니어를 표시
             const users = relations.map((rel: GuardianRelation) => {
-                if (user.role === 'senior') {
-                    return { id: rel.guardian, name: rel.guardian_name, role: 'guardian', relationId: rel.id };
-                } else {
+                if (user.role === 'guardian') {
                     return { id: rel.senior, name: rel.senior_name, role: 'senior', relationId: rel.id };
+                } else {
+                    // patient, senior 모두 보호자(guardian)를 표시
+                    return { id: rel.guardian, name: rel.guardian_name, role: 'guardian', relationId: rel.id };
                 }
             });
             setConnectedUsers(users);
