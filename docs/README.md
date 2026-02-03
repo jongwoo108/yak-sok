@@ -1,6 +1,6 @@
 # 📋 개발 진행 현황
 
-> 최종 업데이트: 2026-01-26
+> 최종 업데이트: 2026-02-02
 
 ## 진행 상태 요약
 
@@ -21,7 +21,8 @@
 | 13. iOS SDK 53 업그레이드 | ✅ 완료 | 2026-01-25 |
 | 14. TestFlight 테스트 | ✅ 완료 | 2026-01-26 |
 | 15. **App Store 심사 제출** | ✅ 완료 | 2026-01-26 |
-| 16. App Store 심사 | ⏳ 대기중 | - |
+| 16. App Store 심사 통과 | ✅ 완료 | 2026-02-02 |
+| 17. 푸시 알림 UX 개선 | ✅ 완료 | 2026-02-02 |
 
 ---
 
@@ -175,6 +176,7 @@ python manage.py runserver
 - [12_ios_functional_issue_resolution.md](./development/12_ios_functional_issue_resolution.md) - iOS 기능 오류 해결
 - [13_ios_sdk53_troubleshooting.md](./development/13_ios_sdk53_troubleshooting.md) - iOS SDK 53 트러블슈팅
 - [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md) - **iOS SDK 53 문제 해결** ✅ 완료 (2026-01-25)
+- [15_notification_improvement.md](./development/15_notification_improvement.md) - **푸시 알림 UX 개선** ✅ 완료 (2026-02-02)
 
 ### 배포 문서
 - [deployment/README.md](./deployment/README.md) - 배포 가이드 전체

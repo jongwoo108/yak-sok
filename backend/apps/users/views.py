@@ -270,7 +270,8 @@ class GuardianRelationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.SENIOR:
+        # 복약자(PATIENT)와 시니어(SENIOR) 모두 동일하게 처리
+        if user.role in [User.Role.SENIOR, User.Role.PATIENT]:
             return GuardianRelation.objects.filter(senior=user)
         elif user.role == User.Role.GUARDIAN:
             return GuardianRelation.objects.filter(guardian=user)
