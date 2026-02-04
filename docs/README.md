@@ -177,6 +177,7 @@ python manage.py runserver
 - [13_ios_sdk53_troubleshooting.md](./development/13_ios_sdk53_troubleshooting.md) - iOS SDK 53 트러블슈팅
 - [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md) - **iOS SDK 53 문제 해결** ✅ 완료 (2026-01-25)
 - [15_notification_improvement.md](./development/15_notification_improvement.md) - **푸시 알림 UX 개선** ✅ 완료 (2026-02-02)
+- [16_health_newsfeed_plan.md](./development/16_health_newsfeed_plan.md) - **건강 뉴스피드 기능 계획** 📋 계획 (2026-02-03)
 
 ### 배포 문서
 - [deployment/README.md](./deployment/README.md) - 배포 가이드 전체
