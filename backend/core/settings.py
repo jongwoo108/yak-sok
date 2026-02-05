@@ -175,6 +175,16 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# Celery Beat 스케줄 (매일 실행되는 태스크)
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'schedule-daily-reminders': {
+        'task': 'apps.alerts.tasks.schedule_daily_reminders',
+        'schedule': crontab(hour=0, minute=5),  # 매일 00:05 (Asia/Seoul)
+        'options': {'queue': 'default'},
+    },
+}
+
 # 개발 환경: Celery 없이 태스크 동기 실행 (Redis/Celery worker 불필요)
 CELERY_TASK_ALWAYS_EAGER = DEBUG  # DEBUG=True일 때만 동기 실행
 

@@ -178,11 +178,13 @@ python manage.py runserver
 - [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md) - **iOS SDK 53 문제 해결** ✅ 완료 (2026-01-25)
 - [15_notification_improvement.md](./development/15_notification_improvement.md) - **푸시 알림 UX 개선** ✅ 완료 (2026-02-02)
 - [16_health_newsfeed_plan.md](./development/16_health_newsfeed_plan.md) - **건강 뉴스피드 기능 계획** 📋 계획 (2026-02-03)
+- [17_sql_practice_queries.md](./development/17_sql_practice_queries.md) - **SQL 실습 예제** (pgAdmin / 프로젝트 DB)
 
 ### 배포 문서
 - [deployment/README.md](./deployment/README.md) - 배포 가이드 전체
 - [deployment/01_aws_lightsail_setup.md](./deployment/01_aws_lightsail_setup.md) - AWS Lightsail 설정
 - [deployment/02_cicd_pipeline.md](./deployment/02_cicd_pipeline.md) - CI/CD (GitHub Actions)
+- [deployment/02b_zero_downtime_deployment.md](./deployment/02b_zero_downtime_deployment.md) - 무중단 배포 검토 (참고용)
 - [deployment/03_monitoring_setup.md](./deployment/03_monitoring_setup.md) - 모니터링 (Sentry)
 - [deployment/04_deployment_status.md](./deployment/04_deployment_status.md) - 배포 진행 현황
 - [deployment/05_appstore_metadata.md](./deployment/05_appstore_metadata.md) - **앱스토어 메타데이터** 📱 (2026-01-25)

@@ -273,3 +273,66 @@ def revoke_alert_task(task_id):
     )
     
     return {'status': 'revoked', 'task_id': task_id}
+
+
+@shared_task
+def schedule_daily_reminders():
+    """
+    매일 실행되는 복약 알림 스케줄러
+    오늘 날짜의 pending 상태인 MedicationLog에 대해 알림 예약
+    Celery Beat에서 매일 00:05에 실행
+    """
+    from apps.medications.models import MedicationLog
+    from django.db.models import Min
+    
+    today = timezone.localdate()
+    today_start = timezone.make_aware(
+        timezone.datetime.combine(today, timezone.datetime.min.time())
+    )
+    today_end = timezone.make_aware(
+        timezone.datetime.combine(today, timezone.datetime.max.time())
+    )
+    
+    # 오늘의 pending 상태 로그를 사용자별, 시간별로 그룹화하여 첫 번째만 가져오기
+    # 같은 시간대에는 알림 1개만 예약
+    logs = MedicationLog.objects.filter(
+        scheduled_datetime__gte=today_start,
+        scheduled_datetime__lte=today_end,
+        status='pending'
+    ).select_related(
+        'schedule',
+        'schedule__medication',
+        'schedule__medication__user'
+    ).order_by('scheduled_datetime')
+    
+    # 사용자별, 시간별로 이미 예약된 것 추적
+    scheduled_alerts = set()  # (user_id, time_str)
+    scheduled_count = 0
+    skipped_count = 0
+    
+    for log in logs:
+        user_id = log.schedule.medication.user_id
+        time_str = log.scheduled_datetime.strftime('%H:%M')
+        key = (user_id, time_str)
+        
+        if key not in scheduled_alerts:
+            # 아직 예약되지 않은 시간대 → 알림 예약
+            try:
+                schedule_medication_alert.delay(log.id)
+                scheduled_alerts.add(key)
+                scheduled_count += 1
+                print(f"[Daily Scheduler] 알림 예약: user={user_id}, time={time_str}, log_id={log.id}")
+            except Exception as e:
+                print(f"[Daily Scheduler] 알림 예약 실패: {e}")
+        else:
+            skipped_count += 1
+    
+    result = {
+        'status': 'completed',
+        'date': str(today),
+        'scheduled': scheduled_count,
+        'skipped': skipped_count,
+        'total_logs': logs.count()
+    }
+    print(f"[Daily Scheduler] 완료: {result}")
+    return result

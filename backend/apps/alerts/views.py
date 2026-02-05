@@ -67,12 +67,12 @@ class AlertViewSet(viewsets.ReadOnlyModelViewSet):
         # 연결 관계 확인
         is_connected = False
         if sender.role == 'guardian':
-            # 보호자가 보내는 경우 - 담당 시니어인지 확인
+            # 보호자가 보내는 경우 - 담당 시니어/복약자인지 확인
             is_connected = GuardianRelation.objects.filter(
                 guardian=sender, senior=recipient
             ).exists()
-        elif sender.role == 'senior':
-            # 시니어가 보내는 경우 - 담당 보호자인지 확인
+        elif sender.role in ['senior', 'patient']:
+            # 시니어/복약자가 보내는 경우 - 담당 보호자인지 확인
             is_connected = GuardianRelation.objects.filter(
                 senior=sender, guardian=recipient
             ).exists()
