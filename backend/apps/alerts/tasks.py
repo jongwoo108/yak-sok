@@ -121,9 +121,9 @@ def send_scheduled_reminder(medication_log_id):
         time_of_day = log.schedule.time_of_day
         scheduled_time = log.scheduled_datetime
         
-        # 중복 발송 방지: 같은 사용자, 같은 시간에 이미 알림이 발송되었는지 확인
-        # 캐시 키: user_id + 날짜 + 시간
-        cache_key = f"reminder_sent:{user.id}:{scheduled_time.strftime('%Y-%m-%d-%H-%M')}"
+        # 중복 발송 방지: 같은 사용자, 같은 시간대(아침/점심/저녁/취침전)에 이미 알림이 발송되었는지 확인
+        # 캐시 키: user_id + 날짜 + 시간대(time_of_day)
+        cache_key = f"reminder_sent:{user.id}:{scheduled_time.strftime('%Y-%m-%d')}:{time_of_day}"
         
         if cache.get(cache_key):
             print(f"[Reminder] 이미 발송된 시간대 알림 (user={user.id}, time={scheduled_time})")
@@ -305,15 +305,15 @@ def schedule_daily_reminders():
         'schedule__medication__user'
     ).order_by('scheduled_datetime')
     
-    # 사용자별, 시간별로 이미 예약된 것 추적
-    scheduled_alerts = set()  # (user_id, time_str)
+    # 사용자별, 시간대(time_of_day)별로 이미 예약된 것 추적
+    scheduled_alerts = set()  # (user_id, time_of_day)
     scheduled_count = 0
     skipped_count = 0
     
     for log in logs:
         user_id = log.schedule.medication.user_id
-        time_str = log.scheduled_datetime.strftime('%H:%M')
-        key = (user_id, time_str)
+        time_of_day = log.schedule.time_of_day  # 아침/점심/저녁/취침전
+        key = (user_id, time_of_day)
         
         if key not in scheduled_alerts:
             # 아직 예약되지 않은 시간대 → 알림 예약
@@ -321,7 +321,7 @@ def schedule_daily_reminders():
                 schedule_medication_alert.delay(log.id)
                 scheduled_alerts.add(key)
                 scheduled_count += 1
-                print(f"[Daily Scheduler] 알림 예약: user={user_id}, time={time_str}, log_id={log.id}")
+                print(f"[Daily Scheduler] 알림 예약: user={user_id}, time_of_day={time_of_day}, log_id={log.id}")
             except Exception as e:
                 print(f"[Daily Scheduler] 알림 예약 실패: {e}")
         else:
