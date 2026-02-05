@@ -13,23 +13,33 @@ from django.conf import settings
 TIME_SLOT_MESSAGES = {
     'morning': {
         'title': '복약 알림',
-        'body': '좋은 아침이에요! 아침약 드실 시간이에요.'
+        'body': '좋은 아침이에요! 아침약 드실 시간이에요.',
+        'missed_title': '미복약 알림',
+        'missed_body': '아침약 복용 시간이 30분 경과했습니다.'
     },
     'noon': {
         'title': '복약 알림',
-        'body': '점심약 드실 시간이에요.'
+        'body': '점심약 드실 시간이에요.',
+        'missed_title': '미복약 알림',
+        'missed_body': '점심약 복용 시간이 30분 경과했습니다.'
     },
     'evening': {
         'title': '복약 알림',
-        'body': '저녁약 드실 시간이에요.'
+        'body': '저녁약 드실 시간이에요.',
+        'missed_title': '미복약 알림',
+        'missed_body': '저녁약 복용 시간이 30분 경과했습니다.'
     },
     'night': {
         'title': '복약 알림',
-        'body': '주무시기 전 약 드셨나요?'
+        'body': '주무시기 전 약 드셨나요?',
+        'missed_title': '미복약 알림',
+        'missed_body': '취침전 약 복용 시간이 30분 경과했습니다.'
     },
     'custom': {
         'title': '복약 알림',
-        'body': '약 드실 시간이에요.'
+        'body': '약 드실 시간이에요.',
+        'missed_title': '미복약 알림',
+        'missed_body': '약 복용 시간이 30분 경과했습니다.'
     }
 }
 
@@ -56,6 +66,8 @@ def schedule_medication_alert(self, medication_log_id):
         # 2. 비상 알림 예약 (예정 시간 + 임계 시간)
         # 중증 질환인 경우 임계 시간을 0으로 설정하여 보호자에게 즉시 알림
         is_severe = log.schedule.medication.group.is_severe if log.schedule.medication.group else False
+        time_of_day = log.schedule.time_of_day
+        message_config = TIME_SLOT_MESSAGES.get(time_of_day, TIME_SLOT_MESSAGES['custom'])
         
         if is_severe:
             threshold = 0
@@ -63,8 +75,8 @@ def schedule_medication_alert(self, medication_log_id):
             alert_message = f'중증 질환 약({log.schedule.medication.name})의 복용 시간이 되었습니다. 즉시 확인이 필요합니다.'
         else:
             threshold = settings.SAFETY_LINE_SETTINGS.get('DEFAULT_THRESHOLD_MINUTES', 30)
-            alert_title = '미복약 알림'
-            alert_message = f'{log.schedule.medication.name} 복용 시간이 {threshold}분 경과했습니다.'
+            alert_title = message_config['missed_title']
+            alert_message = message_config['missed_body']
             
         alert_time = log.scheduled_datetime + timezone.timedelta(minutes=threshold)
         
@@ -205,22 +217,24 @@ def trigger_safety_alert(self, alert_id):
             alert.save()
             return {'status': 'skipped', 'reason': 'already_sent_for_time_slot'}
         
-        # 1단계: 시니어 본인 알림
+        # 1단계: 시니어 본인 알림 (시간대별 그룹 메시지 사용)
+        message_config = TIME_SLOT_MESSAGES.get(time_of_day, TIME_SLOT_MESSAGES['custom'])
         send_push_notification(
             user_id=user.id,
-            title=alert.title,
-            message=alert.message,
+            title=message_config['missed_title'],
+            message=message_config['missed_body'],
             severity=alert.alert_type  # 심각도 전달
         )
         
-        # 2단계: 보호자 알림
+        # 2단계: 보호자 알림 (시간대별 그룹 메시지 사용)
+        message_config = TIME_SLOT_MESSAGES.get(time_of_day, TIME_SLOT_MESSAGES['custom'])
         guardian_relations = GuardianRelation.objects.filter(senior=user)
         for relation in guardian_relations:
             guardian = relation.guardian
             send_push_notification(
                 user_id=guardian.id,
-                title=f'[긴급] {user.first_name}님 미복약 알림',
-                message=alert.message,
+                title=f'[알림] {user.first_name or user.username}님',
+                message=message_config['missed_body'],
                 severity=Alert.AlertType.EMERGENCY  # 보호자 알림은 긴급으로 처리
             )
         

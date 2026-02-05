@@ -98,9 +98,6 @@ class MedicationSerializer(serializers.ModelSerializer):
         end_date = start_date + timedelta(days=days_supply)
         today = timezone.localdate()
         
-        # 오늘 날짜에 이미 알림이 예약된 시간을 추적
-        scheduled_alert_times = set()
-        
         for schedule_data in schedules_data:
             schedule = MedicationSchedule.objects.create(
                 medication=medication,
@@ -120,22 +117,8 @@ class MedicationSerializer(serializers.ModelSerializer):
                     status=MedicationLog.Status.PENDING
                 )
                 
-                # 오늘 날짜의 로그만 비상 알림 스케줄링
-                # 같은 시간에 이미 알림이 예약되어 있으면 건너뛰기 (시간대별 1개 알림)
-                if current_date == today:
-                    time_key = schedule_data['scheduled_time'].strftime('%H:%M')
-                    
-                    if time_key not in scheduled_alert_times:
-                        try:
-                            from apps.alerts.tasks import schedule_medication_alert
-                            schedule_medication_alert.delay(log.id)
-                            scheduled_alert_times.add(time_key)
-                            print(f"[알림 예약] {time_key} 시간대 알림 예약 완료")
-                        except Exception as e:
-                            print(f"알림 스케줄링 실패: {e}")
-                    else:
-                        print(f"[알림 건너뛰기] {time_key} 시간대 알림 이미 예약됨")
-                
+                # 알림 예약은 schedule_daily_reminders()에서 일괄 처리
+                # 약 등록 시에는 MedicationLog만 생성하고 알림은 예약하지 않음
                 current_date += timedelta(days=1)
         
         return medication
