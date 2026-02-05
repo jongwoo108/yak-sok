@@ -1,6 +1,6 @@
 # 푸시 알림 UX 개선
 
-> 최종 업데이트: 2026-02-02
+> 최종 업데이트: 2026-02-05
 
 ---
 
@@ -9,7 +9,7 @@
 사용자 경험 개선을 위해 푸시 알림 로직을 변경했습니다.
 
 **변경 전**: 약 단위로 개별 알림 발송 (약 3개 = 알림 3개)
-**변경 후**: 시간대 단위로 그룹 알림 발송 (약 3개 = 알림 1개)
+**변경 후**: 시간대(time_of_day) 단위로 그룹 알림 발송 (약 3개 = 알림 1개)
 
 ---
 
@@ -32,13 +32,16 @@
 
 - **같은 사용자**: 동일 사용자의 약만 그룹화
 - **같은 날짜**: 같은 날의 복약만
-- **같은 시간**: 정확히 같은 시간 (08:00과 08:30은 별개)
+- **같은 시간대(time_of_day)**: morning, noon, evening, night 기준으로 그룹화
+  - 08:00과 08:30 모두 morning이면 1개 알림
 
 ---
 
 ### 2. 시간대별 맞춤 메시지
 
 시간대(time_of_day)에 따라 다른 메시지를 발송합니다.
+
+#### 복약 리마인더
 
 | 시간대 | 코드 | 제목 | 메시지 |
 |--------|------|------|--------|
@@ -47,6 +50,16 @@
 | 저녁 | `evening` | 복약 알림 | 저녁약 드실 시간이에요. |
 | 취침 전 | `night` | 복약 알림 | 주무시기 전 약 드셨나요? |
 | 사용자 지정 | `custom` | 복약 알림 | 약 드실 시간이에요. |
+
+#### 미복약 알림 (복약 시간 30분 경과 후)
+
+| 시간대 | 코드 | 제목 | 메시지 |
+|--------|------|------|--------|
+| 아침 | `morning` | 미복약 알림 | 아침약 복용 시간이 30분 경과했습니다. |
+| 점심 | `noon` | 미복약 알림 | 점심약 복용 시간이 30분 경과했습니다. |
+| 저녁 | `evening` | 미복약 알림 | 저녁약 복용 시간이 30분 경과했습니다. |
+| 취침 전 | `night` | 미복약 알림 | 취침전 약 복용 시간이 30분 경과했습니다. |
+| 사용자 지정 | `custom` | 미복약 알림 | 약 복용 시간이 30분 경과했습니다. |
 
 ---
 
@@ -68,10 +81,22 @@
 
 | 파일 | 변경 내용 |
 |------|-----------|
-| `backend/apps/alerts/tasks.py` | 시간대별 메시지 정의, 중복 발송 방지 로직 |
-| `backend/apps/medications/serializers.py` | 알림 예약 시 중복 체크 |
+| `backend/apps/alerts/tasks.py` | 시간대별 메시지 정의, 중복 발송 방지, 매일 스케줄러 |
+| `backend/apps/medications/serializers.py` | 약 등록 시 알림 예약 제거 (스케줄러에서 일괄 처리) |
 | `backend/apps/alerts/fcm_service.py` | 이모지 제거 |
-| `backend/apps/users/views.py` | 테스트 알림 이모지 제거 |
+| `backend/apps/alerts/views.py` | patient 역할 알림 전송 지원 |
+| `backend/core/settings.py` | Redis 캐시 백엔드 설정, Celery Beat 스케줄 |
+
+### 알림 스케줄링 구조
+
+```
+[매일 00:05] schedule_daily_reminders (Celery Beat)
+    ↓
+[사용자별, 시간대별 첫 번째 로그만] schedule_medication_alert
+    ↓
+[정시] send_scheduled_reminder → 복약 리마인더
+[정시+30분] trigger_safety_alert → 미복약 알림
+```
 
 ### 핵심 코드
 
@@ -81,56 +106,53 @@
 TIME_SLOT_MESSAGES = {
     'morning': {
         'title': '복약 알림',
-        'body': '좋은 아침이에요! 아침약 드실 시간이에요.'
+        'body': '좋은 아침이에요! 아침약 드실 시간이에요.',
+        'missed_title': '미복약 알림',
+        'missed_body': '아침약 복용 시간이 30분 경과했습니다.'
     },
-    'noon': {
-        'title': '복약 알림',
-        'body': '점심약 드실 시간이에요.'
-    },
-    'evening': {
-        'title': '복약 알림',
-        'body': '저녁약 드실 시간이에요.'
-    },
-    'night': {
-        'title': '복약 알림',
-        'body': '주무시기 전 약 드셨나요?'
-    },
-    'custom': {
-        'title': '복약 알림',
-        'body': '약 드실 시간이에요.'
-    }
+    # noon, evening, night, custom...
 }
 ```
 
-#### 중복 발송 방지 (`tasks.py`)
+#### 중복 발송 방지 - cache.add() 사용 (`tasks.py`)
 
 ```python
-# 캐시 키: user_id + 날짜 + 시간
-cache_key = f"reminder_sent:{user.id}:{scheduled_time.strftime('%Y-%m-%d-%H-%M')}"
+# 캐시 키: user_id + 날짜 + 시간대(time_of_day)
+cache_key = f"reminder_sent:{user.id}:{scheduled_time.strftime('%Y-%m-%d')}:{time_of_day}"
 
-if cache.get(cache_key):
+# cache.add()는 키가 없을 때만 설정 (atomic operation, race condition 방지)
+if not cache.add(cache_key, True, 3600):
     return {'status': 'skipped', 'reason': 'already_sent_for_time_slot'}
-
-# 알림 발송 후 캐시에 기록 (1시간 유효)
-if success:
-    cache.set(cache_key, True, 3600)
 ```
 
-#### 알림 예약 중복 체크 (`serializers.py`)
+#### 매일 알림 스케줄러 (`tasks.py`)
 
 ```python
-# 오늘 날짜에 이미 알림이 예약된 시간을 추적
-scheduled_alert_times = set()
-
-for schedule_data in schedules_data:
-    # ... 스케줄 생성 ...
+@shared_task
+def schedule_daily_reminders():
+    """매일 00:05에 실행 - 오늘의 pending 로그에 대해 알림 예약"""
+    logs = MedicationLog.objects.filter(
+        scheduled_datetime__date=today,
+        status='pending'
+    )
     
-    if current_date == today:
-        time_key = schedule_data['scheduled_time'].strftime('%H:%M')
-        
-        if time_key not in scheduled_alert_times:
+    scheduled_alerts = set()  # (user_id, time_of_day)
+    for log in logs:
+        key = (user_id, time_of_day)
+        if key not in scheduled_alerts:
             schedule_medication_alert.delay(log.id)
-            scheduled_alert_times.add(time_key)
+            scheduled_alerts.add(key)
+```
+
+#### Django Redis 캐시 설정 (`settings.py`)
+
+```python
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+    }
+}
 ```
 
 ---
@@ -147,9 +169,8 @@ ssh -i ~/.ssh/LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.39.142.149
 cd /app/yak-sok
 git pull origin main
 
-# 서버 재시작
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml up -d
+# 서버 재빌드 및 재시작
+docker-compose -f docker-compose.prod.yml up -d --build backend celery_worker celery_beat
 
 # 상태 확인
 docker-compose -f docker-compose.prod.yml ps
@@ -161,14 +182,56 @@ docker-compose -f docker-compose.prod.yml ps
 
 ## 테스트 방법
 
-1. 앱에서 같은 시간에 약 2~3개 등록
-2. 해당 시간에 알림이 **1개만** 오는지 확인
-3. 시간대에 맞는 메시지가 표시되는지 확인
+### 수동 테스트
+
+```bash
+docker-compose -f docker-compose.prod.yml exec backend python manage.py shell
+```
+
+```python
+from apps.alerts.tasks import schedule_daily_reminders
+result = schedule_daily_reminders()
+print(result)
+# {'status': 'completed', 'date': '2026-02-05', 'scheduled': 16, 'skipped': 57, 'total_logs': 73}
+```
 
 ### 예상 결과
 
-- 아침 08:00에 약 3개 등록 → 08:00에 "좋은 아침이에요! 아침약 드실 시간이에요." 1개
-- 취침 전 22:00에 약 1개 등록 → 22:00에 "주무시기 전 약 드셨나요?" 1개
+- 아침 08:00에 약 3개 등록 → 08:00에 "좋은 아침이에요! 아침약 드실 시간이에요." **1개**
+- 아침 약 미복용 시 → 08:30에 "아침약 복용 시간이 30분 경과했습니다." **1개**
+
+---
+
+## 주의사항 (트러블슈팅)
+
+### FCM 토큰 중복 문제
+
+여러 계정이 같은 FCM 토큰을 사용하면 다른 사용자의 알림이 전달됩니다.
+
+**확인 방법:**
+```python
+from apps.users.models import User
+patient_token = User.objects.get(id=8).fcm_token
+same_token_users = User.objects.filter(fcm_token=patient_token)
+for u in same_token_users:
+    print(f"user={u.id}, email={u.email}")
+```
+
+**해결 방법:**
+- 테스트 계정의 FCM 토큰을 빈 문자열로 변경
+- 또는 각 기기에서 해당 계정으로 로그인하여 토큰 갱신
+
+### Celery 큐에 남아있는 태스크
+
+이전에 예약된 태스크가 남아있으면 중복 알림이 발생할 수 있습니다.
+
+```bash
+# Celery 큐 비우기
+docker-compose -f docker-compose.prod.yml exec celery_worker celery -A core purge -f
+
+# Redis 캐시 초기화
+docker-compose -f docker-compose.prod.yml exec redis redis-cli FLUSHALL
+```
 
 ---
 
@@ -181,4 +244,5 @@ docker-compose -f docker-compose.prod.yml ps
 ---
 
 **작성일**: 2026-02-02
+**최종 업데이트**: 2026-02-05
 **상태**: 배포 완료
