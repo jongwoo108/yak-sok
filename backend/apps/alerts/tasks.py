@@ -125,8 +125,10 @@ def send_scheduled_reminder(medication_log_id):
         # 캐시 키: user_id + 날짜 + 시간대(time_of_day)
         cache_key = f"reminder_sent:{user.id}:{scheduled_time.strftime('%Y-%m-%d')}:{time_of_day}"
         
-        if cache.get(cache_key):
-            print(f"[Reminder] 이미 발송된 시간대 알림 (user={user.id}, time={scheduled_time})")
+        # cache.add()는 키가 없을 때만 설정 (atomic operation, race condition 방지)
+        # 반환값: True면 새로 설정됨 (이 태스크가 알림 발송), False면 이미 존재 (스킵)
+        if not cache.add(cache_key, True, 3600):
+            print(f"[Reminder] 이미 발송된 시간대 알림 (user={user.id}, time_of_day={time_of_day})")
             return {'status': 'skipped', 'reason': 'already_sent_for_time_slot'}
         
         # 같은 시간대에 미복용 약이 있는지 확인
@@ -156,9 +158,9 @@ def send_scheduled_reminder(medication_log_id):
             }
         )
         
-        if success:
-            # 알림 발송 성공 시 캐시에 기록 (1시간 유효)
-            cache.set(cache_key, True, 3600)
+        # 발송 실패 시 캐시 삭제하여 재시도 가능하게 함
+        if not success:
+            cache.delete(cache_key)
         
         return {'status': 'sent' if success else 'failed'}
     except Exception as e:
