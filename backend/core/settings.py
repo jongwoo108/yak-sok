@@ -165,6 +165,14 @@ if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True  # 모든 Origin 허용
     CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app', 'https://*.ngrok.io']
 
+# Django Cache Configuration (Redis)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+    }
+}
+
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = 'django-db'
