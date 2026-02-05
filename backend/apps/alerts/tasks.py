@@ -174,19 +174,36 @@ def trigger_safety_alert(self, alert_id):
     Safety Line 비상 알림 발송
     1단계: 시니어 본인 알림
     2단계: 보호자 푸시 알림
-    3단계: 비상 연락처 호출
+    - 시간대(time_of_day)별로 1개만 발송 (중복 방지)
     """
     from apps.alerts.models import Alert
     from apps.users.models import GuardianRelation
+    from django.core.cache import cache
     
     try:
-        alert = Alert.objects.get(id=alert_id)
+        alert = Alert.objects.select_related('medication_log__schedule').get(id=alert_id)
         
         # 이미 취소되었으면 종료
         if alert.status == Alert.Status.CANCELLED:
             return {'status': 'cancelled', 'alert_id': alert_id}
         
         user = alert.user
+        
+        # 시간대 정보 가져오기
+        time_of_day = 'unknown'
+        if alert.medication_log and alert.medication_log.schedule:
+            time_of_day = alert.medication_log.schedule.time_of_day
+        
+        # 중복 발송 방지: 같은 사용자, 같은 날, 같은 시간대에 이미 비상 알림이 발송되었는지 확인
+        today = timezone.localdate()
+        cache_key = f"safety_alert_sent:{user.id}:{today}:{time_of_day}"
+        
+        if not cache.add(cache_key, True, 3600):
+            print(f"[Safety Alert] 이미 발송된 시간대 비상 알림 (user={user.id}, time_of_day={time_of_day})")
+            # 알림 상태를 CANCELLED로 업데이트 (중복)
+            alert.status = Alert.Status.CANCELLED
+            alert.save()
+            return {'status': 'skipped', 'reason': 'already_sent_for_time_slot'}
         
         # 1단계: 시니어 본인 알림
         send_push_notification(
