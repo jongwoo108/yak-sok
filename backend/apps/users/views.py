@@ -230,9 +230,15 @@ class UserViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['patch'])
     def update_fcm_token(self, request):
-        """FCM 토큰 업데이트"""
+        """FCM 토큰 업데이트
+        - 같은 토큰을 가진 다른 사용자가 있으면 해당 토큰 삭제 (디바이스당 1계정 보장)
+        """
         token = request.data.get('fcm_token')
         if token is not None:
+            # 다른 사용자가 같은 토큰을 가지고 있으면 삭제 (디바이스당 1계정)
+            if token:
+                User.objects.filter(fcm_token=token).exclude(id=request.user.id).update(fcm_token='')
+            
             request.user.fcm_token = token
             request.user.save(update_fields=['fcm_token'])
             return Response({'status': 'FCM 토큰이 업데이트되었습니다.'})
