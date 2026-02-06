@@ -111,6 +111,8 @@ services:
       redis:
         condition: service_healthy
     command: celery -A core worker --loglevel=info --concurrency=4
+    healthcheck:
+      disable: true
     networks:
       - yaksok-network
 
@@ -138,6 +140,8 @@ services:
       redis:
         condition: service_healthy
     command: celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    healthcheck:
+      disable: true
     networks:
       - yaksok-network
 
