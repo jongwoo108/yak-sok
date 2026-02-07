@@ -37,6 +37,7 @@ urlpatterns = [
     re_path(r'^api/users/?', include('apps.users.urls')),
     re_path(r'^api/medications/?', include('apps.medications.urls')),
     re_path(r'^api/alerts/?', include('apps.alerts.urls')),
+    re_path(r'^api/health/?', include('apps.health.urls')),
 ]
 
 if settings.DEBUG:
