@@ -61,7 +61,6 @@ def infer_conditions_from_medications(user):
             }
         ],
         response_format={"type": "json_object"},
-        temperature=0.3,
     )
     
     result = json.loads(response.choices[0].message.content)
@@ -113,7 +112,6 @@ def generate_search_queries(conditions):
             }
         ],
         response_format={"type": "json_object"},
-        temperature=0.5,
     )
     
     result = json.loads(response.choices[0].message.content)
