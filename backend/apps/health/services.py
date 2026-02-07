@@ -35,7 +35,7 @@ def infer_conditions_from_medications(user):
     client = _get_openai_client()
     
     response = client.chat.completions.create(
-        model="gpt-5o",
+        model="gpt-5",
         messages=[
             {
                 "role": "system",
@@ -85,7 +85,7 @@ def generate_search_queries(conditions):
     client = _get_openai_client()
     
     response = client.chat.completions.create(
-        model="gpt-5o",
+        model="gpt-5",
         messages=[
             {
                 "role": "system",
