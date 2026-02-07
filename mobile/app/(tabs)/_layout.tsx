@@ -16,9 +16,15 @@ export default function TabLayout() {
             tabBar={(props) => <CustomTabBar {...props} />}
         >
             <Tabs.Screen
+                name="health-feed"
+                options={{
+                    title: '건강피드',
+                }}
+            />
+            <Tabs.Screen
                 name="index"
                 options={{
-                    title: '홈',
+                    title: '복약',
                 }}
             />
             <Tabs.Screen

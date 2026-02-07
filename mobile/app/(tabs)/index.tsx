@@ -1,5 +1,5 @@
 /**
- * HomeScreen - 뉴모피즘 + 파스텔 홈 화면
+ * HomeScreen - 복약 체크 화면
  * Neumorphism + Pastel Design
  */
 
@@ -15,6 +15,7 @@ import {
     Switch,
     Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useMedicationStore } from '../../services/store';
@@ -35,6 +36,7 @@ interface GroupedLogs {
 
 
 export default function HomeScreen() {
+    const router = useRouter();
     const { todayLogs, fetchTodayLogs, batchTakeMedications, isLoading } = useMedicationStore();
     const [refreshing, setRefreshing] = useState(false);
     const [takingGroup, setTakingGroup] = useState<string | null>(null);
@@ -132,6 +134,17 @@ export default function HomeScreen() {
                     <Text style={styles.headerTitle}>오늘의 약속</Text>
                     <Text style={styles.headerDate}>{today}</Text>
                 </View>
+
+                {/* 내 약 관리 바로가기 */}
+                <TouchableOpacity
+                    style={styles.manageMedsButton}
+                    onPress={() => router.push('/(tabs)/medications' as any)}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="list" size={16} color={colors.primary} />
+                    <Text style={styles.manageMedsText}>내 약 관리</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textLight} />
+                </TouchableOpacity>
 
                 {/* 알림 토글 */}
                 <NeumorphCard style={styles.cardSpacing}>
@@ -307,6 +320,23 @@ const styles = StyleSheet.create({
         fontSize: fontSize.base,
         color: colors.textSecondary,
         fontWeight: fontWeight.medium,
+    },
+    manageMedsButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.pill,
+        backgroundColor: colors.base,
+        gap: spacing.xs,
+        marginBottom: spacing.lg,
+        ...shadows.soft,
+    },
+    manageMedsText: {
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.semibold,
+        color: colors.primary,
     },
 
     // 뉴모피즘 카드

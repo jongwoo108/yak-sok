@@ -63,6 +63,7 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
     volumes:
@@ -102,6 +103,7 @@ services:
       - POSTGRES_PORT=5432
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
     volumes:
       - ./backend/firebase-credentials.json:/app/firebase-credentials.json:ro

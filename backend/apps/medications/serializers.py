@@ -121,6 +121,13 @@ class MedicationSerializer(serializers.ModelSerializer):
                 # 약 등록 시에는 MedicationLog만 생성하고 알림은 예약하지 않음
                 current_date += timedelta(days=1)
         
+        # 건강 프로필 자동 분석 (질병 추론 + YouTube 검색)
+        try:
+            from apps.health.tasks import refresh_user_health_profile
+            refresh_user_health_profile.delay(medication.user.id)
+        except Exception:
+            pass  # health 앱 미설치 시 무시
+        
         return medication
 
 

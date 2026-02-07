@@ -5,7 +5,7 @@
 import axios, { AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelation, EmergencyContact, CalendarData } from './types';
+import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelation, EmergencyContact, CalendarData, HealthProfile, CachedVideo, VideoBookmark } from './types';
 
 // 환경변수에서 API URL 가져오기
 // 프로덕션 서버 URL (AWS Lightsail + SSL)
@@ -256,6 +256,23 @@ export const api = {
                     days_supply: number;
                 }>;
             }>(`/medications/senior/${seniorId}/calendar/?year=${year}&month=${month}`),
+    },
+
+    // 건강 정보
+    health: {
+        getProfile: () => apiClient.get<HealthProfile>('/health/profile/'),
+        refreshProfile: () => apiClient.post<{ status: string }>('/health/profile/refresh/'),
+        getFeed: (params?: { category?: string; page?: number }) => {
+            const searchParams = new URLSearchParams();
+            if (params?.category) searchParams.append('category', params.category);
+            if (params?.page) searchParams.append('page', String(params.page));
+            const qs = searchParams.toString();
+            return apiClient.get<ApiResponse<CachedVideo>>(`/health/feed/${qs ? '?' + qs : ''}`);
+        },
+        getVideo: (id: number) => apiClient.get<CachedVideo>(`/health/feed/${id}/`),
+        getBookmarks: () => apiClient.get<ApiResponse<VideoBookmark>>('/health/bookmarks/'),
+        addBookmark: (videoId: number) => apiClient.post<VideoBookmark>('/health/bookmarks/', { video: videoId }),
+        removeBookmark: (id: number) => apiClient.delete(`/health/bookmarks/${id}/`),
     },
 
     // 사용자

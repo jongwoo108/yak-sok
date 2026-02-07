@@ -1,6 +1,6 @@
 # 📋 개발 진행 현황
 
-> 최종 업데이트: 2026-02-05
+> 최종 업데이트: 2026-02-07
 
 ## 진행 상태 요약
 
@@ -23,6 +23,8 @@
 | 15. **App Store 심사 제출** | ✅ 완료 | 2026-01-26 |
 | 16. App Store 심사 통과 | ✅ 완료 | 2026-02-02 |
 | 17. 푸시 알림 UX 개선 | ✅ 완료 | 2026-02-02 |
+| 18. 스플래시 이미지 업데이트 | ✅ 완료 | 2026-02-07 |
+| 19. 건강 유튜브 피드 기능 | ✅ 구현 완료 (배포 전) | 2026-02-07 |
 
 ---
 
@@ -109,8 +111,8 @@ POST /api/alerts/send/
 
 | 역할 | 설명 | 탭 구성 |
 |------|------|---------|
-| **복약자** | 자신의 약만 관리 | 홈, 내 약, 캘린더, 설정 (4탭) |
-| **시니어** | 약 관리 + 보호자 연결 | 홈, 내 약, 캘린더, 설정 (4탭) |
+| **복약자** | 자신의 약만 관리 | 건강피드, 복약, 캘린더, 설정 (4탭) |
+| **시니어** | 약 관리 + 보호자 연결 | 건강피드, 복약, 캘린더, 설정 (4탭) |
 | **보호자** | 연결된 사용자 모니터링 | 시니어관리, 시니어캘린더, 설정 (3탭) |
 
 ### 연결 규칙
@@ -177,7 +179,7 @@ python manage.py runserver
 - [13_ios_sdk53_troubleshooting.md](./development/13_ios_sdk53_troubleshooting.md) - iOS SDK 53 트러블슈팅
 - [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md) - **iOS SDK 53 문제 해결** ✅ 완료 (2026-01-25)
 - [15_notification_improvement.md](./development/15_notification_improvement.md) - **푸시 알림 UX 개선** ✅ 완료 (2026-02-05 업데이트)
-- [16_health_newsfeed_plan.md](./development/16_health_newsfeed_plan.md) - **건강 뉴스피드 기능 계획** 📋 계획 (2026-02-03)
+- [16_health_newsfeed_plan.md](./development/16_health_newsfeed_plan.md) - **건강 유튜브 피드 기능** ✅ 구현 완료 (2026-02-07)
 - [17_sql_practice_queries.md](./development/17_sql_practice_queries.md) - **SQL 실습 예제** (pgAdmin / 프로젝트 DB)
 
 ### 배포 문서
@@ -225,14 +227,17 @@ python manage.py runserver
 
 ## 다음 단계
 
-### ⏳ App Store 심사 대기 중
-- 예상 심사 기간: 1-3일
-- 심사 승인 후 App Store에서 "약속" 검색 가능
+### 건강 유튜브 피드 배포 준비
+1. **YOUTUBE_API_KEY 발급**: Google Cloud Console에서 YouTube Data API v3 키 발급
+2. **DB 마이그레이션**: `python manage.py makemigrations health && python manage.py migrate`
+3. **패키지 설치**: `npx expo install react-native-youtube-iframe react-native-webview`
+4. **신뢰 채널 등록**: Django Admin에서 의사/약사/공공기관 YouTube 채널 등록
+5. **모바일 앱 새 빌드**: 탭 구조 변경 + YouTube 재생 기능 포함
 
 ### 향후 계획
-1. **App Store 심사 승인 후**: 정식 출시 및 홍보
-2. **사용자 피드백 수집**: 앱 개선사항 파악
-3. **버전 업데이트**: 기능 추가 및 버그 수정
+1. **건강 피드 배포 및 테스트**: 실제 사용자 피드백 수집
+2. **콘텐츠 품질 관리**: 신뢰 채널 목록 확장, 부적절 영상 필터링
+3. **사용자 피드백 수집**: 앱 개선사항 파악
 4. **테스트 코드 작성**: 유닛/통합 테스트
 5. **성능 최적화**: API 응답 속도 개선
 

@@ -148,3 +148,48 @@ export interface CalendarData {
     hospital_visits: HospitalVisit[];
 }
 
+// 건강 프로필
+export interface HealthCondition {
+    name: string;
+    category: string;
+}
+
+export interface HealthProfile {
+    id: number;
+    username: string;
+    conditions: HealthCondition[];
+    search_queries: { query: string; category: string; condition: string }[];
+    last_analyzed_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+// 캐시된 YouTube 영상
+export interface CachedVideo {
+    id: number;
+    video_id: string;
+    title: string;
+    description?: string;
+    thumbnail_url: string;
+    channel_title: string;
+    channel_id: string;
+    published_at: string;
+    view_count: number;
+    content_category: 'diet' | 'exercise' | 'lifestyle' | 'medical' | 'general';
+    content_category_display: string;
+    conditions: { id: number; name: string; category: string; category_display: string }[];
+    is_from_trusted_channel: boolean;
+    is_bookmarked: boolean;
+    search_query?: string;
+    fetched_at?: string;
+    updated_at?: string;
+}
+
+// 영상 북마크
+export interface VideoBookmark {
+    id: number;
+    video: number;
+    video_detail: CachedVideo;
+    created_at: string;
+}
+

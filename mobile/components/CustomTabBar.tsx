@@ -22,7 +22,8 @@ interface CustomTabBarProps {
 }
 
 const icons: Record<string, string> = {
-    index: 'home',
+    'health-feed': 'heart',
+    index: 'medical',
     calendar: 'calendar',
     'senior-calendar': 'calendar',
     medications: 'add-circle',
@@ -32,8 +33,8 @@ const icons: Record<string, string> = {
 
 // 보호자 전용 탭: 시니어 관리, 시니어 캘린더, 설정 (3탭)
 const GUARDIAN_TABS = ['seniors', 'senior-calendar', 'profile'];
-// 복약자/시니어 탭: 홈, 내 약, 캘린더, 설정 (4탭)
-const PATIENT_SENIOR_TABS = ['index', 'medications', 'calendar', 'profile'];
+// 복약자/시니어 탭: 건강피드, 복약, 캘린더, 설정 (4탭)
+const PATIENT_SENIOR_TABS = ['health-feed', 'index', 'calendar', 'profile'];
 
 export function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
     // 사용자 role 직접 확인

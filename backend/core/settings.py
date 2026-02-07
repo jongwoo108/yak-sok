@@ -10,17 +10,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Sentry Error Tracking (Production)
-import sentry_sdk
-
+# Sentry Error Tracking (Production) - optional for local dev
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
 if SENTRY_DSN and not os.environ.get('DJANGO_DEBUG', 'True') == 'True':
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,
-        environment="production",
-        send_default_pii=False,
-    )
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=0.1,
+            environment="production",
+            send_default_pii=False,
+        )
+    except ImportError:
+        pass  # sentry_sdk not installed (e.g. local dev)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,6 +55,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.medications',
     'apps.alerts',
+    'apps.health',
 ]
 
 MIDDLEWARE = [
@@ -191,6 +194,11 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=0, minute=5),  # 매일 00:05 (Asia/Seoul)
         'options': {'queue': 'default'},
     },
+    'refresh-youtube-cache': {
+        'task': 'apps.health.tasks.refresh_youtube_cache',
+        'schedule': crontab(hour=5, minute=0),  # 매일 05:00 (Asia/Seoul)
+        'options': {'queue': 'default'},
+    },
 }
 
 # 개발 환경: Celery 없이 태스크 동기 실행 (Redis/Celery worker 불필요)
@@ -203,8 +211,11 @@ CELERY_TASK_ALWAYS_EAGER = DEBUG  # DEBUG=True일 때만 동기 실행
 
 
 
-# OpenAI API Key (for OCR and STT)
+# OpenAI API Key (for OCR, STT, Health Profile)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+# YouTube Data API v3
+YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
 
 # Safety Line Settings (골든타임 세이프티 라인)
 SAFETY_LINE_SETTINGS = {

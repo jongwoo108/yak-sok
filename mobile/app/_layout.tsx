@@ -1,4 +1,4 @@
-﻿import { Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import { colors } from '../components/theme';
@@ -22,6 +22,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/emergency" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/notifications" options={{ headerShown: false }} />
+                <Stack.Screen name="health/video/[id]" options={{ headerShown: false }} />
             </Stack>
         </View>
     );
