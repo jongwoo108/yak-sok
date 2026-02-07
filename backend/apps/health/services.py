@@ -88,7 +88,7 @@ def generate_search_queries(conditions):
         messages=[
             {
                 "role": "system",
-                "content": """질병 목록을 보고 YouTube에서 검색할 한국어 건강 관리 키워드를 생성하세요.
+                "content": """질병 목록을 보고 YouTube에서 검색할 한국어 건강 관리 키워드를 생성하세요. 결과는 JSON으로 반환하세요.
 
 카테고리별로 생성:
 - diet: 식이요법, 음식 관련
