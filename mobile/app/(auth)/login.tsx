@@ -24,6 +24,8 @@ import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '..
 
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
+import * as KakaoLogin from '@react-native-seoul/kakao-login';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,6 +40,10 @@ const hasGoogleClientId =
     !!googleClientIds.iosClientId ||
     !!googleClientIds.androidClientId ||
     !!googleClientIds.webClientId;
+
+// 카카오 REST API 키
+const kakaoRestApiKey = Constants.expoConfig?.extra?.kakaoRestApiKey;
+const hasKakaoKey = !!kakaoRestApiKey;
 
 function GoogleLoginButton({ onSuccess, disabled }: { onSuccess: (accessToken: string) => void; disabled: boolean }) {
     const [request, response, promptAsync] = Google.useAuthRequest({
@@ -66,6 +72,43 @@ function GoogleLoginButton({ onSuccess, disabled }: { onSuccess: (accessToken: s
         >
             <Ionicons name="logo-google" size={20} color={colors.text} style={styles.googleIcon} />
             <Text style={styles.googleButtonText}>Google로 로그인</Text>
+        </TouchableOpacity>
+    );
+}
+
+// 카카오 로그인 버튼 (네이티브 SDK 사용)
+function KakaoLoginButton({ onSuccess, disabled }: { onSuccess: (accessToken: string) => void; disabled: boolean }) {
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+    const handlePress = async () => {
+        if (isLoggingIn) return;
+        setIsLoggingIn(true);
+        try {
+            const result = await KakaoLogin.login();
+            if (result.accessToken) {
+                onSuccess(result.accessToken);
+            } else {
+                Alert.alert('로그인 실패', '카카오 인증 토큰을 받지 못했습니다.');
+            }
+        } catch (error: any) {
+            console.error('Kakao login error:', error);
+            // 사용자가 취소한 경우는 에러 메시지 표시 안함
+            if (error.message?.includes('cancel') || error.code === 'E_CANCELLED_OPERATION') {
+                return;
+            }
+            Alert.alert('로그인 실패', error.message || '카카오 로그인 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoggingIn(false);
+        }
+    };
+
+    return (
+        <TouchableOpacity
+            style={styles.kakaoButton}
+            onPress={handlePress}
+            disabled={disabled || isLoggingIn}
+        >
+            <Text style={styles.kakaoButtonText}>카카오로 로그인</Text>
         </TouchableOpacity>
     );
 }
@@ -100,6 +143,29 @@ export default function LoginScreen() {
         } catch (error: any) {
             console.error('Google login error:', error);
             Alert.alert('로그인 실패', 'Google 로그인 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 카카오 로그인 성공 핸들러
+    const handleKakaoLoginSuccess = async (accessToken: string) => {
+        setLoading(true);
+        try {
+            const res = await api.auth.kakaoLogin(accessToken);
+            const { user, tokens } = res.data;
+
+            await SecureStore.setItemAsync('access_token', tokens.access);
+            await SecureStore.setItemAsync('refresh_token', tokens.refresh);
+
+            resetStore();
+            setUser(user);
+            await NotificationService.updateServerToken();
+            router.replace('/(tabs)');
+        } catch (error: any) {
+            console.error('Kakao login error:', error);
+            const message = error.response?.data?.error || '카카오 로그인 중 오류가 발생했습니다.';
+            Alert.alert('로그인 실패', message);
         } finally {
             setLoading(false);
         }
@@ -219,6 +285,13 @@ export default function LoginScreen() {
                             />
                         ) : (
                             <Text style={styles.googleDisabledText}>Google 로그인은 현재 비활성화되어 있습니다.</Text>
+                        )}
+
+                        {hasKakaoKey && (
+                            <KakaoLoginButton
+                                onSuccess={handleKakaoLoginSuccess}
+                                disabled={loading}
+                            />
                         )}
 
 
@@ -376,18 +449,19 @@ const styles = StyleSheet.create({
         color: colors.textLight,
     },
     googleButton: {
-        backgroundColor: colors.base,
-        borderRadius: borderRadius.pill, // Pill shape for social button
+        backgroundColor: '#FFFFFF',
+        borderRadius: borderRadius.pill,
         paddingVertical: spacing.md,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        // Simple neumorph button style
-        shadowColor: '#B8C4CE',
-        shadowOffset: { width: 3, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#DADCE0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     googleIcon: {
         marginRight: spacing.sm,
@@ -395,12 +469,31 @@ const styles = StyleSheet.create({
     googleButtonText: {
         fontSize: fontSize.base,
         fontWeight: fontWeight.semibold,
-        color: colors.text,
+        color: '#3C4043',
     },
     googleDisabledText: {
         textAlign: 'center',
         fontSize: fontSize.sm,
         color: colors.textLight,
+    },
+    kakaoButton: {
+        backgroundColor: '#F5E6A3',  // 부드러운 파스텔 옐로우 (테마에 맞춤)
+        borderRadius: borderRadius.pill,
+        paddingVertical: spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: spacing.md,
+        shadowColor: '#C4B882',
+        shadowOffset: { width: 2, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    kakaoButtonText: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.semibold,
+        color: '#5C4E00',  // 어두운 골드 톤
     },
 
     registerLink: {

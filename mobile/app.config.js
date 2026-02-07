@@ -4,7 +4,7 @@ export default {
     expo: {
         name: "약속",
         slug: "yak-sok",
-        version: "1.1.2",
+        version: "1.1.3",
         orientation: "portrait",
         // React Native New Architecture (TurboModules/Fabric) 비활성화
         newArchEnabled: false,
@@ -21,7 +21,7 @@ export default {
             bundleIdentifier: "com.jongwoo.yaksok",
             // Expo가 생성하는 타겟 이름을 명시적으로 지정 (slug 기반)
             // 하이픈이 있으면 Xcode에서 문제가 될 수 있어서 언더스코어로 변환
-            buildNumber: "20",
+            buildNumber: "23",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false,
                 NSCameraUsageDescription: "처방전을 촬영하기 위해 카메라 접근이 필요합니다.",
@@ -60,6 +60,13 @@ export default {
                     icon: "./assets/icon.png",
                     color: "#50B498"
                 }
+            ],
+            [
+                "@react-native-seoul/kakao-login",
+                {
+                    kakaoAppKey: "e678831eb561c1a2593c3d704f454a0d",
+                    kotlinVersion: "1.9.0"
+                }
             ]
         ],
         experiments: {
@@ -68,13 +75,14 @@ export default {
         extra: {
             router: {},
             eas: {
-                projectId: "dc59cea5-ac4a-4706-89e4-fcda750a2bc4"
+                projectId: "70068664-24f1-4b81-80c5-eadeaa95cdb5"
             },
-            googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
+            googleIosClientId: "134638209887-6tfrggvs42qg6ic36s0do373ji43mg2n.apps.googleusercontent.com",
             googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID,
-            googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+            googleWebClientId: "134638209887-mh009ouo92jjnle086c3fvkj7f6stksl.apps.googleusercontent.com",
+            kakaoRestApiKey: "4633ad1c310f603189d9e02ba0c54aeb",
             apiBaseUrl: process.env.API_BASE_URL,
         },
-        owner: "jongwoo1008"
+        owner: "jongwoo108"
     }
 };

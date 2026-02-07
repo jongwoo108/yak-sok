@@ -128,7 +128,7 @@ export default function HealthFeedScreen() {
                     const res = await api.health.getProfile();
                     setProfile(res.data);
                     loadData(true);
-                } catch (e) {}
+                } catch (e) { }
             }, 3000);
         } catch (error) {
             console.error('[HealthFeed] 프로필 분석 실패:', error);
@@ -219,9 +219,6 @@ export default function HealthFeedScreen() {
                             </View>
                         ))}
                     </View>
-                    <TouchableOpacity onPress={handleRefreshProfile} style={styles.refreshButton}>
-                        <Ionicons name="refresh" size={16} color={colors.primary} />
-                    </TouchableOpacity>
                 </View>
             ) : (
                 <TouchableOpacity onPress={handleRefreshProfile}>
@@ -368,15 +365,6 @@ const styles = StyleSheet.create({
         fontSize: fontSize.sm,
         fontWeight: fontWeight.semibold,
         color: colors.primaryDark,
-    },
-    refreshButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: colors.base,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...shadows.soft,
     },
 
     // 빈 프로필

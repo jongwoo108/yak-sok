@@ -43,7 +43,7 @@ apiClient.interceptors.request.use(
 );
 
 // 인증이 필요없는 엔드포인트 목록
-const PUBLIC_ENDPOINTS = ['/users/login/', '/users/register/', '/users/login/google/'];
+const PUBLIC_ENDPOINTS = ['/users/login/', '/users/register/', '/users/login/google/', '/users/login/kakao/'];
 
 // 응답 인터셉터: 토큰 갱신 처리
 apiClient.interceptors.response.use(
@@ -125,6 +125,13 @@ export const api = {
             apiClient.post<{ user: User; tokens: { access: string; refresh: string } }>(
                 '/users/login/google/',
                 { access_token: accessToken, user_info: userInfo }
+            ),
+
+        // 카카오 로그인
+        kakaoLogin: (accessToken: string) =>
+            apiClient.post<{ user: User; tokens: { access: string; refresh: string } }>(
+                '/users/login/kakao/',
+                { access_token: accessToken }
             ),
 
         // 이메일 중복 확인

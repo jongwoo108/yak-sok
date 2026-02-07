@@ -207,6 +207,91 @@ class GoogleLoginView(APIView):
             )
 
 
+class KakaoLoginView(APIView):
+    """
+    카카오 로그인 (Access Token 검증)
+    이메일 대신 kakao_id를 고유 식별자로 사용 (이메일은 비즈니스 인증 필요)
+    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        access_token = request.data.get('access_token')
+        
+        if not access_token:
+            return Response(
+                {'error': 'access_token이 필요합니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            import requests
+            # 카카오 사용자 정보 API 호출
+            headers = {'Authorization': f'Bearer {access_token}'}
+            user_response = requests.get(
+                'https://kapi.kakao.com/v2/user/me',
+                headers=headers
+            )
+            
+            if user_response.status_code != 200:
+                return Response(
+                    {'error': '유효하지 않은 Access Token입니다.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            kakao_user = user_response.json()
+            kakao_id = str(kakao_user.get('id'))
+            kakao_account = kakao_user.get('kakao_account', {})
+            nickname = kakao_account.get('profile', {}).get('nickname', '')
+            
+            # 이메일이 있으면 사용, 없으면 kakao_id 기반 가상 이메일 생성
+            email = kakao_account.get('email') or f'kakao_{kakao_id}@kakao.user'
+            
+            # kakao_id 기반 username 생성 (고유성 보장)
+            username = f'kakao_{kakao_id}'
+            
+            # 사용자 조회: 먼저 username으로 검색 (기존 카카오 사용자)
+            user = User.objects.filter(username=username).first()
+            
+            if user:
+                # 기존 사용자
+                created = False
+            else:
+                # 이메일로도 검색 (다른 방법으로 가입한 동일 이메일 사용자)
+                user = User.objects.filter(email=email).first()
+                if user:
+                    # 기존 이메일 사용자 - username 업데이트하여 카카오 연동
+                    user.username = username
+                    user.save(update_fields=['username'])
+                    created = False
+                else:
+                    # 신규 사용자 생성
+                    user = User.objects.create(
+                        username=username,
+                        email=email,
+                        first_name=nickname or '카카오 사용자',
+                        is_active=True
+                    )
+                    user.set_unusable_password()
+                    user.save()
+                    created = True
+            
+            tokens = get_tokens_for_user(user)
+            
+            return Response({
+                'user': UserSerializer(user).data,
+                'tokens': tokens,
+                'created': created
+            })
+            
+        except Exception as e:
+            print(f"!!! Kakao Login Error: {e}")
+            return Response(
+                {'error': '카카오 로그인 처리 중 오류가 발생했습니다.', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class UserViewSet(viewsets.ModelViewSet):
     """사용자 ViewSet"""
     
