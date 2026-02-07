@@ -1,7 +1,12 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '../components/theme';
+
+// 앱 로드 전 스플래시 유지
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     return (

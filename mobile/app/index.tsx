@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import * as SplashScreen from 'expo-splash-screen';
 import { useMedicationStore } from '../services/store';
 import { api } from '../services/api';
 import { colors } from '../components/theme';
@@ -33,13 +34,16 @@ export default function Index() {
                 await SecureStore.deleteItemAsync('refresh_token');
                 setUser(null);
                 setAuthState('unauthenticated');
+            } finally {
+                // 인증 확인 완료 후 스플래시 숨김
+                await SplashScreen.hideAsync();
             }
         };
 
         restoreAuth();
     }, []);
 
-    // 로딩 중일 때 스플래시 화면 표시
+    // 로딩 중일 때 (스플래시가 덮고 있으므로 빈 화면)
     if (authState === 'loading') {
         return (
             <View style={styles.container}>

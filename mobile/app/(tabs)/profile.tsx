@@ -92,10 +92,12 @@ export default function ProfileScreen() {
             
             // 현재 사용자 역할에 따라 연결된 사용자 추출
             const users = relations.map((rel: GuardianRelation) => {
-                if (user.role === 'senior') {
-                    return { id: rel.guardian, name: rel.guardian_name, role: 'guardian', relationId: rel.id };
-                } else {
+                if (user.role === 'guardian') {
+                    // 보호자 → 연결된 시니어/복약자 표시
                     return { id: rel.senior, name: rel.senior_name, role: 'senior', relationId: rel.id };
+                } else {
+                    // 시니어/복약자 → 연결된 보호자 표시
+                    return { id: rel.guardian, name: rel.guardian_name, role: 'guardian', relationId: rel.id };
                 }
             });
             setConnectedUsers(users);

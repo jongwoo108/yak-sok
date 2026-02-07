@@ -26,8 +26,11 @@ import { GradientBackground } from '../../components/GradientBackground';
 import { NeumorphCard } from '../../components';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = spacing.md;
-const CARD_WIDTH = (SCREEN_WIDTH - spacing.xl * 2 - CARD_GAP) / 2;
+const CARD_WIDTH = SCREEN_WIDTH - spacing.xl * 2;
+
+// 이모지 제거 유틸
+const removeEmojis = (text: string) =>
+    text.replace(/[\u{1F600}-\u{1F9FF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '').trim();
 
 const CATEGORIES = [
     { key: 'all', label: '전체', icon: 'apps' },
@@ -153,9 +156,9 @@ export default function HealthFeedScreen() {
     };
 
     // 영상 카드 렌더
-    const renderVideoCard = ({ item, index }: { item: CachedVideo; index: number }) => (
+    const renderVideoCard = ({ item }: { item: CachedVideo }) => (
         <TouchableOpacity
-            style={[styles.videoCard, index % 2 === 0 ? { marginRight: CARD_GAP / 2 } : { marginLeft: CARD_GAP / 2 }]}
+            style={styles.videoCard}
             activeOpacity={0.8}
             onPress={() => router.push(`/health/video/${item.id}` as any)}
         >
@@ -167,23 +170,28 @@ export default function HealthFeedScreen() {
                 />
                 {item.is_from_trusted_channel && (
                     <View style={styles.trustedBadge}>
-                        <Ionicons name="checkmark-circle" size={12} color={colors.white} />
+                        <Ionicons name="checkmark-circle" size={14} color={colors.white} />
+                    </View>
+                )}
+                {item.content_category_display && (
+                    <View style={styles.categoryTag}>
+                        <Text style={styles.categoryTagText}>{item.content_category_display}</Text>
                     </View>
                 )}
             </View>
             <View style={styles.cardContent}>
                 <Text style={styles.videoTitle} numberOfLines={2}>
-                    {item.title}
+                    {removeEmojis(item.title)}
                 </Text>
                 <View style={styles.cardMeta}>
                     <Text style={styles.channelName} numberOfLines={1}>
-                        {item.channel_title}
+                        {removeEmojis(item.channel_title)}
                     </Text>
                     <View style={styles.metaRow}>
                         <Text style={styles.metaText}>
-                            {formatViewCount(item.view_count)}
+                            {formatViewCount(item.view_count)}회
                         </Text>
-                        <Text style={styles.metaDot}> </Text>
+                        <Text style={styles.metaDot}>·</Text>
                         <Text style={styles.metaText}>
                             {formatDate(item.published_at)}
                         </Text>
@@ -299,7 +307,6 @@ export default function HealthFeedScreen() {
                     data={videos}
                     renderItem={renderVideoCard}
                     keyExtractor={(item) => String(item.id)}
-                    numColumns={2}
                     ListHeaderComponent={renderHeader}
                     ListEmptyComponent={renderEmpty}
                     ListFooterComponent={renderFooter}
@@ -448,30 +455,44 @@ const styles = StyleSheet.create({
     },
     trustedBadge: {
         position: 'absolute',
-        top: spacing.xs,
-        right: spacing.xs,
+        top: spacing.sm,
+        right: spacing.sm,
         backgroundColor: colors.primary,
-        borderRadius: 10,
-        width: 20,
-        height: 20,
+        borderRadius: 12,
+        width: 24,
+        height: 24,
         alignItems: 'center',
         justifyContent: 'center',
     },
+    categoryTag: {
+        position: 'absolute',
+        bottom: spacing.sm,
+        left: spacing.sm,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: borderRadius.sm,
+    },
+    categoryTagText: {
+        fontSize: fontSize.xs,
+        color: colors.white,
+        fontWeight: fontWeight.medium,
+    },
     cardContent: {
-        padding: spacing.sm,
+        padding: spacing.md,
     },
     videoTitle: {
-        fontSize: fontSize.sm,
+        fontSize: fontSize.base,
         fontWeight: fontWeight.semibold,
         color: colors.text,
-        lineHeight: 18,
+        lineHeight: 22,
         marginBottom: spacing.xs,
     },
     cardMeta: {
         gap: 2,
     },
     channelName: {
-        fontSize: fontSize.xs,
+        fontSize: fontSize.sm,
         color: colors.textSecondary,
     },
     metaRow: {
@@ -485,7 +506,7 @@ const styles = StyleSheet.create({
     metaDot: {
         fontSize: fontSize.xs,
         color: colors.textLight,
-        marginHorizontal: 2,
+        marginHorizontal: 4,
     },
 
     // 로딩

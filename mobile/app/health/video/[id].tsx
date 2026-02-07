@@ -34,6 +34,7 @@ export default function VideoDetailScreen() {
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [bookmarkId, setBookmarkId] = useState<number | null>(null);
     const [playing, setPlaying] = useState(false);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
         loadVideo();
@@ -43,11 +44,13 @@ export default function VideoDetailScreen() {
         if (!id) return;
         try {
             setIsLoading(true);
+            setLoadError(false);
             const res = await api.health.getVideo(Number(id));
             setVideo(res.data);
             setIsBookmarked(res.data.is_bookmarked);
         } catch (error) {
             console.error('[VideoDetail] 영상 로드 실패:', error);
+            setLoadError(true);
         } finally {
             setIsLoading(false);
         }
@@ -92,11 +95,32 @@ export default function VideoDetailScreen() {
         }
     }, []);
 
-    if (isLoading || !video) {
+    if (isLoading) {
         return (
             <GradientBackground variant="ocean" style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </GradientBackground>
+        );
+    }
+
+    if (loadError || !video) {
+        return (
+            <GradientBackground variant="ocean" style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <View style={styles.backButtonInner}>
+                            <Ionicons name="chevron-back" size={22} color={colors.text} />
+                        </View>
+                    </TouchableOpacity>
+                    <Ionicons name="alert-circle-outline" size={48} color={colors.textLight} />
+                    <Text style={{ color: colors.textSecondary, marginTop: spacing.md, fontSize: fontSize.base }}>
+                        영상을 불러올 수 없습니다
+                    </Text>
+                    <TouchableOpacity onPress={loadVideo} style={{ marginTop: spacing.md }}>
+                        <Text style={{ color: colors.primary, fontWeight: fontWeight.semibold }}>다시 시도</Text>
+                    </TouchableOpacity>
                 </View>
             </GradientBackground>
         );
