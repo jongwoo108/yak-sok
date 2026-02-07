@@ -25,6 +25,7 @@
 | 17. 푸시 알림 UX 개선 | ✅ 완료 | 2026-02-02 |
 | 18. 스플래시 이미지 업데이트 | ✅ 완료 | 2026-02-07 |
 | 19. 건강 유튜브 피드 기능 | ✅ 구현 완료 (배포 전) | 2026-02-07 |
+| 20. 건강 피드 v1.1.0 보완 | ✅ 완료 | 2026-02-07 |
 
 ---
 
@@ -180,6 +181,7 @@ python manage.py runserver
 - [14_ios_sdk53_resolution.md](./development/14_ios_sdk53_resolution.md) - **iOS SDK 53 문제 해결** ✅ 완료 (2026-01-25)
 - [15_notification_improvement.md](./development/15_notification_improvement.md) - **푸시 알림 UX 개선** ✅ 완료 (2026-02-05 업데이트)
 - [16_health_newsfeed_plan.md](./development/16_health_newsfeed_plan.md) - **건강 유튜브 피드 기능** ✅ 구현 완료 (2026-02-07)
+- [18_health_feed_v1.1.0_changelog.md](./development/18_health_feed_v1.1.0_changelog.md) - **건강 피드 v1.1.0 작업 정리** (레이아웃, 스플래시, 버그 수정, 백엔드) ✅ 2026-02-07
 - [17_sql_practice_queries.md](./development/17_sql_practice_queries.md) - **SQL 실습 예제** (pgAdmin / 프로젝트 DB)
 
 ### 배포 문서
@@ -225,6 +227,18 @@ python manage.py runserver
 
 ---
 
+## 건강 피드 v1.1.0 보완 (2026-02-07)
+
+- **피드**: 2열 → 1열 레이아웃, 무한 스크롤 유지, 제목/채널명 이모지 제거
+- **스플래시**: 권장 이미지 1284x2778px, `expo-splash-screen`으로 인증 완료 시점까지 표시
+- **영상 상세**: 로드 실패 시 에러 메시지 + 재시도 버튼
+- **설정**: 연결관리에서 복약자 계정일 때 본인 대신 연결된 보호자만 표시 (버그 수정)
+- **백엔드**: Health API URL 라우팅 추가, GPT-5 사용 및 temperature 제거, 키워드 생성 프롬프트 JSON 명시
+
+상세: [18_health_feed_v1.1.0_changelog.md](./development/18_health_feed_v1.1.0_changelog.md)
+
+---
+
 ## 다음 단계
 
 ### 건강 유튜브 피드 배포 준비
@@ -232,7 +246,7 @@ python manage.py runserver
 2. **DB 마이그레이션**: `python manage.py makemigrations health && python manage.py migrate`
 3. **패키지 설치**: `npx expo install react-native-youtube-iframe react-native-webview`
 4. **신뢰 채널 등록**: Django Admin에서 의사/약사/공공기관 YouTube 채널 등록
-5. **모바일 앱 새 빌드**: 탭 구조 변경 + YouTube 재생 기능 포함
+5. **모바일 앱 빌드**: v1.1.0 (빌드 18) — `eas build --platform ios --profile production`
 
 ### 향후 계획
 1. **건강 피드 배포 및 테스트**: 실제 사용자 피드백 수집

@@ -38,10 +38,11 @@
 - DB에 캐시하여 API 할당량 절약
 - 신뢰 채널 (의사, 약사, 공공기관) 우선 노출
 
-### GPT-5 Mini 활용 (보조)
+### GPT-5 활용 (보조)
 - 약 목록 → 질병 추론 (약 등록 시 1회)
 - 질병 → YouTube 검색 키워드 생성
-- 월 예상 비용: ~$0.30 (사용자 100명 기준)
+- **모델**: GPT-5 (temperature 파라미터 미지원으로 제거)
+- 비용은 사용량에 따라 상이 (체감 테스트용)
 
 ---
 
@@ -52,7 +53,7 @@
 | 파일 | 역할 |
 |------|------|
 | `models.py` | UserHealthProfile, HealthCondition, TrustedChannel, CachedVideo, VideoBookmark |
-| `services.py` | GPT-5 Mini 질병 추론 + 검색 키워드 생성 |
+| `services.py` | GPT-5 질병 추론 + 검색 키워드 생성 |
 | `youtube_service.py` | YouTube API 검색, 통계 조회, 캐시 저장 |
 | `tasks.py` | Celery Beat 자동 캐시 갱신 (매일 05:00) |
 | `views.py` | 프로필, 피드, 북마크 API |
@@ -63,8 +64,8 @@
 
 | 파일 | 역할 |
 |------|------|
-| `mobile/app/(tabs)/health-feed.tsx` | 건강피드 메인 탭 (2열 썸네일 그리드) |
-| `mobile/app/health/video/[id].tsx` | 영상 상세 + YouTube 임베드 재생 |
+| `mobile/app/(tabs)/health-feed.tsx` | 건강피드 메인 탭 (1열 리스트, 무한 스크롤, 이모지 제거) |
+| `mobile/app/health/video/[id].tsx` | 영상 상세 + YouTube 임베드 재생 (에러 시 재시도 UI) |
 | `mobile/components/CustomTabBar.tsx` | 탭 구조 수정 |
 
 ### API 엔드포인트
@@ -86,7 +87,7 @@ DELETE /api/health/bookmarks/<id>/  # 북마크 삭제
 
 ```
 YOUTUBE_API_KEY=...   # Google Cloud Console에서 발급 필요
-OPENAI_API_KEY=...    # 기존 사용 (GPT-5 Mini 호출)
+OPENAI_API_KEY=...    # 기존 사용 (GPT-5 호출)
 ```
 
 ---
@@ -104,8 +105,20 @@ OPENAI_API_KEY=...    # 기존 사용 (GPT-5 Mini 호출)
 
 ## 비용 정리
 
-| 항목 | 월 비용 |
-|------|--------|
-| GPT-5 Mini | ~$0.30 |
-| YouTube API | $0 (무료) |
-| 합계 | ~$0.30/월 |
+| 항목 | 비고 |
+|------|------|
+| GPT-5 | 사용량에 따라 상이 |
+| YouTube API | $0 (무료 할당 내) |
+
+---
+
+## v1.1.0 보완 사항 (2026-02-07)
+
+- **피드 레이아웃**: 2열 → 1열, 무한 스크롤 유지
+- **스플래시**: 이미지 권장 1284x2778px, `expo-splash-screen`으로 인증 완료 시점까지 표시
+- **이모지**: 피드 제목/채널명에서 이모지 제거
+- **영상 상세**: 로드 실패 시 에러 메시지 + 재시도 버튼
+- **설정 연결관리**: 복약자 계정에서 본인 대신 연결된 보호자만 표시하도록 버그 수정
+- **백엔드**: Health URL 라우팅 추가, GPT-5 + temperature 제거, 키워드 생성 프롬프트에 JSON 명시
+
+상세: [18_health_feed_v1.1.0_changelog.md](./18_health_feed_v1.1.0_changelog.md)
