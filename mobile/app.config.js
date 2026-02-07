@@ -4,7 +4,7 @@ export default {
     expo: {
         name: "약속",
         slug: "yak-sok",
-        version: "1.0.3",
+        version: "1.0.4",
         orientation: "portrait",
         // React Native New Architecture (TurboModules/Fabric) 비활성화
         newArchEnabled: false,
