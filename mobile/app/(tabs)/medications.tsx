@@ -90,6 +90,28 @@ export default function MedicationsScreen() {
         }
     };
 
+    // 그룹 단위 선택/해제
+    const toggleGroupSelection = (meds: Medication[]) => {
+        const groupIds = meds.map(m => m.id);
+        const allSelected = groupIds.every(id => selectedIds.has(id));
+        const newSelected = new Set(selectedIds);
+        if (allSelected) {
+            groupIds.forEach(id => newSelected.delete(id));
+        } else {
+            groupIds.forEach(id => newSelected.add(id));
+        }
+        setSelectedIds(newSelected);
+    };
+
+    // 그룹 선택 상태 확인
+    const getGroupSelectionState = (meds: Medication[]): 'all' | 'some' | 'none' => {
+        const groupIds = meds.map(m => m.id);
+        const selectedCount = groupIds.filter(id => selectedIds.has(id)).length;
+        if (selectedCount === 0) return 'none';
+        if (selectedCount === groupIds.length) return 'all';
+        return 'some';
+    };
+
     const handleDeleteSelected = () => {
         if (selectedIds.size === 0) return;
 
@@ -286,19 +308,46 @@ export default function MedicationsScreen() {
                         </Text>
                     </NeumorphCard>
                 ) : (
-                    Object.entries(groupedMedications).map(([groupName, meds]) => (
+                    Object.entries(groupedMedications).map(([groupName, meds]) => {
+                        const groupState = getGroupSelectionState(meds);
+                        return (
                         <View key={groupName} style={styles.groupSection}>
                             {/* 그룹 헤더 */}
                             <View style={styles.groupHeader}>
-                                <View style={styles.groupTitleRow}>
-                                    <View style={styles.groupIconCircle}>
-                                        <Feather name="folder" size={14} color={colors.primary} />
+                                {isEditMode ? (
+                                    <TouchableOpacity
+                                        style={styles.groupTitleRow}
+                                        onPress={() => toggleGroupSelection(meds)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[
+                                            styles.groupCheckbox,
+                                            groupState === 'all' && styles.groupCheckboxSelected,
+                                            groupState === 'some' && styles.groupCheckboxPartial,
+                                        ]}>
+                                            {groupState === 'all' && (
+                                                <Ionicons name="checkmark" size={14} color="white" />
+                                            )}
+                                            {groupState === 'some' && (
+                                                <Ionicons name="remove" size={14} color="white" />
+                                            )}
+                                        </View>
+                                        <Text style={styles.groupName}>{groupName}</Text>
+                                        <View style={styles.countBadge}>
+                                            <Text style={styles.countBadgeText}>{meds.length}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View style={styles.groupTitleRow}>
+                                        <View style={styles.groupIconCircle}>
+                                            <Feather name="folder" size={14} color={colors.primary} />
+                                        </View>
+                                        <Text style={styles.groupName}>{groupName}</Text>
+                                        <View style={styles.countBadge}>
+                                            <Text style={styles.countBadgeText}>{meds.length}</Text>
+                                        </View>
                                     </View>
-                                    <Text style={styles.groupName}>{groupName}</Text>
-                                    <View style={styles.countBadge}>
-                                        <Text style={styles.countBadgeText}>{meds.length}</Text>
-                                    </View>
-                                </View>
+                                )}
 
                                 {/* Group Delete Button (Edit Mode) */}
                                 {isEditMode && meds[0]?.group_id && (
@@ -384,7 +433,7 @@ export default function MedicationsScreen() {
                                 </View>
                             ))}
                         </View>
-                    ))
+                    );})
                 )}
 
                 {/* 하단 여백 */}
@@ -688,6 +737,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: spacing.sm,
+    },
+    groupCheckbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: colors.textLight,
+        backgroundColor: colors.white,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.sm,
+    },
+    groupCheckboxSelected: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    groupCheckboxPartial: {
+        backgroundColor: colors.primaryLight,
+        borderColor: colors.primary,
     },
     groupName: {
         fontSize: fontSize.lg,
