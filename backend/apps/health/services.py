@@ -1,5 +1,5 @@
 """
-Health Services - GPT-5 Mini 질병 추론 및 키워드 생성
+Health Services - GPT-4o 질병 추론 및 키워드 생성
 """
 
 import json
@@ -17,7 +17,7 @@ def _get_openai_client():
 
 def infer_conditions_from_medications(user):
     """
-    사용자 약 목록 → GPT-5 Mini로 질병 추론
+    사용자 약 목록 → GPT-4o로 질병 추론
     
     Args:
         user: User 인스턴스
@@ -35,7 +35,7 @@ def infer_conditions_from_medications(user):
     client = _get_openai_client()
     
     response = client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-4o",
         messages=[
             {
                 "role": "system",
@@ -69,7 +69,7 @@ def infer_conditions_from_medications(user):
 
 def generate_search_queries(conditions):
     """
-    질병 목록 → YouTube 검색 키워드 생성 (GPT-5 Mini)
+    질병 목록 → YouTube 검색 키워드 생성 (GPT-4o)
     
     Args:
         conditions: [{"name": "고혈압", "category": "심혈관"}, ...]
@@ -84,7 +84,7 @@ def generate_search_queries(conditions):
     client = _get_openai_client()
     
     response = client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-4o",
         messages=[
             {
                 "role": "system",

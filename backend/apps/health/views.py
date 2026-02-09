@@ -39,7 +39,7 @@ class HealthProfileViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def refresh(self, request):
-        """질병 재분석 요청 - GPT-5 Mini로 즉시 분석"""
+        """질병 재분석 요청 - GPT-4o로 즉시 분석"""
         from .tasks import refresh_user_health_profile
         
         # 비동기 태스크로 실행 (분석 + YouTube 검색)
