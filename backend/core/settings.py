@@ -211,8 +211,11 @@ CELERY_TASK_ALWAYS_EAGER = DEBUG  # DEBUG=True일 때만 동기 실행
 
 
 
-# OpenAI API Key (for OCR, STT, Health Profile)
+# OpenAI API Key (for OCR structuring, Health Profile)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+# Upstage API Key (for Document OCR)
+UPSTAGE_API_KEY = os.environ.get('UPSTAGE_API_KEY', '')
 
 # YouTube Data API v3
 YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')

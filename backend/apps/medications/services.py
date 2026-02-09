@@ -14,13 +14,14 @@ from PIL import Image, ExifTags
 class OCRService:
     """
     처방전 OCR 스캔 서비스
-    OpenAI Vision API 활용
+    Upstage Document OCR + OpenAI GPT 구조화
     """
-    
+
     def __init__(self):
         # Windows SSL 권한 문제 해결을 위해 SSL 검증 비활성화
         http_client = httpx.Client(verify=False)
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY, http_client=http_client)
+        self.upstage_api_key = settings.UPSTAGE_API_KEY
     
     def _auto_rotate_image(self, image_content: bytes) -> bytes:
         """
@@ -62,69 +63,97 @@ class OCRService:
             # 그 외의 경우에도 원본 반환 (GPT가 처리 시도)
             return image_content
     
+    def _extract_text_with_upstage(self, image_content: bytes) -> str:
+        """
+        Upstage Document OCR API로 이미지에서 텍스트 추출
+        """
+        url = "https://api.upstage.ai/v1/document-digitization"
+        headers = {"Authorization": f"Bearer {self.upstage_api_key}"}
+
+        response = httpx.post(
+            url,
+            headers=headers,
+            files={"document": ("prescription.jpg", image_content, "image/jpeg")},
+            data={"model": "ocr"},
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        result = response.json()
+
+        # pages 내 텍스트 합치기
+        texts = []
+        for page in result.get("pages", []):
+            for word in page.get("words", []):
+                texts.append(word.get("text", ""))
+
+        extracted = " ".join(texts)
+        print(f"[Upstage OCR] 추출된 텍스트 길이: {len(extracted)}")
+        print(f"[Upstage OCR] 텍스트: {extracted[:500]}...")
+        return extracted
+
+    def _structure_with_gpt(self, ocr_text: str) -> dict:
+        """
+        GPT로 OCR 추출 텍스트를 구조화된 JSON으로 변환
+        """
+        prompt = f"""
+        아래는 처방전 이미지에서 OCR로 추출한 텍스트야.
+        이 텍스트에서 약품 정보를 추출해서 JSON 형식으로 반환해줘.
+
+        처방전은 일반적으로 '약품명', '약품 사진', '설명/효능', '복용법' 등의 컬럼으로 구성된 표 형태야.
+        각 행(Row)을 분석해서 다음 필드를 포함하는 리스트를 만들어줘:
+
+        - symptom: 이 처방전에 포함된 약품들이 치료하는 주요 증상/질환명을 추정해줘. 예: "우울증", "고혈압", "당뇨", "불면증", "소화장애" 등. 하나의 대표 증상만.
+        - medications: 약품 목록 (리스트)
+            - name: 약품명 (예: "데팍신서방정 25mg")
+            - dosage: 1회 투약량
+            - frequency: 1일 투여 횟수 (예: "하루 3회", "1일 1회")
+            - times: 복용 시간대 리스트 (예: ["아침", "저녁"]) - 처방전에 표시된 복용 시간 정보를 "아침", "점심", "저녁", "취침전" 중에서 선택해줘
+            - description: 약에 대한 상세 설명. **가장 중요함**. 약의 모양(예: "흰색 정제")과 효능/효과(예: "- 중추에 작용하여...", "- 심박동수를 감소시켜...") 등 해당 칸에 있는 **모든 텍스트**를 그대로 가져와줘. 줄바꿈 문자가 있다면 공백으로 대체해서 한 줄로 만들어줘.
+
+        응답은 오직 JSON 데이터만 보내줘. 마크다운 포맷팅 없이 raw JSON으로.
+
+        --- OCR 추출 텍스트 ---
+        {ocr_text}
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1500,
+        )
+
+        content = response.choices[0].message.content
+        print(f"[GPT Response] Raw Content:\n{content}")
+        return content
+
     def parse_prescription(self, image_file):
         """
         처방전 이미지에서 약품 정보 추출
-        
+        1단계: Upstage OCR로 텍스트 추출
+        2단계: GPT로 텍스트 구조화
+
         Args:
             image_file: 업로드된 이미지 파일
-            
+
         Returns:
             dict: 추출된 약품 정보 리스트
         """
         try:
             # 이미지 읽기 및 자동 회전
             image_content = image_file.read()
-            print(f"[OCR Debug] 원본 바이트 크기: {len(image_content)}, 앞 10바이트: {image_content[:10] if len(image_content) > 10 else image_content}")
+            print(f"[OCR Debug] 원본 바이트 크기: {len(image_content)}")
             image_content = self._auto_rotate_image(image_content)
-            print(f"[OCR Debug] 처리 후 바이트 크기: {len(image_content)}, 앞 10바이트: {image_content[:10] if len(image_content) > 10 else image_content}")
-            image_base64 = base64.b64encode(image_content).decode('utf-8')
-            
-            prompt = """
-            이 처방전 이미지에서 약품 정보를 추출해서 JSON 형식으로 반환해줘.
-            
-            **중요: 이미지가 90도, 180도, 270도 회전되어 있을 수 있어. 텍스트가 읽히는 올바른 방향을 자동으로 감지해서 인식해줘.**
-            
-            이미지는 일반적으로 '약품명', '약품 사진', '설명/효능', '복용법' 등의 컬럼으로 구성된 표 형태일 거야.
-            각 행(Row)을 분석해서 다음 필드를 포함하는 리스트를 만들어줘:
+            print(f"[OCR Debug] 처리 후 바이트 크기: {len(image_content)}")
 
-            - symptom: 이 처방전에 포함된 약품들이 치료하는 주요 증상/질환명을 추정해줘. 예: "우울증", "고혈압", "당뇨", "불면증", "소화장애" 등. 하나의 대표 증상만.
-            - medications: 약품 목록 (리스트)
-                - name: 약품명 (예: "데팍신서방정 25mg")
-                - dosage: 1회 투약량
-                - frequency: 1일 투여 횟수 (예: "하루 3회", "1일 1회")
-                - times: 복용 시간대 리스트 (예: ["아침", "저녁"]) - 처방전에 표시된 복용 시간 정보를 "아침", "점심", "저녁", "취침전" 중에서 선택해줘
-                - description: 약에 대한 상세 설명. **가장 중요함**. 약의 모양(예: "흰색 정제")과 효능/효과(예: "- 중추에 작용하여...", "- 심박동수를 감소시켜...") 등 해당 칸에 있는 **모든 텍스트**를 그대로 가져와줘. 줄바꿈 문자가 있다면 공백으로 대체해서 한 줄로 만들어줘.
+            # 1단계: Upstage OCR로 텍스트 추출
+            ocr_text = self._extract_text_with_upstage(image_content)
 
-            응답은 오직 JSON 데이터만 보내줘. 마크다운 포맷팅 없이 raw JSON으로.
-            """
+            # 2단계: GPT로 구조화
+            content = self._structure_with_gpt(ocr_text)
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{image_base64}",
-                                },
-                            },
-                        ],
-                    }
-                ],
-                max_tokens=1500,
-            )
-            
-            content = response.choices[0].message.content
-            print(f"[GPT Response] Raw Content:\n{content}")  # 디버깅 로그 추가
-            
-            # JSON 파싱 (마크다운 코드블록 제거 강화)
+            # JSON 파싱 (마크다운 코드블록 제거)
             content = content.replace('```json', '').replace('```', '').strip()
-            
-            # 혹시 JSON이 아닌 텍스트가 섞여있을 경우 대비 (첫 '{' 부터 마지막 '}' 까지만 추출)
+
             try:
                 start_idx = content.find('{')
                 end_idx = content.rfind('}')
