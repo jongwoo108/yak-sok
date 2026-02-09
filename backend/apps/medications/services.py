@@ -94,32 +94,35 @@ class OCRService:
     def _structure_with_gpt(self, ocr_text: str) -> dict:
         """
         GPT로 OCR 추출 텍스트를 구조화된 JSON으로 변환
+        temperature=0으로 일관된 결과 보장
         """
-        prompt = f"""
-        아래는 처방전 이미지에서 OCR로 추출한 텍스트야.
-        이 텍스트에서 약품 정보를 추출해서 JSON 형식으로 반환해줘.
+        prompt = f"""아래는 처방전 이미지에서 OCR로 추출한 텍스트입니다.
+이 텍스트에서 약품 정보를 추출하여 JSON 형식으로 반환하세요.
 
-        처방전은 일반적으로 '약품명', '약품 사진', '설명/효능', '복용법' 등의 컬럼으로 구성된 표 형태야.
-        각 행(Row)을 분석해서 다음 필드를 포함하는 리스트를 만들어줘:
+규칙:
+1. symptom: 처방 약품들의 대표 증상/질환명 1개 (예: "고혈압", "당뇨", "우울증")
+2. medications: 약품 목록 배열
+   - name: 약품명 + 용량 (예: "데팍신서방정 25mg")
+   - dosage: 1회 투약량 (예: "1정", "2캡슐")
+   - frequency: 1일 투여 횟수 (예: "1일 1회", "1일 3회")
+   - times: 복용 시간대 배열, 다음 중에서만 선택: ["아침", "점심", "저녁", "취침전"]
+   - description: 약의 모양과 효능/효과를 한 줄로 작성
 
-        - symptom: 이 처방전에 포함된 약품들이 치료하는 주요 증상/질환명을 추정해줘. 예: "우울증", "고혈압", "당뇨", "불면증", "소화장애" 등. 하나의 대표 증상만.
-        - medications: 약품 목록 (리스트)
-            - name: 약품명 (예: "데팍신서방정 25mg")
-            - dosage: 1회 투약량
-            - frequency: 1일 투여 횟수 (예: "하루 3회", "1일 1회")
-            - times: 복용 시간대 리스트 (예: ["아침", "저녁"]) - 처방전에 표시된 복용 시간 정보를 "아침", "점심", "저녁", "취침전" 중에서 선택해줘
-            - description: 약에 대한 상세 설명. **가장 중요함**. 약의 모양(예: "흰색 정제")과 효능/효과(예: "- 중추에 작용하여...", "- 심박동수를 감소시켜...") 등 해당 칸에 있는 **모든 텍스트**를 그대로 가져와줘. 줄바꿈 문자가 있다면 공백으로 대체해서 한 줄로 만들어줘.
-
-        응답은 오직 JSON 데이터만 보내줘. 마크다운 포맷팅 없이 raw JSON으로.
-
-        --- OCR 추출 텍스트 ---
-        {ocr_text}
-        """
+OCR 텍스트:
+{ocr_text}"""
 
         response = self.client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "처방전 OCR 텍스트를 분석하여 약품 정보를 JSON으로 구조화하는 전문가입니다. 정확하고 일관된 형식으로 응답합니다."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0,
             max_tokens=1500,
+            response_format={"type": "json_object"},
         )
 
         content = response.choices[0].message.content

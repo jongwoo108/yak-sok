@@ -18,6 +18,7 @@ import {
     KeyboardAvoidingView,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { useMedicationStore } from '../../services/store';
@@ -55,7 +56,13 @@ export default function CalendarScreen() {
     const [editingVisits, setEditingVisits] = useState<HospitalVisit[]>([]);  // 일괄 수정용 배열
     const [editDaysSupply, setEditDaysSupply] = useState('');
     const [editStartDate, setEditStartDate] = useState('');
+    const [editEndDate, setEditEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    // 날짜 피커 상태
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [datePickerTarget, setDatePickerTarget] = useState<'start' | 'end'>('start');
+    const [pickerDate, setPickerDate] = useState(new Date());
 
     // 월별 캘린더 데이터 가져오기
     const fetchCalendarData = useCallback(async (year: number, month: number) => {
@@ -182,9 +189,8 @@ export default function CalendarScreen() {
     const openBatchEditModal = () => {
         const visits = getSelectedDateHospitalVisits();
         if (visits.length === 0) return;
-        
+
         setEditingVisits(visits);
-        // 첫 번째 약의 정보를 기본값으로 사용
         const firstVisit = visits[0];
         setEditDaysSupply(firstVisit.days_supply.toString());
         // start_date 계산 (end_date - days_supply)
@@ -192,7 +198,51 @@ export default function CalendarScreen() {
         const startDate = new Date(endDate);
         startDate.setDate(startDate.getDate() - firstVisit.days_supply);
         setEditStartDate(startDate.toISOString().split('T')[0]);
+        setEditEndDate(firstVisit.date);
         setEditModalVisible(true);
+    };
+
+    // 날짜 피커 열기
+    const openDatePicker = (target: 'start' | 'end') => {
+        setDatePickerTarget(target);
+        const dateStr = target === 'start' ? editStartDate : editEndDate;
+        setPickerDate(new Date(dateStr));
+        setShowDatePicker(true);
+    };
+
+    // 날짜 피커 변경 처리
+    const handleDatePickerChange = (event: any, selected?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
+        }
+        if (!selected || event.type === 'dismissed') return;
+
+        const dateStr = selected.toISOString().split('T')[0];
+
+        if (datePickerTarget === 'start') {
+            setEditStartDate(dateStr);
+            // 시작일 변경 → 병원방문일 재계산
+            const days = parseInt(editDaysSupply);
+            if (days > 0) {
+                const newEnd = new Date(selected);
+                newEnd.setDate(newEnd.getDate() + days);
+                setEditEndDate(newEnd.toISOString().split('T')[0]);
+            }
+        } else {
+            setEditEndDate(dateStr);
+            // 병원방문일 변경 → 처방일수 역계산
+            const start = new Date(editStartDate);
+            const diffDays = Math.round((selected.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+                setEditDaysSupply(diffDays.toString());
+            }
+        }
+    };
+
+    // iOS 날짜 피커 확인
+    const confirmIOSDatePicker = () => {
+        handleDatePickerChange({ type: 'set' }, pickerDate);
+        setShowDatePicker(false);
     };
 
     // 병원 방문일 일괄 저장
@@ -229,12 +279,16 @@ export default function CalendarScreen() {
         }
     };
 
-    // 새 종료일 계산
-    const calculateNewEndDate = () => {
-        if (!editStartDate || !editDaysSupply) return null;
-        const start = new Date(editStartDate);
-        start.setDate(start.getDate() + parseInt(editDaysSupply));
-        return start.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    // 처방 일수 변경 핸들러
+    const handleDaysSupplyChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        setEditDaysSupply(cleaned);
+        const days = parseInt(cleaned);
+        if (days > 0 && editStartDate) {
+            const newEnd = new Date(editStartDate);
+            newEnd.setDate(newEnd.getDate() + days);
+            setEditEndDate(newEnd.toISOString().split('T')[0]);
+        }
     };
 
     const formatSelectedDate = () => {
@@ -408,6 +462,45 @@ export default function CalendarScreen() {
                 <View style={{ height: 100 }} />
             </ScrollView>
 
+            {/* iOS 날짜 피커 모달 */}
+            {Platform.OS === 'ios' && showDatePicker && (
+                <Modal visible={showDatePicker} transparent animationType="slide">
+                    <View style={styles.datePickerModal}>
+                        <View style={styles.datePickerContainer}>
+                            <View style={styles.datePickerHeader}>
+                                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                                    <Text style={styles.datePickerCancel}>취소</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.datePickerTitle}>
+                                    {datePickerTarget === 'start' ? '복용 시작일' : '병원 방문일'}
+                                </Text>
+                                <TouchableOpacity onPress={confirmIOSDatePicker}>
+                                    <Text style={styles.datePickerDone}>확인</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <DateTimePicker
+                                value={pickerDate}
+                                mode="date"
+                                display="spinner"
+                                onChange={(e, d) => { if (d) setPickerDate(d); }}
+                                style={{ height: 200 }}
+                                textColor={colors.text}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+            )}
+
+            {/* Android 날짜 피커 */}
+            {Platform.OS === 'android' && showDatePicker && (
+                <DateTimePicker
+                    value={pickerDate}
+                    mode="date"
+                    display="default"
+                    onChange={handleDatePickerChange}
+                />
+            )}
+
             {/* 병원 방문일 수정 모달 */}
             <Modal
                 visible={editModalVisible}
@@ -447,17 +540,22 @@ export default function CalendarScreen() {
                                             </Text>
                                         )}
 
-                                        {/* 시작일 표시 */}
+                                        {/* 시작일 선택 */}
                                         <View style={styles.modalField}>
                                             <Text style={styles.modalLabel}>복용 시작일</Text>
-                                            <View style={styles.modalDateDisplay}>
+                                            <TouchableOpacity
+                                                style={styles.modalDateButton}
+                                                onPress={() => openDatePicker('start')}
+                                                activeOpacity={0.7}
+                                            >
                                                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                                                 <Text style={styles.modalDateText}>
                                                     {new Date(editStartDate).toLocaleDateString('ko-KR', {
                                                         year: 'numeric', month: 'long', day: 'numeric'
                                                     })}
                                                 </Text>
-                                            </View>
+                                                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+                                            </TouchableOpacity>
                                         </View>
 
                                         {/* 처방 일수 입력 */}
@@ -467,7 +565,7 @@ export default function CalendarScreen() {
                                                 <TextInput
                                                     style={styles.modalInput}
                                                     value={editDaysSupply}
-                                                    onChangeText={(text) => setEditDaysSupply(text.replace(/[^0-9]/g, ''))}
+                                                    onChangeText={handleDaysSupplyChange}
                                                     keyboardType="number-pad"
                                                     maxLength={3}
                                                 />
@@ -475,15 +573,23 @@ export default function CalendarScreen() {
                                             </View>
                                         </View>
 
-                                        {/* 새 종료일 미리보기 */}
-                                        {calculateNewEndDate() && (
-                                            <View style={styles.modalPreview}>
-                                                <Ionicons name="arrow-forward" size={16} color="#2196F3" />
-                                                <Text style={styles.modalPreviewText}>
-                                                    새 병원 방문일: {calculateNewEndDate()}
+                                        {/* 병원 방문일 선택 */}
+                                        <View style={styles.modalField}>
+                                            <Text style={styles.modalLabel}>병원 방문일</Text>
+                                            <TouchableOpacity
+                                                style={styles.modalDateButton}
+                                                onPress={() => openDatePicker('end')}
+                                                activeOpacity={0.7}
+                                            >
+                                                <MaterialCommunityIcons name="hospital-building" size={18} color="#2196F3" />
+                                                <Text style={[styles.modalDateText, { color: '#2196F3', fontWeight: fontWeight.bold as any }]}>
+                                                    {new Date(editEndDate).toLocaleDateString('ko-KR', {
+                                                        year: 'numeric', month: 'long', day: 'numeric'
+                                                    })}
                                                 </Text>
-                                            </View>
-                                        )}
+                                                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+                                            </TouchableOpacity>
+                                        </View>
 
                                         {/* 버튼들 */}
                                         <View style={styles.modalButtons}>
@@ -785,15 +891,18 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginBottom: spacing.sm,
     },
-    modalDateDisplay: {
+    modalDateButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
         padding: spacing.md,
         backgroundColor: colors.baseLight,
         borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.08)',
     },
     modalDateText: {
+        flex: 1,
         fontSize: fontSize.base,
         color: colors.text,
     },
@@ -817,20 +926,6 @@ const styles = StyleSheet.create({
     modalInputUnit: {
         fontSize: fontSize.lg,
         color: colors.textSecondary,
-    },
-    modalPreview: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        padding: spacing.md,
-        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-        borderRadius: borderRadius.md,
-        marginBottom: spacing.xl,
-    },
-    modalPreviewText: {
-        fontSize: fontSize.base,
-        color: '#2196F3',
-        fontWeight: fontWeight.medium,
     },
     modalButtons: {
         flexDirection: 'row',
@@ -862,5 +957,40 @@ const styles = StyleSheet.create({
     },
     modalButtonDisabled: {
         opacity: 0.5,
+    },
+
+    // 날짜 피커
+    datePickerModal: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    datePickerContainer: {
+        backgroundColor: colors.base,
+        borderTopLeftRadius: borderRadius.xl,
+        borderTopRightRadius: borderRadius.xl,
+        paddingBottom: 30,
+    },
+    datePickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.08)',
+    },
+    datePickerCancel: {
+        fontSize: fontSize.base,
+        color: colors.textSecondary,
+    },
+    datePickerTitle: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+    },
+    datePickerDone: {
+        fontSize: fontSize.base,
+        color: colors.primary,
+        fontWeight: fontWeight.bold,
     },
 });
