@@ -29,7 +29,7 @@ export default function RegisterScreen() {
         password: '',
         confirmPassword: '',
         firstName: '',
-        role: '' as 'patient' | 'senior' | 'guardian' | '',
+        role: '' as 'patient' | 'guardian' | '',
         phoneNumber: '',
     });
 
@@ -266,38 +266,6 @@ export default function RegisterScreen() {
                                                 <TouchableOpacity
                                                     style={[
                                                         styles.roleButton,
-                                                        formData.role === 'senior' && styles.roleButtonActive,
-                                                    ]}
-                                                    onPress={() =>
-                                                        setFormData({ ...formData, role: 'senior' })
-                                                    }
-                                                >
-                                                    <View style={[
-                                                        styles.roleIconCircle,
-                                                        formData.role === 'senior' && styles.roleIconCircleActive
-                                                    ]}>
-                                                        <FontAwesome5
-                                                            name="user-alt"
-                                                            size={22}
-                                                            color={formData.role === 'senior' ? colors.primary : colors.textLight}
-                                                        />
-                                                    </View>
-                                                    <Text
-                                                        style={[
-                                                            styles.roleText,
-                                                            formData.role === 'senior' && styles.roleTextActive,
-                                                        ]}
-                                                    >
-                                                        시니어
-                                                    </Text>
-                                                    <Text style={styles.roleDescription}>
-                                                        보호자 연결
-                                                    </Text>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={[
-                                                        styles.roleButton,
                                                         formData.role === 'guardian' && styles.roleButtonActive,
                                                     ]}
                                                     onPress={() =>
@@ -323,7 +291,7 @@ export default function RegisterScreen() {
                                                         보호자
                                                     </Text>
                                                     <Text style={styles.roleDescription}>
-                                                        시니어 관리
+                                                        복약자 관리
                                                     </Text>
                                                 </TouchableOpacity>
                                             </View>

@@ -33,40 +33,40 @@ const icons: Record<string, string> = {
 
 // 보호자 전용 탭: 시니어 관리, 시니어 캘린더, 설정 (3탭)
 const GUARDIAN_TABS = ['seniors', 'senior-calendar', 'profile'];
-// 복약자/시니어 탭: 건강피드, 복약, 캘린더, 설정 (4탭)
+// 복약자 탭: 건강피드, 복약, 캘린더, 설정 (4탭)
 const PATIENT_SENIOR_TABS = ['health-feed', 'index', 'calendar', 'profile'];
 
 export function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
     // 사용자 role 직접 확인
     const user = useMedicationStore((state) => state.user);
     const isGuardian = user?.role === 'guardian';
-    
+
     // 역할에 따라 표시할 탭 결정
     const allowedTabs = isGuardian ? GUARDIAN_TABS : PATIENT_SENIOR_TABS;
-    
+
     // 허용된 탭만 필터링
     const visibleRoutes = state.routes.filter((route: any) => {
         return allowedTabs.includes(route.name);
     });
-    
+
     // 탭 개수에 따라 너비 조정
-    const tabBarWidth = visibleRoutes.length <= 2 
+    const tabBarWidth = visibleRoutes.length <= 2
         ? SCREEN_WIDTH * 0.45  // 2탭
         : visibleRoutes.length === 3
-        ? SCREEN_WIDTH * 0.55  // 3탭 (보호자)
-        : SCREEN_WIDTH * 0.70; // 4탭
+            ? SCREEN_WIDTH * 0.55  // 3탭 (보호자)
+            : SCREEN_WIDTH * 0.70; // 4탭
 
     return (
         <View style={styles.container}>
             <View style={[styles.tabBar, { width: tabBarWidth }]}>
                 {state.routes.map((route: any, index: number) => {
                     const { options } = descriptors[route.key];
-                    
+
                     // 허용된 탭이 아니면 숨김
                     if (!allowedTabs.includes(route.name)) {
                         return null;
                     }
-                    
+
                     const isFocused = state.index === index;
 
                     const onPress = () => {

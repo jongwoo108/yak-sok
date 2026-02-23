@@ -52,11 +52,11 @@ const MenuItem = ({
 
 // 알림 타입 옵션
 const MESSAGE_OPTIONS = {
-    guardian: [  // 보호자가 시니어에게
+    guardian: [  // 보호자가 복약자에게
         { type: 'check_in', label: '안부 확인', icon: 'heart-outline', color: colors.peachDark },
         { type: 'reminder', label: '약 드셨나요?', icon: 'medical-outline', color: colors.primary },
     ],
-    senior: [  // 시니어가 보호자에게
+    patient: [  // 복약자가 보호자에게
         { type: 'im_ok', label: '괜찮아요', icon: 'checkmark-circle-outline', color: colors.primary },
         { type: 'need_help', label: '도움 필요해요', icon: 'alert-circle-outline', color: colors.danger },
     ],
@@ -65,16 +65,16 @@ const MESSAGE_OPTIONS = {
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, logout, isAuthenticated } = useMedicationStore();
-    
+
     // 연결된 사용자 목록
     const [connectedUsers, setConnectedUsers] = useState<Array<{ id: number; name: string; role: string; relationId: number }>>([]);
     const [loadingConnections, setLoadingConnections] = useState(false);
-    
+
     // 알림 전송 모달
     const [alertModalVisible, setAlertModalVisible] = useState(false);
     const [selectedUser, setSelectedUser] = useState<{ id: number; name: string } | null>(null);
     const [sendingAlert, setSendingAlert] = useState(false);
-    
+
     // 연결 관리 모달
     const [connectModalVisible, setConnectModalVisible] = useState(false);
     const [myInviteCode, setMyInviteCode] = useState<string | null>(null);
@@ -88,13 +88,13 @@ export default function ProfileScreen() {
         setLoadingConnections(true);
         try {
             const res = await api.guardians.list();
-            const relations = res.data.results || res.data || [];
-            
+            const relations: GuardianRelation[] = (res.data as any).results || res.data || [];
+
             // 현재 사용자 역할에 따라 연결된 사용자 추출
             const users = relations.map((rel: GuardianRelation) => {
                 if (user.role === 'guardian') {
-                    // 보호자 → 연결된 시니어/복약자 표시
-                    return { id: rel.senior, name: rel.senior_name, role: 'senior', relationId: rel.id };
+                    // 보호자 → 연결된 복약자 표시
+                    return { id: rel.senior, name: rel.senior_name, role: 'patient', relationId: rel.id };
                 } else {
                     // 시니어/복약자 → 연결된 보호자 표시
                     return { id: rel.guardian, name: rel.guardian_name, role: 'guardian', relationId: rel.id };
@@ -114,7 +114,7 @@ export default function ProfileScreen() {
             fetchConnections();
         }, [fetchConnections])
     );
-    
+
     // 내 초대 코드 조회
     const fetchMyInviteCode = async () => {
         try {
@@ -124,7 +124,7 @@ export default function ProfileScreen() {
             console.error('Fetch invite code error:', error);
         }
     };
-    
+
     // 초대 코드 생성
     const handleGenerateCode = async () => {
         setGeneratingCode(true);
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
             setGeneratingCode(false);
         }
     };
-    
+
     // 초대 코드 공유
     const handleShareCode = async () => {
         if (!myInviteCode) return;
@@ -152,14 +152,14 @@ export default function ProfileScreen() {
             console.error('Share error:', error);
         }
     };
-    
+
     // 초대 코드 수락
     const handleAcceptCode = async () => {
         if (inputCode.length !== 6) {
             Alert.alert('오류', '6자리 초대 코드를 입력해주세요.');
             return;
         }
-        
+
         setAcceptingCode(true);
         try {
             const res = await api.invite.accept(inputCode);
@@ -175,7 +175,7 @@ export default function ProfileScreen() {
             setAcceptingCode(false);
         }
     };
-    
+
     // 연결 해제
     const handleDisconnect = (relationId: number, userName: string) => {
         Alert.alert(
@@ -199,7 +199,7 @@ export default function ProfileScreen() {
             ]
         );
     };
-    
+
     // 연결 관리 모달 열기
     const openConnectModal = () => {
         fetchMyInviteCode();
@@ -209,7 +209,7 @@ export default function ProfileScreen() {
     // 알림 전송
     const handleSendAlert = async (messageType: string) => {
         if (!selectedUser) return;
-        
+
         setSendingAlert(true);
         try {
             const res = await api.alerts.send({
@@ -285,13 +285,13 @@ export default function ProfileScreen() {
                             <Text style={styles.profileEmail}>{user?.email || '-'}</Text>
                             <View style={styles.roleBadge}>
                                 <Ionicons
-                                    name={user?.role === 'guardian' ? 'people' : user?.role === 'senior' ? 'person' : 'medical'}
+                                    name={user?.role === 'guardian' ? 'people' : 'medical'}
                                     size={12}
                                     color={colors.primaryDark}
                                     style={{ marginRight: 4 }}
                                 />
                                 <Text style={styles.roleText}>
-                                    {user?.role === 'patient' ? '복약자' : user?.role === 'senior' ? '시니어' : '보호자'}
+                                    {user?.role === 'patient' ? '복약자' : '보호자'}
                                 </Text>
                             </View>
                         </View>
@@ -310,7 +310,7 @@ export default function ProfileScreen() {
                                 </View>
                             </TouchableOpacity>
                         </View>
-                        
+
                         {loadingConnections ? (
                             <ActivityIndicator color={colors.primary} style={{ paddingVertical: spacing.lg }} />
                         ) : connectedUsers.length === 0 ? (
@@ -318,7 +318,7 @@ export default function ProfileScreen() {
                                 <Ionicons name="people-outline" size={40} color={colors.textLight} />
                                 <Text style={styles.emptyConnectionText}>연결된 사용자가 없습니다</Text>
                                 <Text style={styles.emptyConnectionHint}>
-                                    {user?.role === 'guardian' ? '시니어/복약자와 연결하여 복약을 관리하세요' : '보호자와 연결하여 복약 관리를 받으세요'}
+                                    {user?.role === 'guardian' ? '복약자와 연결하여 복약을 관리하세요' : '보호자와 연결하여 복약 관리를 받으세요'}
                                 </Text>
                             </View>
                         ) : (
@@ -441,7 +441,7 @@ export default function ProfileScreen() {
                             <Ionicons name="send" size={24} color={colors.primary} />
                             <Text style={styles.modalTitle}>알림 보내기</Text>
                         </View>
-                        
+
                         {selectedUser && (
                             <Text style={styles.modalRecipient}>
                                 {selectedUser.name}님에게
@@ -450,7 +450,7 @@ export default function ProfileScreen() {
 
                         {/* 메시지 옵션 버튼들 */}
                         <View style={styles.alertOptionsContainer}>
-                            {(user?.role === 'guardian' ? MESSAGE_OPTIONS.guardian : MESSAGE_OPTIONS.senior).map((option) => (
+                            {(user?.role === 'guardian' ? MESSAGE_OPTIONS.guardian : MESSAGE_OPTIONS.patient).map((option) => (
                                 <TouchableOpacity
                                     key={option.type}
                                     style={[styles.alertOptionButton, sendingAlert && styles.alertOptionDisabled]}
@@ -503,7 +503,7 @@ export default function ProfileScreen() {
                             <Text style={styles.inviteSectionHint}>
                                 상대방에게 이 코드를 전달하세요
                             </Text>
-                            
+
                             {myInviteCode ? (
                                 <View style={styles.inviteCodeBox}>
                                     <Text style={styles.inviteCodeText}>{myInviteCode}</Text>
@@ -542,7 +542,7 @@ export default function ProfileScreen() {
                             <Text style={styles.inviteSectionHint}>
                                 상대방에게 받은 6자리 코드를 입력하세요
                             </Text>
-                            
+
                             <View style={styles.codeInputContainer}>
                                 <TextInput
                                     style={styles.codeInput}

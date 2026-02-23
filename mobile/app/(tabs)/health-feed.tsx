@@ -3,7 +3,7 @@
  * 사용자 질병 기반 맞춤 영상 추천
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { api } from '../../services/api';
+import { useMedicationStore } from '../../services/store';
 import type { CachedVideo, HealthProfile } from '../../services/types';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
@@ -50,6 +51,10 @@ export default function HealthFeedScreen() {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+    // 약 변경 감지용 (store의 healthProfileVersion 구독)
+    const healthProfileVersion = useMedicationStore((s) => s.healthProfileVersion);
+    const prevVersionRef = useRef(healthProfileVersion);
 
     // 프로필 & 피드 로드
     const loadData = useCallback(async (reset = true) => {
@@ -91,9 +96,31 @@ export default function HealthFeedScreen() {
         }, [selectedCategory])
     );
 
-    const onRefresh = () => {
+    // 약 목록 변경 시 자동 새로고침 (프로필 재분석 완료 대기 후 리로드)
+    useEffect(() => {
+        if (prevVersionRef.current !== healthProfileVersion && healthProfileVersion > 0) {
+            // 백엔드에서 Celery 태스크로 프로필 재분석 중이므로 잠시 대기 후 리로드
+            const timer = setTimeout(() => {
+                loadData(true);
+            }, 5000);
+            prevVersionRef.current = healthProfileVersion;
+            return () => clearTimeout(timer);
+        }
+    }, [healthProfileVersion]);
+
+    const onRefresh = async () => {
         setRefreshing(true);
-        loadData(true);
+        try {
+            // 프로필 재분석 요청 (GPT 분석 + YouTube 검색)
+            await api.health.refreshProfile();
+            // 분석 완료 대기 후 리로드
+            setTimeout(() => {
+                loadData(true);
+            }, 4000);
+        } catch (e) {
+            // 프로필 재분석 실패 시에도 기존 데이터 리로드
+            loadData(true);
+        }
     };
 
     // 무한 스크롤

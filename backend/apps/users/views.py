@@ -361,8 +361,7 @@ class GuardianRelationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        # 복약자(PATIENT)와 시니어(SENIOR) 모두 동일하게 처리
-        if user.role in [User.Role.SENIOR, User.Role.PATIENT]:
+        if user.role == User.Role.PATIENT:
             return GuardianRelation.objects.filter(senior=user)
         elif user.role == User.Role.GUARDIAN:
             return GuardianRelation.objects.filter(guardian=user)
@@ -465,15 +464,14 @@ class AcceptInviteView(APIView):
         inviter = invite.user
         accepter = request.user
         
-        # 복약자/시니어 - 보호자 매칭
-        # 복약자와 시니어 모두 보호자와 연결 가능
-        if inviter.role == User.Role.GUARDIAN and accepter.role in [User.Role.PATIENT, User.Role.SENIOR]:
-            senior, guardian = accepter, inviter  # senior 필드에 복약자/시니어 저장
-        elif inviter.role in [User.Role.PATIENT, User.Role.SENIOR] and accepter.role == User.Role.GUARDIAN:
+        # 복약자 - 보호자 매칭
+        if inviter.role == User.Role.GUARDIAN and accepter.role == User.Role.PATIENT:
+            senior, guardian = accepter, inviter
+        elif inviter.role == User.Role.PATIENT and accepter.role == User.Role.GUARDIAN:
             senior, guardian = inviter, accepter
         else:
             return Response(
-                {'error': '복약자/시니어와 보호자만 연결할 수 있습니다.'},
+                {'error': '복약자와 보호자만 연결할 수 있습니다.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

@@ -9,13 +9,12 @@ from django.db import models
 class User(AbstractUser):
     """
     커스텀 사용자 모델
-    복약자, 시니어, 보호자 역할 구분
+    사용자(복약자), 보호자 역할 구분
     """
     
     class Role(models.TextChoices):
-        PATIENT = 'patient', '복약자'      # 자신의 약만 관리 (모니터링 없음)
-        SENIOR = 'senior', '시니어'        # 약 관리 + 보호자에게 모니터링 받음
-        GUARDIAN = 'guardian', '보호자'    # 시니어 모니터링만
+        PATIENT = 'patient', '복약자'      # 약 관리 + 보호자 연결 가능
+        GUARDIAN = 'guardian', '보호자'    # 사용자 모니터링
     
     role = models.CharField(
         max_length=10,
@@ -69,8 +68,8 @@ class GuardianRelation(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='guardians',
-        limit_choices_to={'role': User.Role.SENIOR},
-        verbose_name='시니어'
+        limit_choices_to={'role__in': ['patient']},
+        verbose_name='사용자'
     )
     guardian = models.ForeignKey(
         User,

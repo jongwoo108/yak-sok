@@ -31,7 +31,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=False, allow_blank=True)
-    role = serializers.ChoiceField(choices=User.Role.choices, default=User.Role.SENIOR)
+    role = serializers.ChoiceField(choices=User.Role.choices, default=User.Role.PATIENT)
     
     class Meta:
         model = User

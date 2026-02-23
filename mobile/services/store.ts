@@ -19,6 +19,9 @@ interface AppState {
     // 알림
     alerts: Alert[];
 
+    // 건강피드 갱신 트리거
+    healthProfileVersion: number;
+
     // 로딩 상태
     isLoading: boolean;
     error: string | null;
@@ -34,6 +37,7 @@ interface AppState {
     updateMedication: (id: number, data: any, scheduleChanges?: { add: any[]; remove: number[] }) => Promise<void>;
     deleteMedication: (id: number) => Promise<void>;
     deleteMedicationGroup: (id: number) => Promise<void>;
+    invalidateHealthFeed: () => void;
     fetchTodayLogs: () => Promise<void>;
     takeMedication: (logId: number) => Promise<void>;
     batchTakeMedications: (logIds: number[]) => Promise<void>;
@@ -49,6 +53,7 @@ export const useMedicationStore = create<AppState>((set, get) => ({
     medications: [],
     todayLogs: [],
     alerts: [],
+    healthProfileVersion: 0,
     isLoading: false,
     error: null,
 
@@ -60,8 +65,14 @@ export const useMedicationStore = create<AppState>((set, get) => ({
         medications: [],
         todayLogs: [],
         alerts: [],
+        healthProfileVersion: 0,
         error: null,
     }),
+
+    // 건강피드 갱신 트리거 (약 변경 시 호출)
+    invalidateHealthFeed: () => set((state) => ({
+        healthProfileVersion: state.healthProfileVersion + 1,
+    })),
 
     fetchUser: async () => {
         try {
@@ -105,6 +116,8 @@ export const useMedicationStore = create<AppState>((set, get) => ({
             set({ medications: currentMeds.filter((med) => med.id !== id) });
             // 오늘의 복약 기록 갱신 (메인 화면 동기화)
             await get().fetchTodayLogs();
+            // 건강피드 갱신 트리거
+            get().invalidateHealthFeed();
         } catch (error) {
             set({ error: '약 삭제에 실패했습니다.' });
         } finally {
@@ -121,6 +134,8 @@ export const useMedicationStore = create<AppState>((set, get) => ({
             set({ medications: currentMeds.filter((med) => med.group_id !== id) });
             // 오늘의 복약 기록 갱신 (메인 화면 동기화)
             await get().fetchTodayLogs();
+            // 건강피드 갱신 트리거
+            get().invalidateHealthFeed();
         } catch (error) {
             set({ error: '그룹 삭제에 실패했습니다.' });
         } finally {
@@ -137,6 +152,8 @@ export const useMedicationStore = create<AppState>((set, get) => ({
                 get().fetchMedications(),
                 get().fetchTodayLogs()
             ]);
+            // 건강피드 갱신 트리거
+            get().invalidateHealthFeed();
         } catch (error) {
             set({ error: '약 등록에 실패했습니다.' });
             throw error;
@@ -169,6 +186,8 @@ export const useMedicationStore = create<AppState>((set, get) => ({
                 get().fetchMedications(),
                 get().fetchTodayLogs()
             ]);
+            // 건강피드 갱신 트리거
+            get().invalidateHealthFeed();
         } catch (error) {
             set({ error: '약 수정에 실패했습니다.' });
             throw error;
