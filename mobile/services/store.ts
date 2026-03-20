@@ -43,6 +43,8 @@ interface AppState {
     batchTakeMedications: (logIds: number[]) => Promise<void>;
 
     fetchAlerts: () => Promise<void>;
+    deactivateMedications: (medicationIds: number[]) => Promise<void>;
+    renewMedications: (medications: { id: number; days_supply?: number | null; start_date?: string | null }[]) => Promise<void>;
     clearError: () => void;
 }
 
@@ -254,6 +256,42 @@ export const useMedicationStore = create<AppState>((set, get) => ({
             set({ alerts: response.data.results || [] });
         } catch (error) {
             set({ error: '알림을 불러올 수 없습니다.' });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    // 약 일괄 비활성화 (병원 재방문 시 빠진 약 처리)
+    deactivateMedications: async (medicationIds) => {
+        try {
+            set({ isLoading: true, error: null });
+            await api.medications.batchDeactivate(medicationIds);
+            await Promise.all([
+                get().fetchMedications(),
+                get().fetchTodayLogs()
+            ]);
+            get().invalidateHealthFeed();
+        } catch (error) {
+            set({ error: '약 비활성화에 실패했습니다.' });
+            throw error;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    // 계속 복용 약 갱신 (start_date, days_supply 업데이트)
+    renewMedications: async (medications) => {
+        try {
+            set({ isLoading: true, error: null });
+            await api.medications.batchRenew(medications);
+            await Promise.all([
+                get().fetchMedications(),
+                get().fetchTodayLogs()
+            ]);
+            get().invalidateHealthFeed();
+        } catch (error) {
+            set({ error: '약 갱신에 실패했습니다.' });
+            throw error;
         } finally {
             set({ isLoading: false });
         }

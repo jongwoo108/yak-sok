@@ -2,6 +2,8 @@
 Health Views - 건강 프로필, 영상 피드 API
 """
 
+from datetime import datetime
+
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,13 +13,16 @@ from django.db.models import Q
 
 from .models import (
     UserHealthProfile, HealthCondition, CachedVideo, VideoBookmark,
+    LifestyleTip,
 )
 from .serializers import (
     UserHealthProfileSerializer,
     CachedVideoListSerializer,
     CachedVideoDetailSerializer,
     VideoBookmarkSerializer,
+    LifestyleTipSerializer,
 )
+from apps.users.permissions import IsPremiumUser
 
 
 class HealthProfileViewSet(viewsets.GenericViewSet):
@@ -108,3 +113,51 @@ class VideoBookmarkViewSet(viewsets.GenericViewSet,
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class LifestyleTipViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+    """
+    라이프스타일 팁 API (프리미엄 전용)
+    GET /api/health/lifestyle-tips/?date=2026-03-16
+    
+    해당 날짜 팁이 없으면 GPT로 자동 생성 후 반환
+    """
+    permission_classes = [IsAuthenticated, IsPremiumUser]
+    serializer_class = LifestyleTipSerializer
+    
+    def get_queryset(self):
+        return LifestyleTip.objects.filter(user=self.request.user)
+    
+    def list(self, request):
+        """날짜별 라이프스타일 팁 조회 (없으면 자동 생성)"""
+        date_str = request.query_params.get('date')
+        
+        if not date_str:
+            date_str = timezone.now().strftime('%Y-%m-%d')
+        
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': '올바른 날짜 형식이 아닙니다. (YYYY-MM-DD)'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # 캐시 확인
+        tips = LifestyleTip.objects.filter(user=request.user, date=target_date)
+        
+        if tips.count() < 4:
+            # GPT로 생성
+            from .services import generate_daily_lifestyle_tips
+            try:
+                tips = generate_daily_lifestyle_tips(request.user, target_date)
+            except Exception as e:
+                return Response(
+                    {'error': '팁 생성 중 오류가 발생했습니다.', 'detail': str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+            tips = LifestyleTip.objects.filter(user=request.user, date=target_date)
+        
+        serializer = LifestyleTipSerializer(tips, many=True)
+        return Response(serializer.data)
+

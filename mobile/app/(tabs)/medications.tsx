@@ -314,30 +314,6 @@ export default function MedicationsScreen() {
                         <View key={groupName} style={styles.groupSection}>
                             {/* 그룹 헤더 */}
                             <View style={styles.groupHeader}>
-                                {isEditMode ? (
-                                    <TouchableOpacity
-                                        style={styles.groupTitleRow}
-                                        onPress={() => toggleGroupSelection(meds)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <View style={[
-                                            styles.groupCheckbox,
-                                            groupState === 'all' && styles.groupCheckboxSelected,
-                                            groupState === 'some' && styles.groupCheckboxPartial,
-                                        ]}>
-                                            {groupState === 'all' && (
-                                                <Ionicons name="checkmark" size={14} color="white" />
-                                            )}
-                                            {groupState === 'some' && (
-                                                <Ionicons name="remove" size={14} color="white" />
-                                            )}
-                                        </View>
-                                        <Text style={styles.groupName}>{groupName}</Text>
-                                        <View style={styles.countBadge}>
-                                            <Text style={styles.countBadgeText}>{meds.length}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                ) : (
                                     <View style={styles.groupTitleRow}>
                                         <View style={styles.groupIconCircle}>
                                             <Feather name="folder" size={14} color={colors.primary} />
@@ -347,7 +323,6 @@ export default function MedicationsScreen() {
                                             <Text style={styles.countBadgeText}>{meds.length}</Text>
                                         </View>
                                     </View>
-                                )}
 
                                 {/* Group Delete Button (Edit Mode) */}
                                 {isEditMode && meds[0]?.group_id && (
@@ -363,7 +338,7 @@ export default function MedicationsScreen() {
 
                             {/* 약품 카드들 */}
                             {meds.map((med) => (
-                                <View key={med.id} style={{ position: 'relative' }}>
+                                <View key={med.id}>
                                     <TouchableOpacity
                                         activeOpacity={isEditMode ? 1 : 0.8}
                                         onPress={() => openEditModal(med)}
@@ -372,17 +347,26 @@ export default function MedicationsScreen() {
                                         <NeumorphCard style={styles.medicationCard}>
                                             <View style={styles.cardHeader}>
                                                 <Text style={styles.medicationName}>{med.name}</Text>
-                                                <View style={[
-                                                    styles.statusBadge,
-                                                    med.is_active ? styles.statusActive : styles.statusInactive
-                                                ]}>
-                                                    <Text style={[
-                                                        styles.statusText,
-                                                        med.is_active ? styles.statusTextActive : styles.statusTextInactive
+                                                {isEditMode ? (
+                                                    <TouchableOpacity
+                                                        style={styles.cardDeleteButton}
+                                                        onPress={() => handleDelete(med.id, med.name)}
+                                                    >
+                                                        <Ionicons name="trash-outline" size={18} color={colors.dangerDark} />
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <View style={[
+                                                        styles.statusBadge,
+                                                        med.is_active ? styles.statusActive : styles.statusInactive
                                                     ]}>
-                                                        {med.is_active ? '복용 중' : '중단'}
-                                                    </Text>
-                                                </View>
+                                                        <Text style={[
+                                                            styles.statusText,
+                                                            med.is_active ? styles.statusTextActive : styles.statusTextInactive
+                                                        ]}>
+                                                            {med.is_active ? '복용 중' : '중단'}
+                                                        </Text>
+                                                    </View>
+                                                )}
                                             </View>
 
                                             {med.dosage && (
@@ -412,24 +396,6 @@ export default function MedicationsScreen() {
                                             )}
                                         </NeumorphCard>
                                     </TouchableOpacity>
-
-                                    {/* Selection Overlay for Edit Mode */}
-                                    {isEditMode && (
-                                        <TouchableOpacity
-                                            style={styles.selectionOverlay}
-                                            activeOpacity={1}
-                                            onPress={() => toggleSelection(med.id)}
-                                        >
-                                            <View style={[
-                                                styles.checkbox,
-                                                selectedIds.has(med.id) && styles.checkboxSelected
-                                            ]}>
-                                                {selectedIds.has(med.id) && (
-                                                    <Ionicons name="checkmark" size={16} color="white" />
-                                                )}
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
                                 </View>
                             ))}
                         </View>
@@ -440,28 +406,16 @@ export default function MedicationsScreen() {
                 <View style={{ height: 140 }} />
             </ScrollView>
 
-            {/* 상단 컨트롤 버튼 (Absolute Position) */}
             <View style={styles.absoluteTopBar} pointerEvents="box-none">
-                {isEditMode ? (
-                    <TouchableOpacity
-                        style={styles.selectAllButton}
-                        onPress={handleSelectAll}
-                    >
-                        <Text style={styles.selectAllText}>
-                            {selectedIds.size === medications.length ? '선택 해제' : '전체 선택'}
-                        </Text>
-                    </TouchableOpacity>
-                ) : (
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => router.back()}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.backButtonInner}>
-                            <Ionicons name="chevron-back" size={22} color={colors.text} />
-                        </View>
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.backButtonInner}>
+                        <Ionicons name="chevron-back" size={22} color={colors.text} />
+                    </View>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                     style={[styles.editButton, isEditMode && styles.editButtonActive]}
@@ -480,24 +434,6 @@ export default function MedicationsScreen() {
             Re-implementing inline here to avoid breaking changes, but better structure.
             */}
             <View style={styles.fabRow}>
-                {isEditMode ? (
-                    <TouchableOpacity
-                        onPress={handleDeleteSelected}
-                        style={{ flex: 1 }}
-                        activeOpacity={0.8}
-                        disabled={selectedIds.size === 0}
-                    >
-                        <View style={styles.fabContainer}>
-                            <View style={[styles.fabShadow, { shadowColor: selectedIds.size > 0 ? '#FF5252' : colors.textLight }]} />
-                            <View style={[styles.fabSurface, { backgroundColor: selectedIds.size > 0 ? '#FF5252' : colors.textLight }]}>
-                                <Ionicons name="trash" size={20} color={colors.white} />
-                                <Text style={styles.fabText}>
-                                    {selectedIds.size > 0 ? `${selectedIds.size}개 삭제하기` : '삭제할 항목 선택'}
-                                </Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                ) : (
                     <>
                         <TouchableOpacity onPress={() => router.push('/medications/scan' as any)} style={{ flex: 1 }} activeOpacity={0.8}>
                             <View style={styles.fabContainer}>
@@ -521,7 +457,6 @@ export default function MedicationsScreen() {
                             </View>
                         </TouchableOpacity>
                     </>
-                )}
             </View>
 
             {/* 편집 모달 */}
@@ -730,9 +665,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     groupIconCircle: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: colors.mintLight,
         alignItems: 'center',
         justifyContent: 'center',
@@ -764,9 +699,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     countBadge: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: colors.mintLight,
         alignItems: 'center',
         justifyContent: 'center',
@@ -882,6 +817,15 @@ const styles = StyleSheet.create({
         top: -8,
         right: -4,
         zIndex: 10,
+    },
+    // 카드 내 삭제 버튼
+    cardDeleteButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.dangerLight,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
     },
     // 그룹 삭제 버튼
     groupDeleteButton: {

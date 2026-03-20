@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
     View,
     Text,
@@ -17,12 +18,13 @@ import {
     Alert,
     KeyboardAvoidingView,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Calendar, DateData } from 'react-native-calendars';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { useMedicationStore } from '../../services/store';
-import type { CalendarData, CalendarDailySummary, MedicationLog, HospitalVisit } from '../../services/types';
+import type { CalendarData, CalendarDailySummary, MedicationLog, HospitalVisit, LifestyleTip } from '../../services/types';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
 import { NeumorphCard, NeumorphIconButton } from '../../components';
@@ -36,8 +38,18 @@ interface MarkedDates {
     };
 }
 
+const TIP_CATEGORY_ICON: Record<string, string> = {
+    lifestyle: 'sparkles',
+    diet: 'nutrition',
+    exercise: 'fitness',
+    mental: 'heart',
+};
+
 export default function CalendarScreen() {
+    const router = useRouter();
     const isAuthenticated = useMedicationStore((state) => state.isAuthenticated);
+    const user = useMedicationStore((state) => state.user);
+    const fetchUser = useMedicationStore((state) => state.fetchUser);
     const [dailySummary, setDailySummary] = useState<CalendarDailySummary>({});
     const [hospitalVisits, setHospitalVisits] = useState<HospitalVisit[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(
@@ -58,6 +70,10 @@ export default function CalendarScreen() {
     const [editStartDate, setEditStartDate] = useState('');
     const [editEndDate, setEditEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    // 라이프스타일 팁
+    const [tips, setTips] = useState<LifestyleTip[]>([]);
+    const [tipsLoading, setTipsLoading] = useState(false);
 
     // 날짜 피커 상태
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -109,6 +125,27 @@ export default function CalendarScreen() {
             fetchDateLogs(selectedDate);
         }
     }, [selectedDate, fetchDateLogs]);
+
+    const loadTips = useCallback(async () => {
+        if (!isAuthenticated) return;
+        setTipsLoading(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const res = await api.health.getLifestyleTips(today);
+            setTips(res.data);
+        } catch {
+            setTips([]);
+        } finally {
+            setTipsLoading(false);
+        }
+    }, [isAuthenticated]);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchUser();
+            loadTips();
+        }, [fetchUser, loadTips])
+    );
 
     // 병원 방문일 날짜 목록
     const hospitalVisitDates = hospitalVisits.map(v => v.date);
@@ -291,6 +328,84 @@ export default function CalendarScreen() {
         }
     };
 
+    const isPremium = user?.has_active_premium ?? false;
+
+    const renderLifestyleTips = () => {
+        return (
+            <View style={styles.tipsSection}>
+                <View style={styles.tipsSectionHeader}>
+                    <Ionicons name="sparkles" size={20} color={colors.primary} />
+                    <Text style={styles.tipsSectionTitle}>오늘의 라이프스타일 팁</Text>
+                    {!isPremium && (
+                        <View style={styles.premiumBadge}>
+                            <Text style={styles.premiumBadgeText}>프리미엄</Text>
+                        </View>
+                    )}
+                </View>
+
+                {isPremium ? (
+                    tipsLoading ? (
+                        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />
+                    ) : tips.length === 0 ? (
+                        <NeumorphCard style={styles.tipsEmptyCard}>
+                            <Ionicons name="sparkles-outline" size={32} color={colors.textLight} />
+                            <Text style={styles.tipsEmptyText}>오늘의 팁을 불러오는 중입니다</Text>
+                        </NeumorphCard>
+                    ) : (
+                        <View style={styles.tipsList}>
+                            {tips.map((tip) => (
+                                <NeumorphCard key={tip.id} style={styles.tipCard}>
+                                    <View style={styles.tipIconWrap}>
+                                        <Ionicons
+                                            name={(TIP_CATEGORY_ICON[tip.category] ?? 'bulb-outline') as any}
+                                            size={20}
+                                            color={colors.primary}
+                                        />
+                                    </View>
+                                    <View style={styles.tipContent}>
+                                        <Text style={styles.tipTitle}>{tip.title}</Text>
+                                        <Text style={styles.tipBody}>{tip.content}</Text>
+                                    </View>
+                                </NeumorphCard>
+                            ))}
+                        </View>
+                    )
+                ) : (
+                    <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => router.push('/premium')}
+                        style={styles.lockWrapper}
+                    >
+                        <NeumorphCard style={styles.tipsPreviewCard}>
+                            {[
+                                { icon: 'sparkles', title: '오늘의 라이프스타일 팁', body: '나의 복약 정보를 바탕으로 맞춤 팁을 제공합니다.' },
+                                { icon: 'nutrition', title: '식이요법 가이드', body: '복용 중인 약과 질환에 맞는 식단 조언을 드립니다.' },
+                            ].map((item, i) => (
+                                <View key={i} style={[styles.tipCard, { opacity: 0.4 }]}>
+                                    <View style={styles.tipIconWrap}>
+                                        <Ionicons name={item.icon as any} size={20} color={colors.primary} />
+                                    </View>
+                                    <View style={styles.tipContent}>
+                                        <Text style={styles.tipTitle}>{item.title}</Text>
+                                        <Text style={styles.tipBody}>{item.body}</Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </NeumorphCard>
+                        <BlurView intensity={18} tint="light" style={styles.blurOverlay} pointerEvents="none" />
+                        <View style={styles.lockContent}>
+                            <View style={styles.lockIconWrap}>
+                                <Ionicons name="lock-closed" size={28} color={colors.primary} />
+                            </View>
+                            <Text style={styles.lockTitle}>프리미엄 전용 콘텐츠</Text>
+                            <Text style={styles.lockDesc}>탭하여 프리미엄 기능을 확인하세요</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
+            </View>
+        );
+    };
+
     const formatSelectedDate = () => {
         const date = new Date(selectedDate);
         return date.toLocaleDateString('ko-KR', {
@@ -457,6 +572,9 @@ export default function CalendarScreen() {
                         </View>
                     )}
                 </NeumorphCard>
+
+                {/* 라이프스타일 팁 */}
+                {renderLifestyleTips()}
 
                 {/* 하단 여백 */}
                 <View style={{ height: 100 }} />
@@ -957,6 +1075,111 @@ const styles = StyleSheet.create({
     },
     modalButtonDisabled: {
         opacity: 0.5,
+    },
+
+    // 라이프스타일 팁
+    tipsSection: {
+        marginTop: spacing.xl,
+    },
+    tipsSectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+    },
+    tipsSectionTitle: {
+        fontSize: fontSize.lg,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+        flex: 1,
+    },
+    premiumBadge: {
+        backgroundColor: colors.mintLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 3,
+        borderRadius: borderRadius.pill,
+    },
+    premiumBadgeText: {
+        fontSize: 13,
+        fontWeight: fontWeight.semibold,
+        color: colors.primaryDark,
+    },
+    tipsList: {
+        gap: spacing.sm,
+    },
+    tipsEmptyCard: {
+        alignItems: 'center',
+        paddingVertical: spacing.xxl,
+        gap: spacing.md,
+    },
+    tipsEmptyText: {
+        fontSize: fontSize.sm,
+        color: colors.textLight,
+    },
+    tipCard: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: spacing.md,
+        marginBottom: spacing.sm,
+    },
+    tipIconWrap: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.mintLight,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+    },
+    tipContent: {
+        flex: 1,
+    },
+    tipTitle: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.semibold,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    tipBody: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        lineHeight: 22,
+    },
+    lockWrapper: {
+        position: 'relative',
+        borderRadius: borderRadius.xxl,
+        overflow: 'hidden',
+    },
+    tipsPreviewCard: {
+        padding: spacing.xl,
+    },
+    blurOverlay: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    lockContent: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+    },
+    lockIconWrap: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: colors.mintLight,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.xs,
+    },
+    lockTitle: {
+        fontSize: fontSize.base,
+        fontWeight: fontWeight.bold,
+        color: colors.text,
+    },
+    lockDesc: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
     },
 
     // 날짜 피커

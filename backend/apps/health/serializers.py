@@ -5,7 +5,7 @@ Health Serializers - 건강 프로필, 영상 피드
 from rest_framework import serializers
 from .models import (
     UserHealthProfile, HealthCondition, CachedVideo,
-    VideoBookmark, TrustedChannel,
+    VideoBookmark, TrustedChannel, LifestyleTip,
 )
 
 
@@ -86,3 +86,21 @@ class VideoBookmarkSerializer(serializers.ModelSerializer):
         ).exists():
             raise serializers.ValidationError('이미 북마크된 영상입니다.')
         return value
+
+
+class LifestyleTipSerializer(serializers.ModelSerializer):
+    """라이프스타일 팁 시리얼라이저"""
+    
+    category_display = serializers.CharField(
+        source='get_category_display', read_only=True
+    )
+    
+    class Meta:
+        model = LifestyleTip
+        fields = [
+            'id', 'date', 'category', 'category_display',
+            'title', 'content', 'emoji', 'condition_name',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+

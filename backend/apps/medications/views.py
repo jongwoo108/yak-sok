@@ -61,6 +61,137 @@ class MedicationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=False, methods=['post'], url_path='batch-deactivate')
+    def batch_deactivate(self, request):
+        """
+        약 일괄 비활성화 (병원 재방문 시 빠진 약 처리)
+        - is_active = False 설정
+        - 미래 MedicationLog 삭제
+        - 예약된 Celery 태스크 취소
+        """
+        medication_ids = request.data.get('medication_ids', [])
+        if not medication_ids:
+            return Response(
+                {'error': 'medication_ids가 필요합니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        medications = Medication.objects.filter(
+            id__in=medication_ids,
+            user=request.user,
+            is_active=True
+        )
+        
+        deactivated_count = 0
+        now = timezone.now()
+        
+        for med in medications:
+            med.is_active = False
+            med.save(update_fields=['is_active', 'updated_at'])
+            
+            # 미래 MedicationLog 삭제 및 Celery 태스크 취소
+            future_logs = MedicationLog.objects.filter(
+                schedule__medication=med,
+                scheduled_datetime__gte=now,
+                status=MedicationLog.Status.PENDING
+            )
+            for log in future_logs:
+                if log.celery_task_id:
+                    try:
+                        from apps.alerts.tasks import revoke_alert_task
+                        revoke_alert_task(log.celery_task_id)
+                    except Exception:
+                        pass
+            future_logs.delete()
+            
+            # 스케줄 비활성화
+            MedicationSchedule.objects.filter(medication=med).update(is_active=False)
+            
+            deactivated_count += 1
+        
+        return Response({
+            'success': True,
+            'deactivated_count': deactivated_count,
+            'message': f'{deactivated_count}개의 약이 비활성화되었습니다.'
+        })
+    
+    @action(detail=False, methods=['post'], url_path='batch-renew')
+    def batch_renew(self, request):
+        """
+        계속 복용하는 약 갱신 (병원 재방문 시)
+        - start_date, days_supply 업데이트
+        - 새 기간에 대한 MedicationLog 재생성
+        """
+        from datetime import datetime, timedelta
+        
+        medications_data = request.data.get('medications', [])
+        if not medications_data:
+            return Response(
+                {'error': 'medications 배열이 필요합니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        renewed_count = 0
+        now = timezone.now()
+        
+        for med_data in medications_data:
+            med_id = med_data.get('id')
+            new_days_supply = med_data.get('days_supply')
+            new_start_date = med_data.get('start_date')
+            
+            if not med_id:
+                continue
+            
+            try:
+                med = Medication.objects.get(id=med_id, user=request.user)
+            except Medication.DoesNotExist:
+                continue
+            
+            # start_date, days_supply 갱신
+            if new_start_date:
+                med.start_date = datetime.strptime(new_start_date, '%Y-%m-%d').date()
+            if new_days_supply:
+                med.days_supply = new_days_supply
+            med.save(update_fields=['start_date', 'days_supply', 'updated_at'])
+            
+            # 미래의 PENDING 로그 삭제 (새로 생성할 예정)
+            MedicationLog.objects.filter(
+                schedule__medication=med,
+                scheduled_datetime__gte=now,
+                status=MedicationLog.Status.PENDING
+            ).delete()
+            
+            # 새 기간에 대한 MedicationLog 재생성
+            start_date = med.start_date or timezone.localdate()
+            days_supply = med.days_supply or 30
+            end_date = start_date + timedelta(days=days_supply)
+            
+            for schedule in med.schedules.filter(is_active=True):
+                current_date = max(start_date, timezone.localdate())  # 오늘 이전은 생성 안 함
+                while current_date < end_date:
+                    scheduled_datetime = timezone.make_aware(
+                        datetime.combine(current_date, schedule.scheduled_time)
+                    )
+                    # 이미 존재하는 로그는 건너뜀
+                    if not MedicationLog.objects.filter(
+                        schedule=schedule,
+                        scheduled_datetime=scheduled_datetime
+                    ).exists():
+                        MedicationLog.objects.create(
+                            schedule=schedule,
+                            scheduled_datetime=scheduled_datetime,
+                            status=MedicationLog.Status.PENDING
+                        )
+                    current_date += timedelta(days=1)
+            
+            renewed_count += 1
+        
+        return Response({
+            'success': True,
+            'renewed_count': renewed_count,
+            'message': f'{renewed_count}개의 약이 갱신되었습니다.'
+        })
+    
 
 
 

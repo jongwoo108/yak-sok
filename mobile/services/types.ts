@@ -14,6 +14,9 @@ export interface User {
     emergency_contact: string;
     emergency_relation?: string;
     emergency_name?: string;
+    is_premium: boolean;
+    premium_until: string | null;
+    has_active_premium: boolean;
 }
 
 // 보호자 관계
@@ -183,6 +186,19 @@ export interface CachedVideo {
     search_query?: string;
     fetched_at?: string;
     updated_at?: string;
+}
+
+// 라이프스타일 팁 (프리미엄)
+export interface LifestyleTip {
+    id: number;
+    date: string;
+    category: 'diet' | 'exercise' | 'lifestyle' | 'mental';
+    category_display: string;
+    title: string;
+    content: string;
+    emoji: string;
+    condition_name: string;
+    created_at: string;
 }
 
 // 영상 북마크

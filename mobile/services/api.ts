@@ -5,7 +5,7 @@
 import axios, { AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelation, EmergencyContact, CalendarData, HealthProfile, CachedVideo, VideoBookmark } from './types';
+import type { User, Medication, MedicationLog, Alert, ApiResponse, GuardianRelation, EmergencyContact, CalendarData, HealthProfile, CachedVideo, VideoBookmark, LifestyleTip } from './types';
 
 // 환경변수에서 API URL 가져오기
 // 프로덕션 서버 URL (AWS Lightsail + SSL)
@@ -153,6 +153,10 @@ export const api = {
         delete: (id: number) => apiClient.delete(`/medications/${id}/`),
         scanPrescriptionBase64: (base64Image: string) =>
             apiClient.post('/medications/scan/', { image_base64: base64Image }, { timeout: 60000 }),
+        batchDeactivate: (medicationIds: number[]) =>
+            apiClient.post('/medications/batch-deactivate/', { medication_ids: medicationIds }),
+        batchRenew: (medications: { id: number; days_supply?: number | null; start_date?: string | null }[]) =>
+            apiClient.post('/medications/batch-renew/', { medications }),
     },
 
     // 약품 그룹
@@ -280,6 +284,10 @@ export const api = {
         getBookmarks: () => apiClient.get<ApiResponse<VideoBookmark>>('/health/bookmarks/'),
         addBookmark: (videoId: number) => apiClient.post<VideoBookmark>('/health/bookmarks/', { video: videoId }),
         removeBookmark: (id: number) => apiClient.delete(`/health/bookmarks/${id}/`),
+        getLifestyleTips: (date?: string) => {
+            const qs = date ? `?date=${date}` : '';
+            return apiClient.get<LifestyleTip[]>(`/health/lifestyle-tips/${qs}`);
+        },
     },
 
     // 사용자

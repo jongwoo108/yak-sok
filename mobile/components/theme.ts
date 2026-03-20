@@ -44,11 +44,11 @@ export const colors = {
     dangerLight: '#FFEBEE',    // 레드 라이트
     dangerDark: '#EF9A9A',
 
-    // Text Colors
-    text: '#37474F',           // 메인 텍스트 (부드러운 다크)
-    textSecondary: '#607D8B',  // 보조 텍스트
-    textLight: '#90A4AE',      // 연한 텍스트
-    textMuted: '#B0BEC5',      // 뮤트 텍스트
+    // Text Colors (시니어 대비 강화)
+    text: '#37474F',           // 메인 텍스트
+    textSecondary: '#455A64',  // 보조 텍스트 (대비 강화 #607D8B → #455A64)
+    textLight: '#78909C',      // 연한 텍스트 (대비 강화 #90A4AE → #78909C)
+    textMuted: '#90A4AE',      // 뮤트 텍스트 (기존 textLight 수준)
 
     // Basic Colors
     white: '#FFFFFF',
@@ -83,14 +83,14 @@ export const borderRadius = {
 };
 
 export const fontSize = {
-    xs: 12,
-    sm: 14,
-    base: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
-    display: 40,
+    xs: 14,      // 12 → 14 (시니어 최소 가독 크기)
+    sm: 16,      // 14 → 16 (WCAG 권장 최소)
+    base: 17,    // 16 → 17
+    lg: 19,      // 18 → 19
+    xl: 22,      // 20 → 22
+    xxl: 26,     // 24 → 26
+    xxxl: 34,    // 32 → 34
+    display: 42,  // 40 → 42
 };
 
 export const fontWeight = {

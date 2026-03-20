@@ -12,13 +12,16 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     """사용자 기본 시리얼라이저"""
     
+    has_active_premium = serializers.BooleanField(read_only=True)
+    
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'role', 'phone_number', 'emergency_contact', 'emergency_relation', 'emergency_name'
+            'role', 'phone_number', 'emergency_contact', 'emergency_relation', 'emergency_name',
+            'is_premium', 'premium_until', 'has_active_premium',
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'has_active_premium']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

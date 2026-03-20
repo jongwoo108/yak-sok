@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useMedicationStore } from '../../services/store';
 import { api } from '../../services/api';
+import type { Medication } from '../../services/types';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
 
@@ -45,8 +46,23 @@ interface MedicationEdit {
     description: string;
     schedules: MedicationScheduleEdit[];
     isDuplicate: boolean;
-    noScheduleDetected: boolean; // 스케줄이 감지되지 않은 경우
+    noScheduleDetected: boolean;
 }
+
+// 계속 복용하는 약 (기존 약과 OCR 매칭)
+interface ExistingMedMatch {
+    existingMed: Medication;
+    ocrName: string;
+}
+
+// 약 이름 정규화 (OCR 오차 대응)
+const normalizeMedName = (name: string): string => {
+    return name
+        .replace(/\s+/g, '')
+        .replace(/[()\[\]]/g, '')
+        .replace(/(정|캡슐|mg|ml|g|mcg|ug)/gi, '')
+        .toLowerCase();
+};
 
 type Step = 'capture' | 'analyze' | 'edit';
 
@@ -78,7 +94,10 @@ export default function ScanScreen() {
     const [medicationsToEdit, setMedicationsToEdit] = useState<MedicationEdit[]>([]);
     const [symptom, setSymptom] = useState('');
     const [isSevere, setIsSevere] = useState(false);
-    const [daysSupply, setDaysSupply] = useState('');  // 처방 일수
+    const [daysSupply, setDaysSupply] = useState('');
+    // 약 변경사항 비교 상태
+    const [continuedMeds, setContinuedMeds] = useState<ExistingMedMatch[]>([]);
+    const [droppedMeds, setDroppedMeds] = useState<Medication[]>([]);
     const [customTimes, setCustomTimes] = useState<{ [key: string]: string }>({
         morning: '08:00',
         noon: '12:00',
@@ -190,6 +209,58 @@ export default function ScanScreen() {
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
+    // OCR 결과를 기존 약과 비교하여 분류하는 헬퍼
+    const classifyMedications = (ocrMeds: any[], detectedSymptom: string) => {
+        const continued: ExistingMedMatch[] = [];
+        const newMeds: MedicationEdit[] = [];
+        const matchedExistingIds = new Set<number>();
+
+        for (const med of ocrMeds) {
+            const normalizedOcr = normalizeMedName(med.name);
+            const matchedExisting = existingMedications.find(existing =>
+                existing.is_active && normalizeMedName(existing.name) === normalizedOcr
+            );
+
+            if (matchedExisting) {
+                continued.push({ existingMed: matchedExisting, ocrName: med.name });
+                matchedExistingIds.add(matchedExisting.id);
+            } else {
+                const schedules: MedicationScheduleEdit[] = [];
+                if (med.times && Array.isArray(med.times)) {
+                    med.times.forEach((timeStr: string) => {
+                        const preset = TIME_PRESETS[timeStr];
+                        if (preset) {
+                            schedules.push({
+                                time_of_day: preset.time_of_day,
+                                scheduled_time: preset.scheduled_time,
+                                enabled: true,
+                            });
+                        }
+                    });
+                }
+                newMeds.push({
+                    name: med.name,
+                    dosage: med.dosage || '',
+                    description: med.description || med.frequency || '',
+                    schedules,
+                    isDuplicate: false,
+                    noScheduleDetected: schedules.length === 0,
+                });
+            }
+        }
+
+        // 같은 그룹(같은 증상)의 기존 약 중 OCR에 없는 것 = 빠진 약
+        const dropped = existingMedications.filter(existing =>
+            existing.is_active &&
+            !matchedExistingIds.has(existing.id) &&
+            (detectedSymptom
+                ? existing.group_name === detectedSymptom
+                : true) // 증상명 없으면 전체에서 비교
+        );
+
+        return { continued, dropped, newMeds };
+    };
+
     // AI 분석
     const handleAnalyzeAll = async () => {
         if (images.length === 0) {
@@ -202,7 +273,7 @@ export default function ScanScreen() {
         setStep('analyze');
 
         try {
-            const allMedications: MedicationEdit[] = [];
+            const allOcrMeds: any[] = [];
             let detectedSymptom = '';
 
             for (const image of images) {
@@ -217,113 +288,44 @@ export default function ScanScreen() {
                     detectedSymptom = result.symptom;
                 }
 
-                const meds: MedicationEdit[] = result.medications?.map((med: any) => {
-                    const isDuplicate = existingMedications.some(existing => existing.name === med.name) ||
-                        allMedications.some(existing => existing.name === med.name);
-
-                    const schedules: MedicationScheduleEdit[] = [];
-                    if (med.times && Array.isArray(med.times)) {
-                        med.times.forEach((timeStr: string) => {
-                            const preset = TIME_PRESETS[timeStr];
-                            if (preset) {
-                                schedules.push({
-                                    time_of_day: preset.time_of_day,
-                                    scheduled_time: preset.scheduled_time,
-                                    enabled: true,
-                                });
-                            }
-                        });
-                    }
-
-                    // 스케줄이 없으면 자동으로 추가하지 않고 사용자에게 직접 선택하게 함
-                    const noScheduleDetected = schedules.length === 0;
-
-                    return {
-                        name: med.name,
-                        dosage: med.dosage || '',
-                        description: med.description || med.frequency || '',
-                        schedules,
-                        isDuplicate,
-                        noScheduleDetected,
-                    };
-                }) || [];
-
-                allMedications.push(...meds);
+                if (result.medications) {
+                    allOcrMeds.push(...result.medications);
+                }
             }
 
-            setMedicationsToEdit(allMedications);
+            const { continued, dropped, newMeds } = classifyMedications(allOcrMeds, detectedSymptom);
+            setContinuedMeds(continued);
+            setDroppedMeds(dropped);
+            setMedicationsToEdit(newMeds);
             setSymptom(detectedSymptom);
             setStep('edit');
 
         } catch (err: any) {
             console.error('OCR Error Details:', err);
 
-            // 데모 모드 (인증 실패 또는 네트워크 오류 시)
             const isAuthError = err.response?.status === 401 || err.message?.includes('401');
 
             if (isAuthError) {
-                // 토큰이 없거나 인증 실패 시 데모 데이터 사용
-                // Alert.alert('데모 모드', '로그인이 되어있지 않아 데모 데이터로 진행합니다.');
-
-                const demoResult = {
-                    success: true,
-                    symptom: '고혈압',
-                    medications: [
-                        {
-                            name: '아모디핀정 5mg',
-                            dosage: '1정',
-                            frequency: '1일 1회',
-                            times: ['아침'],
-                            description: '흰색의 육각형 정제, 고혈압 치료제'
-                        },
-                        {
-                            name: '다이아벡스정 500mg',
-                            dosage: '1정',
-                            frequency: '1일 2회',
-                            times: ['아침', '저녁'],
-                            description: '흰색의 원형 필름코팅정, 당뇨병 치료제'
-                        }
-                    ]
-                };
-
-                // 데모 데이터 처리 로직 (위의 try 블록 복제)
-                const allMedications: MedicationEdit[] = [];
-                // 1장만 처리한다고 가정
-                const meds: MedicationEdit[] = demoResult.medications.map((med: any) => {
-                    const isDuplicate = existingMedications.some(existing => existing.name === med.name);
-
-                    const schedules: MedicationScheduleEdit[] = [];
-                    if (med.times && Array.isArray(med.times)) {
-                        med.times.forEach((timeStr: string) => {
-                            const preset = TIME_PRESETS[timeStr];
-                            if (preset) {
-                                schedules.push({
-                                    time_of_day: preset.time_of_day,
-                                    scheduled_time: preset.scheduled_time,
-                                    enabled: true,
-                                });
-                            }
-                        });
+                const demoMeds = [
+                    {
+                        name: '아모디핀정 5mg', dosage: '1정',
+                        frequency: '1일 1회', times: ['아침'],
+                        description: '흰색의 육각형 정제, 고혈압 치료제'
+                    },
+                    {
+                        name: '다이아벡스정 500mg', dosage: '1정',
+                        frequency: '1일 2회', times: ['아침', '저녁'],
+                        description: '흰색의 원형 필름코팅정, 당뇨병 치료제'
                     }
-
-                    // 데모 모드에서도 스케줄이 없으면 사용자에게 직접 선택하게 함
-                    const noScheduleDetected = schedules.length === 0;
-
-                    return {
-                        name: med.name,
-                        dosage: med.dosage || '',
-                        description: med.description || med.frequency || '',
-                        schedules,
-                        isDuplicate,
-                        noScheduleDetected,
-                    };
-                });
-
-                allMedications.push(...meds);
-                setMedicationsToEdit(allMedications);
-                setSymptom(demoResult.symptom);
+                ];
+                const detectedSymptom = '고혈압';
+                const { continued, dropped, newMeds } = classifyMedications(demoMeds, detectedSymptom);
+                setContinuedMeds(continued);
+                setDroppedMeds(dropped);
+                setMedicationsToEdit(newMeds);
+                setSymptom(detectedSymptom);
                 setStep('edit');
-                return; // 성공했으므로 종료
+                return;
             }
 
             const errorMessage = err.response?.data?.error || err.message || 'OCR 처리에 실패했습니다.';
@@ -381,80 +383,88 @@ export default function ScanScreen() {
         });
     };
 
-    // 등록 확정
+    // 등록 확정 (3단계: 비활성화 → 갱신 → 새 등록)
     const handleConfirm = async () => {
         console.log('[handleConfirm] 시작');
-        const { createMedication } = useMedicationStore.getState();
+        const { createMedication, deactivateMedications, renewMedications } = useMedicationStore.getState();
         const newMedications = medicationsToEdit.filter(med =>
             !med.isDuplicate && med.schedules.some(s => s.enabled)
         );
 
-        if (newMedications.length === 0) {
-            Alert.alert('알림', '등록할 약이 없습니다. 복용 시간을 선택해주세요.');
+        const hasChanges = droppedMeds.length > 0 || continuedMeds.length > 0 || newMedications.length > 0;
+        if (!hasChanges) {
+            Alert.alert('알림', '변경사항이 없습니다.');
             return;
         }
 
-        console.log('[handleConfirm] 등록할 약 개수:', newMedications.length);
+        if (newMedications.length > 0 && !newMedications.some(m => m.schedules.some(s => s.enabled))) {
+            Alert.alert('알림', '새 약의 복용 시간을 선택해주세요.');
+            return;
+        }
+
         setIsLoading(true);
         setError('');
 
         try {
-            let groupId: number | null = null;
-            if (symptom) {
-                console.log('[handleConfirm] 그룹 생성 중:', symptom, '중증 여부:', isSevere);
-                try {
-                    // 가끔 발생하는 타입 오류 방지를 위해 any 타입 단언 사용
-                    const groupResponse = await (api.medicationGroups.create as any)({
-                        name: symptom,
-                        is_severe: isSevere
-                    });
-                    groupId = groupResponse.data.id;
-                    console.log('[handleConfirm] 그룹 생성 완료, groupId:', groupId);
-                } catch (groupError: any) {
-                    console.error('[handleConfirm] 그룹 생성 중 에러:', groupError.response?.status, groupError.message);
-                    if (groupError.response?.status === 401) {
-                        throw new Error('인증 세션이 만료되었습니다. 다시 로그인한 후에 시도해주세요.');
+            // 1단계: 빠진 약 비활성화
+            if (droppedMeds.length > 0) {
+                console.log('[handleConfirm] 빠진 약 비활성화:', droppedMeds.map(m => m.name));
+                await deactivateMedications(droppedMeds.map(m => m.id));
+            }
+
+            // 2단계: 계속 복용 약 갱신 (start_date, days_supply)
+            if (continuedMeds.length > 0) {
+                console.log('[handleConfirm] 계속 복용 약 갱신:', continuedMeds.map(m => m.existingMed.name));
+                const today = new Date().toISOString().split('T')[0];
+                await renewMedications(continuedMeds.map(m => ({
+                    id: m.existingMed.id,
+                    days_supply: daysSupply ? parseInt(daysSupply) : null,
+                    start_date: today,
+                })));
+            }
+
+            // 3단계: 새 약 등록 (기존 로직)
+            if (newMedications.length > 0) {
+                let groupId: number | null = null;
+                if (symptom) {
+                    try {
+                        const groupResponse = await (api.medicationGroups.create as any)({
+                            name: symptom,
+                            is_severe: isSevere
+                        });
+                        groupId = groupResponse.data.id;
+                    } catch (groupError: any) {
+                        if (groupError.response?.status === 401) {
+                            throw new Error('인증 세션이 만료되었습니다. 다시 로그인한 후에 시도해주세요.');
+                        }
+                        throw groupError;
                     }
-                    throw groupError;
+                }
+
+                for (const med of newMedications) {
+                    const enabledSchedules = med.schedules
+                        .filter(s => s.enabled)
+                        .map(s => ({
+                            time_of_day: s.time_of_day,
+                            scheduled_time: s.scheduled_time,
+                        }));
+
+                    await createMedication({
+                        name: med.name,
+                        dosage: med.dosage,
+                        description: med.description,
+                        schedules_input: enabledSchedules,
+                        group_id: groupId,
+                        days_supply: daysSupply ? parseInt(daysSupply) : null,
+                        start_date: new Date().toISOString().split('T')[0],
+                    });
                 }
             }
 
-            for (let i = 0; i < newMedications.length; i++) {
-                const med = newMedications[i];
-                console.log(`[handleConfirm] 약 ${i + 1}/${newMedications.length} 등록 중:`, med.name);
-                const enabledSchedules = med.schedules
-                    .filter(s => s.enabled)
-                    .map(s => ({
-                        time_of_day: s.time_of_day,
-                        scheduled_time: s.scheduled_time,
-                    }));
-
-                // store action 사용 (자동으로 fetchMedications, fetchTodayLogs 실행)
-                // 처방전 스캔 시점 = 병원 방문일 (start_date = 오늘)
-                await createMedication({
-                    name: med.name,
-                    dosage: med.dosage,
-                    description: med.description,
-                    schedules_input: enabledSchedules,
-                    group_id: groupId,
-                    days_supply: daysSupply ? parseInt(daysSupply) : null,
-                    start_date: new Date().toISOString().split('T')[0],  // 오늘 날짜
-                });
-                console.log(`[handleConfirm] 약 ${i + 1} 등록 완료`);
-            }
-
-            console.log('[handleConfirm] 모든 약 등록 및 동기화 완료, router.replace 호출');
+            console.log('[handleConfirm] 모든 처리 완료');
             router.replace('/(tabs)/medications');
-            console.log('[handleConfirm] 완료');
         } catch (err: any) {
-            console.error('[handleConfirm] 에러 발생:', err);
-            console.error('[handleConfirm] 에러 메시지:', err?.message);
-            if (err.response) {
-                console.error('[handleConfirm] 에러 응답 상태:', err.response.status);
-                console.error('[handleConfirm] 에러 응답 데이터:', JSON.stringify(err.response.data, null, 2));
-            } else {
-                console.error('[handleConfirm] 응답 없음 (네트워크 오류 가능성)');
-            }
+            console.error('[handleConfirm] 에러:', err?.message);
             setError('약 등록에 실패했습니다: ' + (err.response?.data?.error || err.message));
         } finally {
             setIsLoading(false);
@@ -471,10 +481,18 @@ export default function ScanScreen() {
         return labels[timeOfDay] || timeOfDay;
     };
 
+    // 빠진 약 중 하나를 복원 (계속 복용으로 전환)
+    const restoreDroppedMed = (med: Medication) => {
+        setDroppedMeds(prev => prev.filter(m => m.id !== med.id));
+        setContinuedMeds(prev => [...prev, { existingMed: med, ocrName: med.name }]);
+    };
+
     const resetAll = () => {
         setStep('capture');
         setImages([]);
         setMedicationsToEdit([]);
+        setContinuedMeds([]);
+        setDroppedMeds([]);
         setSymptom('');
         setDaysSupply('');
         setError('');
@@ -673,11 +691,83 @@ export default function ScanScreen() {
                             )}
                         </NeumorphCard>
 
-                        {/* 약품 목록 */}
+                        {/* 📋 빠진 약 (비활성화 대상) */}
+                        {droppedMeds.length > 0 && (
+                            <NeumorphCard style={styles.cardSpacing}>
+                                <View style={styles.sectionHeader}>
+                                    <Ionicons name="close-circle" size={18} color={colors.dangerDark} />
+                                    <Text style={[styles.sectionTitle, { color: colors.dangerDark }]}>
+                                        빠진 약 ({droppedMeds.length}개)
+                                    </Text>
+                                </View>
+                                <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 22 }}>
+                                    이번 처방전에 없는 약이에요.{"\n"}등록하면 복용이 중단됩니다.
+                                </Text>
+                                {droppedMeds.map((med) => (
+                                    <View key={med.id} style={[styles.medicationItem, { backgroundColor: colors.dangerLight }]}>
+                                        <View style={styles.medicationHeader}>
+                                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                                                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
+                                                    <Ionicons name="close" size={16} color={colors.white} />
+                                                </View>
+                                                <View>
+                                                    <Text style={[styles.medicationName, { color: colors.textLight }]}>
+                                                        {med.name}
+                                                    </Text>
+                                                    {med.dosage ? <Text style={styles.medicationDosage}>{med.dosage}</Text> : null}
+                                                </View>
+                                            </View>
+                                            <TouchableOpacity
+                                                style={{ backgroundColor: colors.mintLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: borderRadius.pill, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+                                                onPress={() => restoreDroppedMed(med)}
+                                            >
+                                                <Text style={{ fontSize: fontSize.xs, color: colors.primaryDark, fontWeight: fontWeight.bold }}>유지</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                ))}
+                            </NeumorphCard>
+                        )}
+
+                        {/* ✅ 계속 복용 약 (갱신 대상) */}
+                        {continuedMeds.length > 0 && (
+                            <NeumorphCard style={styles.cardSpacing}>
+                                <View style={styles.sectionHeader}>
+                                    <Ionicons name="checkmark-circle" size={18} color={colors.successDark} />
+                                    <Text style={[styles.sectionTitle, { color: colors.successDark }]}>
+                                        계속 복용 ({continuedMeds.length}개)
+                                    </Text>
+                                </View>
+                                <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 22 }}>
+                                    기존과 동일한 약이에요. 처방 일수만 갱신됩니다.
+                                </Text>
+                                {continuedMeds.map((match) => (
+                                    <View key={match.existingMed.id} style={[styles.medicationItem, { backgroundColor: colors.mintLight }]}>
+                                        <View style={styles.medicationHeader}>
+                                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                                                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
+                                                    <Ionicons name="checkmark" size={16} color={colors.white} />
+                                                </View>
+                                                <View>
+                                                    <Text style={styles.medicationName}>{match.existingMed.name}</Text>
+                                                    {match.existingMed.dosage ? <Text style={styles.medicationDosage}>{match.existingMed.dosage}</Text> : null}
+                                                </View>
+                                            </View>
+                                            <View style={{ backgroundColor: colors.mintLight, paddingHorizontal: 14, paddingVertical: 6, borderRadius: borderRadius.pill }}>
+                                                <Text style={{ fontSize: fontSize.xs, color: colors.primaryDark, fontWeight: fontWeight.bold }}>유지됨</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                ))}
+                            </NeumorphCard>
+                        )}
+
+                        {/* 🆕 새로 추가되는 약 */}
+                        {medicationsToEdit.length > 0 && (
                         <NeumorphCard style={styles.cardSpacing}>
                             <View style={styles.sectionHeader}>
-                                <Ionicons name="time" size={18} color={colors.primary} />
-                                <Text style={styles.sectionTitle}>복용 시간 설정 ({medicationsToEdit.length}개)</Text>
+                                <Ionicons name="add-circle" size={18} color={colors.primary} />
+                                <Text style={styles.sectionTitle}>새로 추가 ({medicationsToEdit.length}개)</Text>
                             </View>
 
                             {medicationsToEdit.map((med, medIndex) => (
@@ -707,16 +797,10 @@ export default function ScanScreen() {
                                                 editable={!med.isDuplicate}
                                             />
                                         </View>
-                                        {med.isDuplicate && (
-                                            <View style={styles.duplicateBadge}>
-                                                <Text style={styles.duplicateText}>이미 등록됨</Text>
-                                            </View>
-                                        )}
                                     </View>
 
                                     {!med.isDuplicate && (
                                         <>
-                                            {/* 스케줄이 감지되지 않은 경우 안내 메시지 */}
                                             {med.noScheduleDetected && med.schedules.filter(s => s.enabled).length === 0 && (
                                                 <View style={styles.noScheduleWarning}>
                                                     <Ionicons name="alert-circle" size={16} color={colors.warning} />
@@ -761,6 +845,19 @@ export default function ScanScreen() {
                                 </View>
                             ))}
                         </NeumorphCard>
+                        )}
+
+                        {/* 변경사항 없을 때 안내 */}
+                        {droppedMeds.length === 0 && continuedMeds.length === 0 && medicationsToEdit.length === 0 && (
+                            <NeumorphCard style={styles.cardSpacing}>
+                                <View style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+                                    <Ionicons name="checkmark-done-circle" size={48} color={colors.primary} />
+                                    <Text style={{ fontSize: fontSize.base, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
+                                        기존 약과 동일해요.{"\n"}변경사항이 없습니다.
+                                    </Text>
+                                </View>
+                            </NeumorphCard>
+                        )}
 
                         {/* 버튼들 */}
                         <TouchableOpacity
@@ -774,7 +871,7 @@ export default function ScanScreen() {
                                 <>
                                     <Ionicons name="checkmark" size={20} color={colors.white} style={{ marginRight: 8 }} />
                                     <Text style={styles.confirmButtonText}>
-                                        {symptom ? `"${symptom}" 그룹으로 등록` : '등록 완료'}
+                                        변경사항 저장하기
                                     </Text>
                                 </>
                             )}
@@ -962,18 +1059,18 @@ const styles = StyleSheet.create({
         ...shadows.dark,
     },
     captureIconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 64,
+        height: 64,
+        borderRadius: 32,
         backgroundColor: colors.mintLight,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: spacing.sm,
     },
     captureText: {
-        fontSize: fontSize.sm,
+        fontSize: fontSize.base,
         color: colors.text,
-        fontWeight: fontWeight.medium,
+        fontWeight: fontWeight.semibold,
     },
 
     // 팁 카드
@@ -1200,10 +1297,13 @@ const styles = StyleSheet.create({
         gap: spacing.sm,
     },
     timeButton: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.xl,
+        paddingVertical: spacing.lg,
         borderRadius: borderRadius.pill,
         backgroundColor: colors.base,
+        minHeight: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     timeButtonActive: {
         backgroundColor: colors.primary,

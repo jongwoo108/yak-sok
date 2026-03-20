@@ -250,3 +250,55 @@ class VideoBookmark(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.video.title[:30]}"
+
+
+class LifestyleTip(models.Model):
+    """
+    매일 실천 라이프스타일 팁 (GPT 생성, 캐시)
+    사용자의 건강 프로필 기반으로 날짜별 맞춤 팁 제공
+    """
+    
+    class Category(models.TextChoices):
+        DIET = 'diet', '식이요법'
+        EXERCISE = 'exercise', '운동'
+        LIFESTYLE = 'lifestyle', '생활습관'
+        MENTAL = 'mental', '정서 관리'
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='lifestyle_tips',
+        verbose_name='사용자'
+    )
+    date = models.DateField(verbose_name='대상 날짜')
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        verbose_name='카테고리'
+    )
+    title = models.CharField(
+        max_length=100,
+        verbose_name='팁 제목'
+    )
+    content = models.TextField(verbose_name='팁 내용')
+    emoji = models.CharField(
+        max_length=10,
+        default='💡',
+        verbose_name='아이콘 이모지'
+    )
+    condition_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='관련 질병명'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = '라이프스타일 팁'
+        verbose_name_plural = '라이프스타일 팁 목록'
+        unique_together = ('user', 'date', 'category')
+        ordering = ['date', 'category']
+    
+    def __str__(self):
+        return f"{self.user.username} {self.date} [{self.get_category_display()}] {self.title}"
+

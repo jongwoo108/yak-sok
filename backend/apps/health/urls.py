@@ -10,6 +10,7 @@ router = DefaultRouter()
 router.register('profile', views.HealthProfileViewSet, basename='health-profile')
 router.register('feed', views.VideoFeedViewSet, basename='health-feed')
 router.register('bookmarks', views.VideoBookmarkViewSet, basename='health-bookmarks')
+router.register('lifestyle-tips', views.LifestyleTipViewSet, basename='lifestyle-tips')
 
 urlpatterns = [
     path('', include(router.urls)),

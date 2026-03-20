@@ -43,6 +43,7 @@ const CATEGORIES = [
 
 export default function HealthFeedScreen() {
     const router = useRouter();
+
     const [videos, setVideos] = useState<CachedVideo[]>([]);
     const [profile, setProfile] = useState<HealthProfile | null>(null);
     const [selectedCategory, setSelectedCategory] = useState('all');

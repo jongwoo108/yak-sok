@@ -169,3 +169,104 @@ def analyze_and_update_profile(user):
     profile.save()
     
     return profile
+
+
+def generate_daily_lifestyle_tips(user, date):
+    """
+    사용자 건강 프로필 기반 일별 라이프스타일 팁 생성 (GPT-4o)
+    
+    Args:
+        user: User 인스턴스
+        date: datetime.date - 팁 대상 날짜
+        
+    Returns:
+        list[LifestyleTip]: 생성된 팁 목록 (4개 카테고리)
+    """
+    from .models import UserHealthProfile, LifestyleTip
+    
+    # 이미 해당 날짜에 팁이 있으면 캐시 반환
+    existing = LifestyleTip.objects.filter(user=user, date=date)
+    if existing.count() >= 4:
+        return list(existing)
+    
+    # 건강 프로필 조회
+    try:
+        profile = UserHealthProfile.objects.get(user=user)
+        conditions = profile.conditions or []
+    except UserHealthProfile.DoesNotExist:
+        conditions = []
+    
+    if not conditions:
+        return []
+    
+    condition_names = [c.get('name', '') for c in conditions]
+    client = _get_openai_client()
+    
+    # 날짜를 시드로 사용하여 매일 다른 팁 생성
+    day_of_year = date.timetuple().tm_yday
+    
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": """당신은 시니어(고령자)를 위한 건강 관리 전문가입니다.
+사용자의 질병 정보와 날짜를 기반으로 매일 실천할 수 있는 구체적인 라이프스타일 팁을 생성하세요.
+
+반환 형식 (JSON):
+{
+    "tips": [
+        {
+            "category": "diet",
+            "title": "팁 제목 (10자 이내)",
+            "content": "구체적이고 실천 가능한 조언 (2-3문장, 시니어가 이해하기 쉽게)",
+            "emoji": "관련 이모지 1개",
+            "condition_name": "관련 질병명"
+        }
+    ]
+}
+
+카테고리별 정확히 1개씩 총 4개:
+- diet: 식이요법 (음식, 영양)
+- exercise: 운동 (시니어에게 적합한 가벼운 운동)
+- lifestyle: 생활습관 (수면, 위생, 자세)
+- mental: 정서 관리 (스트레스, 사회활동)
+
+주의사항:
+- 시니어가 쉽게 실천할 수 있는 내용만
+- 위험한 운동이나 급격한 식단 변화 절대 금지
+- 따뜻하고 친근한 톤으로 작성
+- 날짜 시드가 다르면 매번 다른 팁을 제공"""
+            },
+            {
+                "role": "user",
+                "content": f"질병: {', '.join(condition_names)}\n날짜 시드: {day_of_year} (매일 다른 팁을 주세요)"
+            }
+        ],
+        response_format={"type": "json_object"},
+    )
+    
+    result = json.loads(response.choices[0].message.content)
+    tips_data = result.get('tips', [])
+    
+    created_tips = []
+    for tip_data in tips_data:
+        category = tip_data.get('category', 'lifestyle')
+        if category not in ['diet', 'exercise', 'lifestyle', 'mental']:
+            continue
+        
+        tip, created = LifestyleTip.objects.update_or_create(
+            user=user,
+            date=date,
+            category=category,
+            defaults={
+                'title': tip_data.get('title', ''),
+                'content': tip_data.get('content', ''),
+                'emoji': tip_data.get('emoji', '💡'),
+                'condition_name': tip_data.get('condition_name', ''),
+            }
+        )
+        created_tips.append(tip)
+    
+    return created_tips
+

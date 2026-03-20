@@ -4,6 +4,7 @@ Users Models - 사용자 계정 및 보호자 연결 관계
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -43,6 +44,18 @@ class User(AbstractUser):
         verbose_name='비상 연락처 이름'
     )
     
+    # 프리미엄 구독
+    is_premium = models.BooleanField(
+        default=False,
+        verbose_name='프리미엄 여부'
+    )
+    premium_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='프리미엄 만료일',
+        help_text='null이면 무기한 프리미엄'
+    )
+    
     # FCM Token for push notifications
     fcm_token = models.CharField(
         max_length=255,
@@ -56,6 +69,15 @@ class User(AbstractUser):
     
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
+    
+    @property
+    def has_active_premium(self):
+        """프리미엄 활성 상태 확인 (만료일 체크 포함)"""
+        if not self.is_premium:
+            return False
+        if self.premium_until and self.premium_until < timezone.now():
+            return False
+        return True
 
 
 class GuardianRelation(models.Model):
