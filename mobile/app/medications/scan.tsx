@@ -704,16 +704,14 @@ export default function ScanScreen() {
                                     이번 처방전에 없는 약이에요.{"\n"}등록하면 복용이 중단됩니다.
                                 </Text>
                                 {droppedMeds.map((med) => (
-                                    <View key={med.id} style={[styles.medicationItem, { backgroundColor: colors.dangerLight }]}>
+                                    <View key={med.id} style={styles.medicationItem}>
                                         <View style={[styles.medicationHeader, { alignItems: 'center', marginBottom: 0 }]}>
                                             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
+                                                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.dangerDark, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
                                                     <Ionicons name="close" size={16} color={colors.white} />
                                                 </View>
                                                 <View>
-                                                    <Text style={[styles.medicationName, { color: colors.textLight }]}>
-                                                        {med.name}
-                                                    </Text>
+                                                    <Text style={styles.medicationName}>{med.name}</Text>
                                                     {med.dosage ? <Text style={styles.medicationDosage}>{med.dosage}</Text> : null}
                                                 </View>
                                             </View>
@@ -733,8 +731,8 @@ export default function ScanScreen() {
                         {continuedMeds.length > 0 && (
                             <NeumorphCard style={styles.cardSpacing}>
                                 <View style={styles.sectionHeader}>
-                                    <Ionicons name="checkmark-circle" size={18} color={colors.successDark} />
-                                    <Text style={[styles.sectionTitle, { color: colors.successDark }]}>
+                                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                                    <Text style={[styles.sectionTitle, { color: colors.primary }]}>
                                         계속 복용 ({continuedMeds.length}개)
                                     </Text>
                                 </View>
@@ -742,10 +740,10 @@ export default function ScanScreen() {
                                     기존과 동일한 약이에요. 처방 일수만 갱신됩니다.
                                 </Text>
                                 {continuedMeds.map((match) => (
-                                    <View key={match.existingMed.id} style={[styles.medicationItem, { backgroundColor: colors.mintLight }]}>
+                                    <View key={match.existingMed.id} style={styles.medicationItem}>
                                         <View style={[styles.medicationHeader, { alignItems: 'center', marginBottom: 0 }]}>
                                             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
+                                                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
                                                     <Ionicons name="checkmark" size={16} color={colors.white} />
                                                 </View>
                                                 <View>
@@ -764,87 +762,87 @@ export default function ScanScreen() {
 
                         {/* 🆕 새로 추가되는 약 */}
                         {medicationsToEdit.length > 0 && (
-                        <NeumorphCard style={styles.cardSpacing}>
-                            <View style={styles.sectionHeader}>
-                                <Ionicons name="add-circle" size={18} color={colors.primary} />
-                                <Text style={styles.sectionTitle}>새로 추가 ({medicationsToEdit.length}개)</Text>
-                            </View>
-
-                            {medicationsToEdit.map((med, medIndex) => (
-                                <View
-                                    key={medIndex}
-                                    style={[
-                                        styles.medicationItem,
-                                        med.isDuplicate && styles.medicationItemDuplicate
-                                    ]}
-                                >
-                                    <View style={styles.medicationHeader}>
-                                        <View style={{ flex: 1 }}>
-                                            <TextInput
-                                                style={styles.medicationNameInput}
-                                                value={med.name}
-                                                onChangeText={(text) => updateMedicationName(medIndex, text)}
-                                                placeholder="약 이름"
-                                                placeholderTextColor={colors.textLight}
-                                                editable={!med.isDuplicate}
-                                            />
-                                            <TextInput
-                                                style={styles.medicationDosageInput}
-                                                value={med.dosage}
-                                                onChangeText={(text) => updateMedicationDosage(medIndex, text)}
-                                                placeholder="용량 (예: 1정)"
-                                                placeholderTextColor={colors.textLight}
-                                                editable={!med.isDuplicate}
-                                            />
-                                        </View>
-                                    </View>
-
-                                    {!med.isDuplicate && (
-                                        <>
-                                            {med.noScheduleDetected && med.schedules.filter(s => s.enabled).length === 0 && (
-                                                <View style={styles.noScheduleWarning}>
-                                                    <Ionicons name="alert-circle" size={16} color={colors.warning} />
-                                                    <Text style={styles.noScheduleWarningText}>
-                                                        복용 일정이 감지되지 않았습니다. 아래에서 직접 선택해주세요.
-                                                    </Text>
-                                                </View>
-                                            )}
-                                            <View style={styles.timeButtons}>
-                                                {['morning', 'noon', 'evening', 'night'].map(timeOfDay => {
-                                                    const schedule = med.schedules.find(s => s.time_of_day === timeOfDay);
-                                                    const isActive = schedule?.enabled;
-
-                                                    return (
-                                                        <TouchableOpacity
-                                                            key={timeOfDay}
-                                                            style={[
-                                                                styles.timeButton,
-                                                                isActive && styles.timeButtonActive,
-                                                                med.noScheduleDetected && !isActive && styles.timeButtonHighlight
-                                                            ]}
-                                                            onPress={() => {
-                                                                if (schedule) {
-                                                                    toggleSchedule(medIndex, med.schedules.indexOf(schedule));
-                                                                } else {
-                                                                    addSchedule(medIndex, timeOfDay);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Text style={[
-                                                                styles.timeButtonText,
-                                                                isActive && styles.timeButtonTextActive
-                                                            ]}>
-                                                                {getTimeLabel(timeOfDay)}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    );
-                                                })}
-                                            </View>
-                                        </>
-                                    )}
+                            <NeumorphCard style={styles.cardSpacing}>
+                                <View style={styles.sectionHeader}>
+                                    <Ionicons name="add-circle" size={18} color={colors.primary} />
+                                    <Text style={styles.sectionTitle}>새로 추가 ({medicationsToEdit.length}개)</Text>
                                 </View>
-                            ))}
-                        </NeumorphCard>
+
+                                {medicationsToEdit.map((med, medIndex) => (
+                                    <View
+                                        key={medIndex}
+                                        style={[
+                                            styles.medicationItem,
+                                            med.isDuplicate && styles.medicationItemDuplicate
+                                        ]}
+                                    >
+                                        <View style={styles.medicationHeader}>
+                                            <View style={{ flex: 1 }}>
+                                                <TextInput
+                                                    style={styles.medicationNameInput}
+                                                    value={med.name}
+                                                    onChangeText={(text) => updateMedicationName(medIndex, text)}
+                                                    placeholder="약 이름"
+                                                    placeholderTextColor={colors.textLight}
+                                                    editable={!med.isDuplicate}
+                                                />
+                                                <TextInput
+                                                    style={styles.medicationDosageInput}
+                                                    value={med.dosage}
+                                                    onChangeText={(text) => updateMedicationDosage(medIndex, text)}
+                                                    placeholder="용량 (예: 1정)"
+                                                    placeholderTextColor={colors.textLight}
+                                                    editable={!med.isDuplicate}
+                                                />
+                                            </View>
+                                        </View>
+
+                                        {!med.isDuplicate && (
+                                            <>
+                                                {med.noScheduleDetected && med.schedules.filter(s => s.enabled).length === 0 && (
+                                                    <View style={styles.noScheduleWarning}>
+                                                        <Ionicons name="alert-circle" size={16} color={colors.warning} />
+                                                        <Text style={styles.noScheduleWarningText}>
+                                                            복용 일정이 감지되지 않았습니다. 아래에서 직접 선택해주세요.
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                                <View style={styles.timeButtons}>
+                                                    {['morning', 'noon', 'evening', 'night'].map(timeOfDay => {
+                                                        const schedule = med.schedules.find(s => s.time_of_day === timeOfDay);
+                                                        const isActive = schedule?.enabled;
+
+                                                        return (
+                                                            <TouchableOpacity
+                                                                key={timeOfDay}
+                                                                style={[
+                                                                    styles.timeButton,
+                                                                    isActive && styles.timeButtonActive,
+                                                                    med.noScheduleDetected && !isActive && styles.timeButtonHighlight
+                                                                ]}
+                                                                onPress={() => {
+                                                                    if (schedule) {
+                                                                        toggleSchedule(medIndex, med.schedules.indexOf(schedule));
+                                                                    } else {
+                                                                        addSchedule(medIndex, timeOfDay);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Text style={[
+                                                                    styles.timeButtonText,
+                                                                    isActive && styles.timeButtonTextActive
+                                                                ]}>
+                                                                    {getTimeLabel(timeOfDay)}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        );
+                                                    })}
+                                                </View>
+                                            </>
+                                        )}
+                                    </View>
+                                ))}
+                            </NeumorphCard>
                         )}
 
                         {/* 변경사항 없을 때 안내 */}
