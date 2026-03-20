@@ -705,7 +705,7 @@ export default function ScanScreen() {
                                 </Text>
                                 {droppedMeds.map((med) => (
                                     <View key={med.id} style={[styles.medicationItem, { backgroundColor: colors.dangerLight }]}>
-                                        <View style={styles.medicationHeader}>
+                                        <View style={[styles.medicationHeader, { alignItems: 'center', marginBottom: 0 }]}>
                                             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                                                 <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
                                                     <Ionicons name="close" size={16} color={colors.white} />
@@ -743,7 +743,7 @@ export default function ScanScreen() {
                                 </Text>
                                 {continuedMeds.map((match) => (
                                     <View key={match.existingMed.id} style={[styles.medicationItem, { backgroundColor: colors.mintLight }]}>
-                                        <View style={styles.medicationHeader}>
+                                        <View style={[styles.medicationHeader, { alignItems: 'center', marginBottom: 0 }]}>
                                             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                                                 <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
                                                     <Ionicons name="checkmark" size={16} color={colors.white} />
