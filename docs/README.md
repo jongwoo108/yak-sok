@@ -1,6 +1,6 @@
 # 📋 개발 진행 현황
 
-> 최종 업데이트: 2026-02-07
+> 최종 업데이트: 2026-03-30
 
 ## 진행 상태 요약
 
@@ -26,6 +26,9 @@
 | 18. 스플래시 이미지 업데이트 | ✅ 완료 | 2026-02-07 |
 | 19. 건강 유튜브 피드 기능 | ✅ 구현 완료 (배포 전) | 2026-02-07 |
 | 20. 건강 피드 v1.1.0 보완 | ✅ 완료 | 2026-02-07 |
+| 21. v1.1.6 역할 통합 & 피드 자동 업데이트 | ✅ 완료 | 2026-02-23 |
+| 22. v1.1.7 스캔 UI 통일 & 서버 배포 | ✅ 완료 | 2026-03-20 |
+| 23. **Android 빌드** | ✅ 빌드 성공 (Play Store 미제출) | 2026-03-30 |
 
 ---
 
@@ -183,6 +186,9 @@ python manage.py runserver
 - [16_health_newsfeed_plan.md](./development/16_health_newsfeed_plan.md) - **건강 유튜브 피드 기능** ✅ 구현 완료 (2026-02-07)
 - [18_health_feed_v1.1.0_changelog.md](./development/18_health_feed_v1.1.0_changelog.md) - **건강 피드 v1.1.0 작업 정리** (레이아웃, 스플래시, 버그 수정, 백엔드) ✅ 2026-02-07
 - [17_sql_practice_queries.md](./development/17_sql_practice_queries.md) - **SQL 실습 예제** (pgAdmin / 프로젝트 DB)
+- [21_v1.1.6_changelog.md](./development/21_v1.1.6_changelog.md) - **v1.1.6 역할 통합 & 피드 자동 업데이트**
+- [version_1_1_7_update.md](./development/version_1_1_7_update.md) - **v1.1.7 스캔 UI 통일 & 서버 배포**
+- [22_android_build.md](./development/22_android_build.md) - **Android 빌드** ✅ (2026-03-30)
 
 ### 배포 문서
 - [deployment/README.md](./deployment/README.md) - 배포 가이드 전체
@@ -241,17 +247,16 @@ python manage.py runserver
 
 ## 다음 단계
 
-### 건강 유튜브 피드 배포 준비
-1. **YOUTUBE_API_KEY 발급**: Google Cloud Console에서 YouTube Data API v3 키 발급
-2. **DB 마이그레이션**: `python manage.py makemigrations health && python manage.py migrate`
-3. **패키지 설치**: `npx expo install react-native-youtube-iframe react-native-webview`
-4. **신뢰 채널 등록**: Django Admin에서 의사/약사/공공기관 YouTube 채널 등록
-5. **모바일 앱 빌드**: v1.1.0 (빌드 18) — `eas build --platform ios --profile production`
+### Android Play Store 출시 준비
+1. **Google Play Console 가입** (개발자 등록비 $25)
+2. **서비스 계정 JSON 생성** → `mobile/google-service-account.json`
+3. **카카오 Android 키 해시 등록** (카카오 개발자 콘솔)
+4. **Google Android Client ID 발급** (Google Cloud Console)
+5. **Play Store 제출**: `npx eas-cli submit --platform android`
 
 ### 향후 계획
-1. **건강 피드 배포 및 테스트**: 실제 사용자 피드백 수집
+1. **사용자 피드백 수집**: 앱 개선사항 파악
 2. **콘텐츠 품질 관리**: 신뢰 채널 목록 확장, 부적절 영상 필터링
-3. **사용자 피드백 수집**: 앱 개선사항 파악
-4. **테스트 코드 작성**: 유닛/통합 테스트
-5. **성능 최적화**: API 응답 속도 개선
+3. **테스트 코드 작성**: 유닛/통합 테스트
+4. **성능 최적화**: API 응답 속도 개선
 

@@ -50,7 +50,8 @@ export default {
                         newArchEnabled: false
                     },
                     android: {
-                        newArchEnabled: false
+                        newArchEnabled: false,
+                        kotlinVersion: "2.0.21"
                     }
                 }
             ],
@@ -65,7 +66,7 @@ export default {
                 "@react-native-seoul/kakao-login",
                 {
                     kakaoAppKey: "e678831eb561c1a2593c3d704f454a0d",
-                    kotlinVersion: "1.9.0"
+                    kotlinVersion: "2.0.21"
                 }
             ]
         ],
