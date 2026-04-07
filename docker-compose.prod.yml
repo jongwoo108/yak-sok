@@ -80,7 +80,7 @@ services:
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2"
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --max-requests 500 --max-requests-jitter 50"
     networks:
       - yaksok-network
 
@@ -112,7 +112,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A core worker --loglevel=info --concurrency=4
+    command: celery -A core worker --loglevel=info --concurrency=2
     healthcheck:
       disable: true
     networks:
