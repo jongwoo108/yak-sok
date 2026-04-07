@@ -117,8 +117,13 @@ class MedicationSerializer(serializers.ModelSerializer):
                     status=MedicationLog.Status.PENDING
                 )
                 
-                # 알림 예약은 schedule_daily_reminders()에서 일괄 처리
-                # 약 등록 시에는 MedicationLog만 생성하고 알림은 예약하지 않음
+                # 오늘 날짜의 로그는 즉시 알림 예약 (00:05 스케줄러를 기다리지 않음)
+                if current_date == today:
+                    try:
+                        from apps.alerts.tasks import schedule_medication_alert
+                        schedule_medication_alert.delay(log.id)
+                    except Exception:
+                        pass
                 current_date += timedelta(days=1)
         
         # 건강 프로필 자동 분석 (질병 추론 + YouTube 검색)

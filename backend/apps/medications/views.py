@@ -155,19 +155,29 @@ class MedicationViewSet(viewsets.ModelViewSet):
             med.save(update_fields=['start_date', 'days_supply', 'updated_at'])
             
             # 미래의 PENDING 로그 삭제 (새로 생성할 예정)
-            MedicationLog.objects.filter(
+            # 삭제 전에 연결된 Celery 태스크 취소
+            future_logs = MedicationLog.objects.filter(
                 schedule__medication=med,
                 scheduled_datetime__gte=now,
                 status=MedicationLog.Status.PENDING
-            ).delete()
+            )
+            for log in future_logs:
+                if log.celery_task_id:
+                    try:
+                        from apps.alerts.tasks import revoke_alert_task
+                        revoke_alert_task(log.celery_task_id)
+                    except Exception:
+                        pass
+            future_logs.delete()
             
             # 새 기간에 대한 MedicationLog 재생성
             start_date = med.start_date or timezone.localdate()
             days_supply = med.days_supply or 30
             end_date = start_date + timedelta(days=days_supply)
+            today = timezone.localdate()
             
             for schedule in med.schedules.filter(is_active=True):
-                current_date = max(start_date, timezone.localdate())  # 오늘 이전은 생성 안 함
+                current_date = max(start_date, today)  # 오늘 이전은 생성 안 함
                 while current_date < end_date:
                     scheduled_datetime = timezone.make_aware(
                         datetime.combine(current_date, schedule.scheduled_time)
@@ -177,11 +187,18 @@ class MedicationViewSet(viewsets.ModelViewSet):
                         schedule=schedule,
                         scheduled_datetime=scheduled_datetime
                     ).exists():
-                        MedicationLog.objects.create(
+                        new_log = MedicationLog.objects.create(
                             schedule=schedule,
                             scheduled_datetime=scheduled_datetime,
                             status=MedicationLog.Status.PENDING
                         )
+                        # 오늘 날짜의 로그는 즉시 알림 예약 (00:05 스케줄러를 기다리지 않음)
+                        if current_date == today:
+                            try:
+                                from apps.alerts.tasks import schedule_medication_alert
+                                schedule_medication_alert.delay(new_log.id)
+                            except Exception:
+                                pass
                     current_date += timedelta(days=1)
             
             renewed_count += 1
