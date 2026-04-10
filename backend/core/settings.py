@@ -192,12 +192,10 @@ CELERY_BEAT_SCHEDULE = {
     'schedule-daily-reminders': {
         'task': 'apps.alerts.tasks.schedule_daily_reminders',
         'schedule': crontab(hour=0, minute=5),  # 매일 00:05 (Asia/Seoul)
-        'options': {'queue': 'default'},
     },
     'refresh-youtube-cache': {
         'task': 'apps.health.tasks.refresh_youtube_cache',
         'schedule': crontab(hour=5, minute=0),  # 매일 05:00 (Asia/Seoul)
-        'options': {'queue': 'default'},
     },
 }
 
