@@ -1,5 +1,6 @@
 """
 Medications Services - OCR 처리
+GPT-4o Vision을 사용하여 처방전 이미지에서 직접 약품 정보 추출
 """
 
 import json
@@ -14,14 +15,13 @@ from PIL import Image, ExifTags
 class OCRService:
     """
     처방전 OCR 스캔 서비스
-    Upstage Document OCR + OpenAI GPT 구조화
+    GPT-4o Vision으로 이미지에서 직접 약품 정보 추출
     """
 
     def __init__(self):
         # Windows SSL 권한 문제 해결을 위해 SSL 검증 비활성화
         http_client = httpx.Client(verify=False)
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY, http_client=http_client)
-        self.upstage_api_key = settings.UPSTAGE_API_KEY
     
     def _auto_rotate_image(self, image_content: bytes) -> bytes:
         """
@@ -62,42 +62,27 @@ class OCRService:
                 return image_content
             # 그 외의 경우에도 원본 반환 (GPT가 처리 시도)
             return image_content
-    
-    def _extract_text_with_upstage(self, image_content: bytes) -> str:
-        """
-        Upstage Document OCR API로 이미지에서 텍스트 추출
-        """
-        url = "https://api.upstage.ai/v1/document-digitization"
-        headers = {"Authorization": f"Bearer {self.upstage_api_key}"}
 
-        response = httpx.post(
-            url,
-            headers=headers,
-            files={"document": ("prescription.jpg", image_content, "image/jpeg")},
-            data={"model": "ocr"},
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        result = response.json()
-
-        # pages 내 텍스트 합치기
-        texts = []
-        for page in result.get("pages", []):
-            for word in page.get("words", []):
-                texts.append(word.get("text", ""))
-
-        extracted = " ".join(texts)
-        print(f"[Upstage OCR] 추출된 텍스트 길이: {len(extracted)}")
-        print(f"[Upstage OCR] 텍스트: {extracted[:500]}...")
-        return extracted
-
-    def _structure_with_gpt(self, ocr_text: str) -> dict:
+    def _extract_with_gpt4o_vision(self, image_content: bytes) -> str:
         """
-        GPT로 OCR 추출 텍스트를 구조화된 JSON으로 변환
-        temperature=0으로 일관된 결과 보장
+        GPT-4o Vision으로 처방전 이미지에서 직접 약품 정보 추출
+        이미지를 base64로 인코딩하여 전송
         """
-        prompt = f"""아래는 처방전 이미지에서 OCR로 추출한 텍스트입니다.
-이 텍스트에서 약품 정보를 추출하여 JSON 형식으로 반환하세요.
+        image_base64 = base64.b64encode(image_content).decode('utf-8')
+        
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "처방전 이미지를 분석하여 약품 정보를 JSON으로 구조화하는 전문가입니다. 정확하고 일관된 형식으로 응답합니다."
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": """이 처방전 이미지에서 약품 정보를 추출하여 JSON 형식으로 반환하세요.
 
 규칙:
 1. symptom: 처방 약품들의 대표 증상/질환명 1개 (예: "고혈압", "당뇨", "우울증")
@@ -106,34 +91,33 @@ class OCRService:
    - dosage: 1회 투약량 (예: "1정", "2캡슐")
    - frequency: 1일 투여 횟수 (예: "1일 1회", "1일 3회")
    - times: 복용 시간대 배열, 다음 중에서만 선택: ["아침", "점심", "저녁", "취침전"]
-   - description: 약의 모양과 효능/효과를 한 줄로 작성
+   - description: 약의 효능/효과를 한 줄로 작성
 
-OCR 텍스트:
-{ocr_text}"""
-
-        response = self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "처방전 OCR 텍스트를 분석하여 약품 정보를 JSON으로 구조화하는 전문가입니다. 정확하고 일관된 형식으로 응답합니다."
-                },
-                {"role": "user", "content": prompt}
+처방전의 모든 약품을 빠짐없이 추출하세요."""
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}",
+                                "detail": "high"
+                            }
+                        }
+                    ]
+                }
             ],
             temperature=0,
-            max_tokens=1500,
+            max_tokens=2000,
             response_format={"type": "json_object"},
         )
 
         content = response.choices[0].message.content
-        print(f"[GPT Response] Raw Content:\n{content}")
+        print(f"[GPT-4o Vision] Raw Response:\n{content}")
         return content
 
     def parse_prescription(self, image_file):
         """
         처방전 이미지에서 약품 정보 추출
-        1단계: Upstage OCR로 텍스트 추출
-        2단계: GPT로 텍스트 구조화
+        GPT-4o Vision으로 이미지에서 직접 추출 (1단계)
 
         Args:
             image_file: 업로드된 이미지 파일
@@ -148,11 +132,8 @@ OCR 텍스트:
             image_content = self._auto_rotate_image(image_content)
             print(f"[OCR Debug] 처리 후 바이트 크기: {len(image_content)}")
 
-            # 1단계: Upstage OCR로 텍스트 추출
-            ocr_text = self._extract_text_with_upstage(image_content)
-
-            # 2단계: GPT로 구조화
-            content = self._structure_with_gpt(ocr_text)
+            # GPT-4o Vision으로 직접 추출
+            content = self._extract_with_gpt4o_vision(image_content)
 
             # JSON 파싱 (마크다운 코드블록 제거)
             content = content.replace('```json', '').replace('```', '').strip()
@@ -197,25 +178,10 @@ OCR 텍스트:
             
         except Exception as e:
             print(f"OCR Error: {str(e)}")
-            # 데모 모드: API 키가 없거나 에러 발생 시 예시 데이터 반환
+            import traceback
+            traceback.print_exc()
             return {
-                'success': True,
-                'symptom': '고혈압',
-                'medications': [
-                    {
-                        'name': '아모디핀정 5mg',
-                        'dosage': '1정',
-                        'frequency': '1일 1회',
-                        'times': ['아침'],
-                        'description': '흰색의 육각형 정제, 고혈압 치료제'
-                    },
-                    {
-                        'name': '다이아벡스정 500mg',
-                        'dosage': '1정',
-                        'frequency': '1일 2회',
-                        'times': ['아침', '저녁'],
-                        'description': '흰색의 원형 필름코팅정, 당뇨병 치료제'
-                    }
-                ],
-                'message': 'OCR 처리가 완료되었습니다. (데모 데이터)'
+                'success': False,
+                'error': str(e),
+                'message': f'OCR 처리에 실패했습니다: {str(e)}'
             }
