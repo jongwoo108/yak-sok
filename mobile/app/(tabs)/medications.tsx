@@ -16,10 +16,13 @@ import {
     Alert,
     Modal,
     TextInput,
+    KeyboardAvoidingView,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useMedicationStore } from '../../services/store';
+import { api } from '../../services/api';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../components/theme';
 import { GradientBackground } from '../../components/GradientBackground';
 import { NeumorphCard, NeumorphIconButton } from '../../components';
@@ -46,6 +49,14 @@ export default function MedicationsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+    // 기간 연장 모달 상태
+    const [renewModalVisible, setRenewModalVisible] = useState(false);
+    const [renewStartDate, setRenewStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [renewDaysSupply, setRenewDaysSupply] = useState('30');
+    const [isRenewing, setIsRenewing] = useState(false);
+    const [showRenewDatePicker, setShowRenewDatePicker] = useState(false);
+    const [renewPickerDate, setRenewPickerDate] = useState(new Date());
 
     // 편집 모달 상태
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -124,7 +135,6 @@ export default function MedicationsScreen() {
                     text: '삭제',
                     style: 'destructive',
                     onPress: async () => {
-                        // Batch delete logic (Client-side loop since backend batch endpoint might not exist yet)
                         for (const id of selectedIds) {
                             await deleteMedication(id);
                         }
@@ -133,6 +143,54 @@ export default function MedicationsScreen() {
                 }
             ]
         );
+    };
+
+    const openRenewModal = () => {
+        if (selectedIds.size === 0) return;
+        setRenewStartDate(new Date().toISOString().split('T')[0]);
+        setRenewPickerDate(new Date());
+        setRenewDaysSupply('30');
+        setRenewModalVisible(true);
+    };
+
+    const handleRenewDateChange = (event: any, selected?: Date) => {
+        if (Platform.OS === 'android') setShowRenewDatePicker(false);
+        if (!selected || event.type === 'dismissed') return;
+        setRenewPickerDate(selected);
+        setRenewStartDate(selected.toISOString().split('T')[0]);
+    };
+
+    const handleRenew = async () => {
+        const days = parseInt(renewDaysSupply);
+        if (!days || days <= 0) {
+            Alert.alert('오류', '올바른 처방 일수를 입력해주세요.');
+            return;
+        }
+        setIsRenewing(true);
+        try {
+            const medsToRenew = [...selectedIds].map(id => ({
+                id,
+                start_date: renewStartDate,
+                days_supply: days,
+            }));
+            await api.medications.batchRenew(medsToRenew);
+            setRenewModalVisible(false);
+            setIsEditMode(false);
+            await fetchMedications();
+            Alert.alert('완료', `${selectedIds.size}개 약의 복약 기간이 연장되었습니다.`);
+        } catch {
+            Alert.alert('오류', '기간 연장에 실패했습니다.');
+        } finally {
+            setIsRenewing(false);
+        }
+    };
+
+    const getRenewEndDate = () => {
+        const days = parseInt(renewDaysSupply);
+        if (!renewStartDate || !days || days <= 0) return null;
+        const d = new Date(renewStartDate + 'T00:00:00');
+        d.setDate(d.getDate() + days);
+        return d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
     };
 
     const onRefresh = async () => {
@@ -337,24 +395,23 @@ export default function MedicationsScreen() {
                             </View>
 
                             {/* 약품 카드들 */}
-                            {meds.map((med) => (
+                            {meds.map((med) => {
+                                const isSelected = selectedIds.has(med.id);
+                                return (
                                 <View key={med.id}>
                                     <TouchableOpacity
-                                        activeOpacity={isEditMode ? 1 : 0.8}
-                                        onPress={() => openEditModal(med)}
-                                        disabled={isEditMode}
+                                        activeOpacity={0.8}
+                                        onPress={() => isEditMode ? toggleSelection(med.id) : openEditModal(med)}
                                     >
                                         <NeumorphCard style={styles.medicationCard}>
                                             <View style={styles.cardHeader}>
+                                                {isEditMode && (
+                                                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                                                        {isSelected && <Ionicons name="checkmark" size={16} color="white" />}
+                                                    </View>
+                                                )}
                                                 <Text style={styles.medicationName}>{med.name}</Text>
-                                                {isEditMode ? (
-                                                    <TouchableOpacity
-                                                        style={styles.cardDeleteButton}
-                                                        onPress={() => handleDelete(med.id, med.name)}
-                                                    >
-                                                        <Ionicons name="trash-outline" size={18} color={colors.dangerDark} />
-                                                    </TouchableOpacity>
-                                                ) : (
+                                                {!isEditMode && (
                                                     <View style={[
                                                         styles.statusBadge,
                                                         med.is_active ? styles.statusActive : styles.statusInactive
@@ -397,7 +454,7 @@ export default function MedicationsScreen() {
                                         </NeumorphCard>
                                     </TouchableOpacity>
                                 </View>
-                            ))}
+                            );})}
                         </View>
                     );})
                 )}
@@ -428,36 +485,58 @@ export default function MedicationsScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* 약 추가 FAB 버튼들 */}
-            {/* 약 추가 FAB 버튼들 (NeumorphFab is removed, using inline style for now or replace with ClayCard variant if needed, but let's keep inline structure simplified for brevity or use NeumorphCard logic) -> Actually I removed NeumorphFab definition. I should provide a quick inline replacement or restore it.
-            Wait, I removed NeumorphFab but didn't provide a shared replacement. I should probably re-implement it as a shared component or just use a standard View style here. 
-            Re-implementing inline here to avoid breaking changes, but better structure.
-            */}
-            <View style={styles.fabRow}>
-                    <>
-                        <TouchableOpacity onPress={() => router.push('/medications/scan' as any)} style={{ flex: 1 }} activeOpacity={0.8}>
-                            <View style={styles.fabContainer}>
-                                <View style={[styles.fabShadow, { shadowColor: colors.primary }]} />
-                                <View style={styles.fabShadowLight} />
-                                <View style={[styles.fabSurface, { backgroundColor: colors.primary }]}>
-                                    <Ionicons name="camera" size={20} color={colors.white} />
-                                    <Text style={styles.fabText}>처방전 스캔</Text>
-                                </View>
-                            </View>
+            {isEditMode ? (
+                /* 편집 모드 액션 바 */
+                <View style={styles.actionBar}>
+                    <Text style={styles.actionBarCount}>
+                        {selectedIds.size > 0 ? `${selectedIds.size}개 선택됨` : '약을 선택하세요'}
+                    </Text>
+                    <View style={styles.actionBarButtons}>
+                        <TouchableOpacity
+                            style={[styles.actionBarBtn, selectedIds.size === 0 && styles.actionBarBtnDisabled]}
+                            onPress={handleDeleteSelected}
+                            disabled={selectedIds.size === 0}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="trash-outline" size={16} color={selectedIds.size > 0 ? colors.dangerDark : colors.textLight} />
+                            <Text style={[styles.actionBarBtnText, { color: selectedIds.size > 0 ? colors.dangerDark : colors.textLight }]}>삭제</Text>
                         </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => router.push('/medications/add')} style={{ flex: 1 }} activeOpacity={0.8}>
-                            <View style={styles.fabContainer}>
-                                <View style={styles.fabShadow} />
-                                <View style={styles.fabShadowLight} />
-                                <View style={[styles.fabSurface, { backgroundColor: colors.base }]}>
-                                    <Ionicons name="add" size={20} color={colors.primary} />
-                                    <Text style={[styles.fabText, { color: colors.primary }]}>직접 추가</Text>
-                                </View>
-                            </View>
+                        <TouchableOpacity
+                            style={[styles.actionBarBtn, styles.actionBarBtnPrimary, selectedIds.size === 0 && styles.actionBarBtnDisabled]}
+                            onPress={openRenewModal}
+                            disabled={selectedIds.size === 0}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="refresh" size={16} color={selectedIds.size > 0 ? colors.primary : colors.textLight} />
+                            <Text style={[styles.actionBarBtnText, { color: selectedIds.size > 0 ? colors.primary : colors.textLight }]}>기간 연장</Text>
                         </TouchableOpacity>
-                    </>
-            </View>
+                    </View>
+                </View>
+            ) : (
+                /* 약 추가 FAB 버튼들 */
+                <View style={styles.fabRow}>
+                    <TouchableOpacity onPress={() => router.push('/medications/scan' as any)} style={{ flex: 1 }} activeOpacity={0.8}>
+                        <View style={styles.fabContainer}>
+                            <View style={[styles.fabShadow, { shadowColor: colors.primary }]} />
+                            <View style={styles.fabShadowLight} />
+                            <View style={[styles.fabSurface, { backgroundColor: colors.primary }]}>
+                                <Ionicons name="camera" size={20} color={colors.white} />
+                                <Text style={styles.fabText}>처방전 스캔</Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push('/medications/add')} style={{ flex: 1 }} activeOpacity={0.8}>
+                        <View style={styles.fabContainer}>
+                            <View style={styles.fabShadow} />
+                            <View style={styles.fabShadowLight} />
+                            <View style={[styles.fabSurface, { backgroundColor: colors.base }]}>
+                                <Ionicons name="add" size={20} color={colors.primary} />
+                                <Text style={[styles.fabText, { color: colors.primary }]}>직접 추가</Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* 편집 모달 */}
             <Modal
@@ -532,6 +611,115 @@ export default function MedicationsScreen() {
                     </View>
                 </View>
             </Modal>
+            {/* 기간 연장 모달 */}
+            <Modal
+                visible={renewModalVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setRenewModalVisible(false)}
+            >
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.renewModalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>복약 기간 연장</Text>
+                                <TouchableOpacity onPress={() => setRenewModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={colors.text} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={styles.renewSubtitle}>
+                                {selectedIds.size}개 약의 새 복약 기간을 설정합니다
+                            </Text>
+
+                            <Text style={styles.inputLabel}>복용 시작일</Text>
+                            <TouchableOpacity
+                                style={styles.datePickerButton}
+                                onPress={() => setShowRenewDatePicker(true)}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                                <Text style={styles.datePickerButtonText}>
+                                    {new Date(renewStartDate + 'T00:00:00').toLocaleDateString('ko-KR', {
+                                        year: 'numeric', month: 'long', day: 'numeric'
+                                    })}
+                                </Text>
+                                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+                            </TouchableOpacity>
+
+                            <Text style={styles.inputLabel}>처방 일수</Text>
+                            <View style={styles.daysInputRow}>
+                                <TextInput
+                                    style={styles.daysInput}
+                                    value={renewDaysSupply}
+                                    onChangeText={(t) => setRenewDaysSupply(t.replace(/[^0-9]/g, ''))}
+                                    keyboardType="number-pad"
+                                    maxLength={3}
+                                />
+                                <Text style={styles.daysUnit}>일</Text>
+                            </View>
+
+                            {getRenewEndDate() && (
+                                <View style={styles.endDateDisplay}>
+                                    <Ionicons name="calendar" size={16} color={colors.primary} />
+                                    <Text style={styles.endDateText}>
+                                        다음 병원 방문 예정일: {getRenewEndDate()}
+                                    </Text>
+                                </View>
+                            )}
+
+                            <TouchableOpacity
+                                style={[styles.saveButton, isRenewing && styles.saveButtonDisabled]}
+                                onPress={handleRenew}
+                                disabled={isRenewing}
+                            >
+                                {isRenewing ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <Text style={styles.saveButtonText}>연장 적용</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* iOS 날짜 피커 */}
+            {Platform.OS === 'ios' && showRenewDatePicker && (
+                <Modal visible transparent animationType="slide">
+                    <View style={styles.iosPickerModal}>
+                        <View style={styles.iosPickerContainer}>
+                            <View style={styles.iosPickerHeader}>
+                                <TouchableOpacity onPress={() => setShowRenewDatePicker(false)}>
+                                    <Text style={styles.iosPickerCancel}>취소</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => {
+                                    setRenewStartDate(renewPickerDate.toISOString().split('T')[0]);
+                                    setShowRenewDatePicker(false);
+                                }}>
+                                    <Text style={styles.iosPickerDone}>확인</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <DateTimePicker
+                                value={renewPickerDate}
+                                mode="date"
+                                display="spinner"
+                                onChange={(e, d) => { if (d) setRenewPickerDate(d); }}
+                                style={{ height: 200 }}
+                                textColor={colors.text}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+            )}
+            {Platform.OS === 'android' && showRenewDatePicker && (
+                <DateTimePicker
+                    value={renewPickerDate}
+                    mode="date"
+                    display="default"
+                    onChange={handleRenewDateChange}
+                />
+            )}
         </GradientBackground>
     );
 }
@@ -851,6 +1039,7 @@ const styles = StyleSheet.create({
         borderColor: colors.textLight,
         alignItems: 'center',
         justifyContent: 'center',
+        marginRight: spacing.md,
         ...shadows.soft,
     },
     checkboxSelected: {
@@ -912,6 +1101,152 @@ const styles = StyleSheet.create({
     editHintText: {
         fontSize: fontSize.xs,
         color: colors.textLight,
+    },
+
+
+    // 편집 모드 액션 바
+    actionBar: {
+        position: 'absolute',
+        bottom: Platform.OS === 'ios' ? 100 : 90,
+        left: spacing.xl,
+        right: spacing.xl,
+        backgroundColor: colors.base,
+        borderRadius: borderRadius.xxl,
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.xl,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        ...shadows.dark,
+    },
+    actionBarCount: {
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.semibold,
+        color: colors.textSecondary,
+        flex: 1,
+    },
+    actionBarButtons: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+    },
+    actionBarBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: borderRadius.pill,
+        backgroundColor: colors.baseLight,
+        borderWidth: 1,
+        borderColor: colors.baseDark,
+    },
+    actionBarBtnPrimary: {
+        borderColor: colors.primary + '50',
+        backgroundColor: colors.mintLight,
+    },
+    actionBarBtnDisabled: {
+        opacity: 0.4,
+    },
+    actionBarBtnText: {
+        fontSize: fontSize.sm,
+        fontWeight: fontWeight.semibold,
+    },
+
+    // 기간 연장 모달
+    renewModalContent: {
+        backgroundColor: colors.base,
+        borderTopLeftRadius: borderRadius.xxl,
+        borderTopRightRadius: borderRadius.xxl,
+        padding: spacing.xl,
+        paddingBottom: Platform.OS === 'ios' ? 40 : spacing.xl,
+    },
+    renewSubtitle: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        marginBottom: spacing.lg,
+    },
+    datePickerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        padding: spacing.md,
+        backgroundColor: colors.baseLight,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: colors.baseDark,
+        marginBottom: spacing.sm,
+    },
+    datePickerButtonText: {
+        flex: 1,
+        fontSize: fontSize.base,
+        color: colors.text,
+    },
+    daysInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        marginBottom: spacing.sm,
+    },
+    daysInput: {
+        flex: 1,
+        fontSize: fontSize.xl,
+        fontWeight: fontWeight.bold,
+        color: colors.primary,
+        padding: spacing.md,
+        backgroundColor: colors.baseLight,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: colors.primary + '40',
+        textAlign: 'center',
+    },
+    daysUnit: {
+        fontSize: fontSize.lg,
+        color: colors.textSecondary,
+        width: 28,
+    },
+    endDateDisplay: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.mintLight,
+        padding: spacing.md,
+        borderRadius: borderRadius.md,
+        marginBottom: spacing.md,
+    },
+    endDateText: {
+        fontSize: fontSize.sm,
+        color: colors.primaryDark,
+        fontWeight: fontWeight.medium,
+    },
+
+    // iOS 날짜 피커 모달
+    iosPickerModal: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    iosPickerContainer: {
+        backgroundColor: colors.base,
+        borderTopLeftRadius: borderRadius.xl,
+        borderTopRightRadius: borderRadius.xl,
+        paddingBottom: 30,
+    },
+    iosPickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.08)',
+    },
+    iosPickerCancel: {
+        fontSize: fontSize.base,
+        color: colors.textSecondary,
+    },
+    iosPickerDone: {
+        fontSize: fontSize.base,
+        color: colors.primary,
+        fontWeight: fontWeight.bold,
     },
 
     // 편집 모달
